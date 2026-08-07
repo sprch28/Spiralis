@@ -3,22 +3,6 @@
 #pragma once
 #include "../setup/init.hpp"
 
-// -----------------------------------------------------------------------
-/* -=-
-
-        *** Saved ANSI color and formatting codes ***
-    
-    This is a simple declaration of a bunch of ANSI codes that can be used
-    in printing; useful for any formatting/color coding.
-    
-     Warning about use:
-
-    Spiral is not yet a mature library: beware of bugs.
-    Feel free to contact me with any inquiries, bug reports, etc.
-
--=- */
-// -----------------------------------------------------------------------
-
 namespace sp {
 namespace console {
 
