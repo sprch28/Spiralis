@@ -6,7 +6,6 @@
 #include "../numeric/int128.hpp"
 #include "../core/pair.hpp"
 #include "../collections/string.hpp"
-#include "../asm/sp_asm.hpp"
 
 #include <unistd.h>
 #include <cstdio>
@@ -133,7 +132,7 @@ public:
     SP_FORCEINLINE void setFd(int fd) { _fd = fd; }
     
     SP_COLD bool refillBuffer() {
-        ssize_t n = sp::sp_read(_fd, _buf, _SIZE);
+        ssize_t n = ::read(_fd, _buf, _SIZE);
         if (n <= 0) return false;
         _head = 0;
         _tail = static_cast<ull>(n);
@@ -167,7 +166,7 @@ public:
         while (bytes > 0) {
             // If the buffer is empty, refill it
             if (_head == _tail) {
-                ssize_t n = sp::sp_read(_fd, _buf, _SIZE);
+                ssize_t n = ::read(_fd, _buf, _SIZE);
                 SP_IF_NOT_EXPECT(n <= 0) break; // EOF or error
                 _head = 0;
                 _tail = static_cast<ull>(n);
@@ -200,7 +199,7 @@ bool _boolalpha=false;
     ~__O_Backend() { flush();  }
     SP_FORCEINLINE void flush(){
         SP_IF_EXPECT(_idx){
-            sp::sp_write(_fd, _buf, _idx);
+            ::write(_fd, _buf, _idx);
             _idx = 0;
         }
     }
@@ -215,7 +214,7 @@ bool _boolalpha=false;
     SP_FORCEINLINE void writeBinary(const void* data, ull bytes) {
         SP_IF_NOT_EXPECT(bytes >= _SIZE) {
             flush();
-            sp::sp_write(_fd, data, bytes);
+            ::write(_fd, data, bytes);
             return;
         }
 
@@ -289,7 +288,7 @@ bool _boolalpha=false;
         ull len = sp::strlen(s);
         SP_IF_NOT_EXPECT(len+_idx >= _SIZE) {
             flush();
-            sp::sp_write(_fd,s,len);
+            ::write(_fd,s,len);
             return;
         }
         memcpy(_buf+_idx, s, len);

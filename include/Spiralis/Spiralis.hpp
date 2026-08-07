@@ -35,6 +35,4 @@
 #include "system/highrestimer.hpp"
 #include "system/thread.hpp"
 
-#include "asm/sp_asm.hpp"
-
 #endif // ____SPIRALIS_CPP____
