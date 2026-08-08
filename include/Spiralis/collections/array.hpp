@@ -33,9 +33,6 @@
 // 0: No safety checks, requires valid params and sufficient capacity when altering size
 // 1: Bounds checking on functions, reallocation checks
 
-// On data-shifting operations, repeated placement new can cause UB and segfault very quickly; fix required
-
-
 // Temporary Macros
 
 #ifndef _SP_CHECK_SAFETY_
@@ -678,42 +675,23 @@ public:
      * @brief Emplace a new element at the specified index.
      * @param index index to emplace at
      * @param args arguments to forward to the element constructor
-     * @note safety level of 0 requirements: index <= size, # args > 0, capacity > 0, size < capacity
      */
     template <short safety = _safety_level, typename... Args>
     SP_HOT void emplace(ull index, Args&&... args) {
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(index > _size) throw exceptions::ArrayException("Index out of range.");
-        _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(sizeof...(args)==0) throw exceptions::ArrayException("Emplace requires args.");
-        if (_size == 0) {
-            _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(_capacity == 0) reallocate(1);
-            sp::allocator_traits<Allocator<T>>::construct(_alloc, _data, sp::forward<Args>(args)...);
-            _size++;
-            return;
-        }
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(_size >= _capacity) reallocate(grow_capacity(_size + 1));
         T* pos = _data + index;
-        if constexpr (spt::is_trivially_copyable_v<T>) {
+        if(index == _size) sp::allocator_traits<Allocator<T>>::construct(_alloc, pos, sp::forward<Args>(args)...);
+        else if constexpr (spt::is_trivially_copyable_v<T>) {
             memmove(pos + 1, pos, (_size - index) * sizeof(T));
-            sp::allocator_traits<Allocator<T>>::construct(_alloc, pos,sp::forward<Args>(args)...);
-        } else {
-            sp::allocator_traits<Allocator<T>>::construct(_alloc, _data+_size, sp::move(_data[_size-1]));
-        #if __SP_UNROLL_LOOPS__ == 1
-            ull i = _size - 1;
-            while(i - 3 > index){
-                _data[i] = sp::move(_data[i - 1]);
-                _data[i - 1] = sp::move(_data[i - 2]);
-                _data[i - 2] = sp::move(_data[i - 3]);
-                _data[i - 3] = sp::move(_data[i - 4]);
-                i -= 4;
-            }
-            while(i>index) { _data[i] = sp::move(_data[i - 1]); i--; }
-        #else
+            sp::allocator_traits<Allocator<T>>::construct(_alloc, pos, sp::forward<Args>(args)...);
+        }else{
+            sp::allocator_traits<Allocator<T>>::construct(_alloc, _data + _size, sp::move(_data[_size - 1]));
             for (ull i = _size - 1; i > index; --i) _data[i] = sp::move(_data[i - 1]);
-        #endif
             sp::allocator_traits<Allocator<T>>::destroy(_alloc, pos);
             sp::allocator_traits<Allocator<T>>::construct(_alloc, pos, sp::forward<Args>(args)...);
         }
-        _size++;
+        ++_size;
     }
 
     /**
@@ -721,24 +699,8 @@ public:
      * @param args arguments to forward to the element constructor
      */
     template <short safety = _safety_level, typename... Args>
-    SP_HOT void emplace_front(Args&&... args) {
-        _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(_size >= _capacity) reallocate(grow_capacity(_size + 1));
-    #if __SP_UNROLL_LOOPS__ == 1
-        ull i = _size - 1;
-        while(i - 3 > 0){
-            sp::allocator_traits<Allocator<T>>::construct(_alloc,_data+i,sp::move(_data[i-1]));
-            sp::allocator_traits<Allocator<T>>::construct(_alloc,_data+i-1,sp::move(_data[i-2]));
-            sp::allocator_traits<Allocator<T>>::construct(_alloc,_data+i-2,sp::move(_data[i-3]));
-            sp::allocator_traits<Allocator<T>>::construct(_alloc,_data+i-3,sp::move(_data[i-4]));
-            i -= 4;
-        }
-        while(i>0) { sp::allocator_traits<Allocator<T>>::construct(_alloc,_data+i,sp::move(_data[i - 1])); i--; }
-    #else
-        for (ull i = _size - 1; i > 0; i--) sp::allocator_traits<Allocator<T>>::construct(_alloc,_data+i,sp::move(_data[i-1]));
-    #endif
-        sp::allocator_traits<Allocator<T>>::destroy(_alloc,_data);
-        sp::allocator_traits<Allocator<T>>::construct(_alloc,_data,sp::forward<Args>(args)...);
-        _size++;
+    SP_FORCEINLINE SP_HOT void emplace_front(Args&&... args) {
+        emplace<safety>(0, sp::forward<Args>(args)...);
     }
 
     /**
@@ -746,7 +708,9 @@ public:
      * @param item element to insert
      */
     _SP_SAFETY_TEMPLATE_
-    SP_HOT SP_FLATTEN void push_front(type_param item){ emplace_front<safety>(item); }
+    SP_HOT SP_FLATTEN void push_front(type_param item) { 
+        emplace_front<safety>(sp::move(item)); 
+    }
 
     /**
      * @brief Emplace a new element at the end of the array.
@@ -755,11 +719,11 @@ public:
     template <short safety = _safety_level, typename... Args>
     SP_FORCEINLINE SP_HOT void emplace_back(Args&&... args) {
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(_size >= _capacity) reallocate(grow_capacity(_size + 1));
-        if constexpr(sizeof(T)>=32) { 
+        if constexpr (sizeof(T) >= 32) { 
             _SP_PREFETCH_(&_data[_size + 1], 1, 3);
         }
-        sp::allocator_traits<Allocator<T>>::construct(_alloc,_data+_size,sp::forward<Args>(args)...);
-        _size++;
+        sp::allocator_traits<Allocator<T>>::construct(_alloc, _data + _size, sp::forward<Args>(args)...);
+        ++_size;
     }
 
     /**
@@ -777,9 +741,9 @@ public:
     void clear_and_resize(ull new_size) {
         destroy_elements();
         ull final_size = new_size>0 ? next_pow2(new_size) : new_size;
-        if (new_size > _capacity) {
+        if(new_size > _capacity){
             sp::allocator_traits<Allocator<T>>::deallocate(_alloc, _data, _capacity);
-            SP_IF_EXPECT(new_size>0) _data = sp::allocator_traits<Allocator<T>>::allocate(_alloc, final_size);//static_cast<T*>(allocate(final_size));
+            SP_IF_EXPECT(new_size>0) _data = sp::allocator_traits<Allocator<T>>::allocate(_alloc, final_size);
             else _data = nullptr;
             _capacity = new_size;
         }
@@ -795,12 +759,10 @@ public:
      */
     _SP_SAFETY_TEMPLATE_
     T pop(ull index) {
-    _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(index >= _size) throw exceptions::ArrayException("Index out of range.");
+        _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(index >= _size) throw exceptions::ArrayException("Index out of range.");
         T removed_element = sp::move(_data[index]);
-        sp::allocator_traits<Allocator<T>>::destroy(_alloc,_data+index);
-        _SP_EXPLICIT_UNROLLED_(i, index, _size, sp::allocator_traits<Allocator<T>>::construct(_alloc,_data+i,sp::move(_data[i+1])));
-        sp::allocator_traits<Allocator<T>>::destroy(_alloc,_data+_size-1);
-        _size--;
+        if(index < _size - 1) _SP_EXPLICIT_UNROLLED_(i, index, _size - 1, _data[i] = sp::move(_data[i + 1]));
+        sp::allocator_traits<Allocator<T>>::destroy(_alloc, _data + (--_size));
         return removed_element;
     }
     
