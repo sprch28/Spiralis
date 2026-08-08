@@ -13,11 +13,7 @@
     #include <mach/arm/vm_param.h>
 #endif
 
-// So far we have:
-// allocator: operator new
-// aligned_allocator: aligned_alloc/_aligned_malloc
-// page_allocator: mmap
-// stack_allocator: stack allocation, fixed size
+
 namespace sp{
 
 class _spiral_alloc_traits{

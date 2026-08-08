@@ -10,19 +10,9 @@
 #include "../algorithms/iterator.hpp"
 namespace sp{
 
-#ifndef _SP_CHECK_SAFETY_
-    #undef _SP_CHECK_SAFETY_
-    #define _SP_CHECK_SAFETY_(level) if constexpr(safety>=level)
-#endif
-
 #ifndef _SP_CHECK_SAFETY_LEVEL_
     #undef _SP_CHECK_SAFETY_LEVEL_
     #define _SP_CHECK_SAFETY_LEVEL_(level) if constexpr(_safety_level>=level)
-#endif
-
-#ifndef _SP_SAFETY_TEMPLATE_
-    #undef _SP_SAFETY_TEMPLATE_
-    #define _SP_SAFETY_TEMPLATE_ template<short safety = _safety_level>
 #endif
 
 SP_HOT SP_FORCEINLINE constexpr ull strlen(const char* s) noexcept {

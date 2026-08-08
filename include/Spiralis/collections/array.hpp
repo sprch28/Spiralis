@@ -6,7 +6,6 @@
 #include "../core/type_traits.hpp"
 #include "../core/allocators.hpp"
 #include "../core/pair.hpp"
-//#include "../core/initializer_list.hpp"
 #include "../numeric/bit_manip.hpp"
 #include "../numeric/math.hpp"
 #include "../algorithms/iterator.hpp"
@@ -32,13 +31,9 @@
 // SAFETY LEVELS:
 
 // 0: No safety checks, requires valid params and sufficient capacity when altering size
-// 1: Bounds checking on functions, vector-level safety
+// 1: Bounds checking on functions, reallocation checks
 
-
-
-// CRUCIAL FATAL ERROR: 
-// On data-shifting operations, repeated placement new can cause UB and segfault very quickly; fix right away
-
+// On data-shifting operations, repeated placement new can cause UB and segfault very quickly; fix required
 
 
 // Temporary Macros

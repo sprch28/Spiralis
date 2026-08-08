@@ -13,8 +13,7 @@
 #include <stdexcept>
 
 namespace sp{
-// unscoped enum: bleeds into namespace sp directly for experienced dev conveinence (typing sp::flush instead of sp::io::flush, etc.)
-enum io{ 
+enum /*class*/ io{ 
     flush, // Flush the buffer
     endl, // End line and flush buffer
     nl, // End line without flushing

@@ -3,6 +3,7 @@
 #pragma once
 #include "../setup/init.hpp"
 #include "../collections/array.hpp"
+#include "../collections/string.hpp"
 
 namespace sp {
 

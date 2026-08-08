@@ -1,6 +1,6 @@
 #ifndef ____SP_HBA2____
 #define ____SP_HBA2____
-#pragma once
+// hirearchial bitmask array
 #pragma once
 #include "../setup/init.hpp"
 #include "../core/IO.hpp"
