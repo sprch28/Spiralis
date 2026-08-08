@@ -109,7 +109,7 @@ private:
         ull true_cap = allocator_ext<Allocator<T>>::true_capacity(new_cap);
         T* new_block = true_cap ? sp::allocator_traits<Allocator<T>>::allocate(_alloc, true_cap) : nullptr;
         if(_size && new_block){
-            if constexpr(spt::is_trivially_copyable_v<T>){
+            if constexpr(_trivially_copyable){
                 memmove(new_block, _data, _size * sizeof(T));
             }
             else if constexpr(spt::is_nothrow_move_constructible_v<T>){
@@ -221,7 +221,7 @@ public:
     array(const array& other) : _alloc(other._alloc), _data(nullptr), _size(other._size), _capacity(other._capacity){
         _SP_CHECK_SAFETY_LEVEL_(1) SP_IF_NOT_EXPECT(_capacity == 0) return;
         _data = sp::allocator_traits<Allocator<T>>::allocate(_alloc, _capacity);
-        if constexpr (spt::is_trivially_copyable_v<T>) {
+        if constexpr (_trivially_copyable) {
             std::memcpy(_data, other._data, _size * sizeof(T));
         } else {
             try {
@@ -517,7 +517,7 @@ public:
      */
     SP_NODISCARD bool equals(const array<T, _safety_level>& other) const {
         SP_IF_NOT_EXPECT(_size != other._size) return false;
-        if constexpr (spt::is_trivially_copyable_v<T> && sizeof(T) == sizeof(int)){
+        if constexpr (_trivially_copyable && sizeof(T) == sizeof(int)){
             return std::memcmp(_data, other._data, _size * sizeof(T)) == 0;
         }
     _SP_APPLY_UNROLLED_(_size, SP_IF_NOT_EXPECT(!(_data[i]==other._data[i])) return false);
@@ -682,7 +682,7 @@ public:
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(_size >= _capacity) reallocate(grow_capacity(_size + 1));
         T* pos = _data + index;
         if(index == _size) sp::allocator_traits<Allocator<T>>::construct(_alloc, pos, sp::forward<Args>(args)...);
-        else if constexpr (spt::is_trivially_copyable_v<T>) {
+        else if constexpr (_trivially_copyable) {
             memmove(pos + 1, pos, (_size - index) * sizeof(T));
             sp::allocator_traits<Allocator<T>>::construct(_alloc, pos, sp::forward<Args>(args)...);
         }else{
@@ -765,7 +765,6 @@ public:
         sp::allocator_traits<Allocator<T>>::destroy(_alloc, _data + (--_size));
         return removed_element;
     }
-    
 
     /**
      * @brief Resize the array to a new size.
@@ -773,12 +772,11 @@ public:
      */
     _SP_SAFETY_TEMPLATE_
     void resize(ull count) {
-        if (count > _size) {
+        if(count > _size){
             if (count > _capacity) reallocate(grow_capacity(count));
             if constexpr (!spt::is_trivially_default_constructible<T>::value) _SP_EXPLICIT_UNROLLED_(i, _size, count, sp::allocator_traits<Allocator<T>>::construct(_alloc,_data+i));
         }
-        else if (count < _size)
-            if constexpr (!spt::is_trivially_destructible_v<T>) _SP_EXPLICIT_UNROLLED_(i, count, _size, sp::allocator_traits<Allocator<T>>::destroy(_alloc,_data+i));
+        else if(count < _size) if constexpr (!spt::is_trivially_destructible_v<T>) _SP_EXPLICIT_UNROLLED_(i, count, _size, sp::allocator_traits<Allocator<T>>::destroy(_alloc,_data+i));
         _size = count;
     }
 
@@ -788,45 +786,23 @@ public:
      * @param value element to insert
      */
     _SP_SAFETY_TEMPLATE_
-    void insert(ull index, T&& value) {
-        emplace<safety>(index, sp::move(value));
-    }
-
-    /**
-     * @brief Insert an element into the array at the specified index.
-     * @param index index to insert at
-     * @param value element to insert
-     */
-    _SP_SAFETY_TEMPLATE_
-    void insert(ull index, const T&& value) {
-        emplace<safety>(index, sp::move(value));
-    }
-
-    /**
-     * @brief Insert an element into the array at the specified index.
-     * @param index index to insert at
-     * @param value element to insert
-     */
-    _SP_SAFETY_TEMPLATE_
-    void insert(ull index, type_param value) {
-        emplace<safety>(index, value);
-    }
+    void insert(ull index, type_param value) { emplace<safety>(index, value); }
 
     /**
      * @brief Erase the element at the specified index.
      * @param index index of the element to erase
      */
     _SP_SAFETY_TEMPLATE_
-    void erase(ull index) {
+    void erase(ull index){
     _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(index >= _size) return;
         sp::allocator_traits<Allocator<T>>::destroy(_alloc,_data+index);
-        if constexpr (spt::is_trivially_copyable_v<T>) {
+        if constexpr(_trivially_copyable){
             memmove(_data + index, _data + index + 1, (_size - index - 1) * sizeof(T));
-        } else {
+        }else{
             _SP_EXPLICIT_UNROLLED_(i, index, _size - 1, _data[i] = sp::move(_data[i + 1]));
             sp::allocator_traits<Allocator<T>>::destroy(_alloc,_data+_size-1);
         }
-        _size--;
+       --_size;
     }
 
     /**
@@ -834,26 +810,24 @@ public:
      * @param index index of the element to erase
      */
     _SP_SAFETY_TEMPLATE_
-    void erase_unordered(ull index){
+    void erase_swap(ull index){
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(index>=_size) throw exceptions::ArrayException("Index out of range.");
-        sp::allocator_traits<Allocator<T>>::destroy(_alloc, &_data[index]);
-        SP_IF_EXPECT(index!=_size-1) sp::allocator_traits<Allocator<T>>::construct(_alloc,_data+index,sp::move(_data[_size-1]));
-        _size--;
+        SP_IF_EXPECT(index!=_size-1) _data[index] = sp::move(_data[_size-1]);
+        sp::allocator_traits<Allocator<T>>::destroy(_alloc,_data+_size-1);
+        --_size;
     }
 
     /**
      * @brief Shrink the capacity of the array to fit its size.
      */
     _SP_SAFETY_TEMPLATE_
-    SP_FORCEINLINE void shrink_to_fit() {
-        SP_IF_EXPECT(_size < _capacity) {
-            SP_IF_NOT_EXPECT(_size == 0) {
+    SP_FORCEINLINE void shrink_to_fit(){
+        SP_IF_EXPECT(_size < _capacity){
+            SP_IF_NOT_EXPECT(_size == 0){
                 sp::allocator_traits<Allocator<T>>::deallocate(_alloc, _data, _capacity);
                 _data = nullptr;
                 _capacity = 0;
-            } else {
-                reallocate(_size);
-            }
+            }else reallocate(_size);
         }
     }
 
@@ -867,31 +841,18 @@ public:
     }
 
     /**
-     * @brief Remove the mid element from the array.
+     * @brief Remove the front element from the array.
      * @return the popped value
      */
     _SP_SAFETY_TEMPLATE_
-    T pop_front(){
-        _SP_CHECK_SAFETY_(1) if(_size==0) throw exceptions::ArrayException("Array is empty.");
-        T element = sp::move(_data[0]);
-        sp::allocator_traits<Allocator<T>>::destroy(_alloc,_data);
-        _SP_APPLY_UNROLLED_(_size-1, sp::allocator_traits<Allocator<T>>::construct(_alloc,_data+i,sp::move(_data[i+1])); sp::allocator_traits<Allocator<T>>::destroy(_alloc,_data+i+1));
-        _size--;
-        return element;
-    }
+    T pop_front() { return pop(0); }
 
     /**
      * @brief Remove the back element from the array.
      * @return the popped value
      */
     _SP_SAFETY_TEMPLATE_
-    T pop_back(){
-        _SP_CHECK_SAFETY_(1) if(_size==0) throw exceptions::ArrayException("Array is empty.");
-        T element = sp::move(_data[_size-1]);
-        sp::allocator_traits<Allocator<T>>::destroy(_alloc,_data+_size-1);
-        --_size;
-        return element;
-    }
+    T pop_back(){ return (SP_EXPECT(_size>0,true)) ? pop(_size-1) : pop(0); }
 
     /**
      * @brief Check if the array contains the specified element.
@@ -1340,7 +1301,7 @@ public:
     _SP_SAFETY_TEMPLATE_
     SP_NODISCARD SP_PURE SP_FORCEINLINE bool equals(const array<T, _safety_level>& other) const {
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(_size != other._size) return false;
-        if constexpr (spt::is_trivially_copyable_v<T> && sizeof(T) == sizeof(int)){
+        if constexpr (_trivially_copyable && sizeof(T) == sizeof(int)){
             return std::memcmp(_data, other._data, _size * sizeof(T)) == 0;
         }
         _SP_APPLY_UNROLLED_(_size, SP_IF_NOT_EXPECT(!(_data[i]==other._data[i])) return false);
