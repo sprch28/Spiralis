@@ -11,6 +11,7 @@
 #include <cstdio>
 #include <fcntl.h>
 #include <stdexcept>
+#include <cstring>
 
 namespace sp{
 enum /*class*/ io{ 
@@ -479,7 +480,7 @@ public:
                 ull bytes_read = __sp_backend_i.readBinary(dta, size);
                 return bytes_read == size;
             } else {
-                fallback_assert<T>();
+                static_assert(false, "Target data type for read() does not have required method size().");
                 return false;
             }
         }else{

@@ -13,6 +13,9 @@
 #include <iostream>
 #include <new>
 #include <initializer_list>
+#include <cstring>
+#include <algorithm>
+#include <memory>
 
 #if defined(__APPLE__)
     #include <mach/vm_statistics.h>

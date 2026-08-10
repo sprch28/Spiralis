@@ -10,6 +10,9 @@
     #include <windows.h>
 #else
     #include <sys/mman.h>
+#endif
+
+#if defined(__APPLE__)
     #include <mach/arm/vm_param.h>
 #endif
 

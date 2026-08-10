@@ -99,7 +99,7 @@ static_assert([]() constexpr {
     #define __SP_DEFAULT_SAFETY_LEVEL__ 1
 #endif
 #ifndef __SP_SIZE_TYPE__
-    #define __SP_SIZE_TYPE__ ull
+    #define __SP_SIZE_TYPE__ decltype(sizeof(0));
 #endif
 #ifndef __SP_IO_BUFFER_SIZE__
     #define __SP_IO_BUFFER_SIZE__ 32768 // 1 << 15
@@ -296,27 +296,13 @@ static_assert([]() constexpr {
 #define _SP_FUNC_NFORN_ _SP_FUNC_NFO_ SP_RETURNS_NONNULL
 #define _SP_FUNC_NFOP_  _SP_FUNC_NFO_ SP_PURE
 
-#define _SP_TEMP_F_ _SP_SAFETY_TEMPLATE_ SP_FLATTEN
-#define _SP_TEMP_N_ _SP_SAFETY_TEMPLATE_ SP_NODISCARD
-#define _SP_TEMP_H_ _SP_SAFETY_TEMPLATE_ SP_HOT
-#define _SP_TEMP_HF_ _SP_TEMP_H_ SP_FLATTEN
-#define _SP_TEMP_NF_ _SP_TEMP_N_ SP_FLATTEN
-#define _SP_TEMP_NFO_ _SP_SAFETY_TEMPLATE_ _SP_FUNC_NFO_
-#define _SP_TEMP_NP_ _SP_TEMP_N_ SP_PURE
-#define _SP_TEMP_NFP_ _SP_TEMP_NF_ SP_PURE
-#define _SP_TEMP_NFPFO_ _SP_TEMP_NFP_ SP_FORCEINLINE
-#define _SP_TEMP_NPFO_ _SP_TEMP_NP_ SP_FORCEINLINE
-#define _SP_TEMP_FO_ _SP_SAFETY_TEMPLATE_ SP_FORCEINLINE
-#define _SP_TEMP_NFPI_  _SP_TEMP_NFPFO_
-
-
 
 // ===========================// ===========================// ===========================// ===========================
 // VARIABLES AND UTILITY FUNCTIONS
 // ---------------------------------------------------------------------------------------------------------------------
 typedef unsigned long long ull;
 typedef long long ll;
-typedef __SP_SIZE_TYPE__ size_type;
+using size_type = __SP_SIZE_TYPE__;
 
 namespace sp {
     // Forward declarations

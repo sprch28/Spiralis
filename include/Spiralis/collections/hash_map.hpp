@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 
 #include "../setup/init.hpp"
 #include "../core/type_traits.hpp"

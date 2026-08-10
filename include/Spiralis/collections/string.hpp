@@ -8,6 +8,7 @@
 #include "../numeric/math.hpp"
 #include "../numeric/bit_manip.hpp"
 #include "../algorithms/iterator.hpp"
+#include <cstring>
 namespace sp{
 
 #ifndef _SP_CHECK_SAFETY_LEVEL_

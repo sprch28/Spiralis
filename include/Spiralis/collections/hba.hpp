@@ -9,12 +9,13 @@
 #include "../numeric/bit_manip.hpp"
 #include "../algorithms/algorithm.hpp"
 #include <initializer_list>
+#include <cstring>
 #if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
     #include <immintrin.h>
 #endif
 namespace sp{
 #ifdef __SP_HBA_NUM_LAYERS__
-    template <typename T, ull __num_layers=__SP_HBA_NUM_LAYERS__, class Allocator = sp::default_allocator>
+    template <typename T, ull __num_layers=__SP_HBA_NUM_LAYERS__, template <typename> typename Alloc = sp::allocator>
 #else
     template <typename T, ull __num_layers=1, template <typename> typename Alloc = sp::allocator>
 #endif

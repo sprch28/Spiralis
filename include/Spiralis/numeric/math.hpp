@@ -4,11 +4,11 @@
 #include "../setup/init.hpp"
 namespace sp{
 
-template <typename T>
-SP_FORCEINLINE SP_PURE constexpr T min(T a, T b) { return a < b ? a : b; }
+template <typename T, typename U>
+SP_FORCEINLINE SP_PURE constexpr T min(T a, U b) { return a < b ? a : b; }
 
-template <typename T>
-SP_FORCEINLINE SP_PURE constexpr T max(T a, T b) { return a > b ? a : b; }
+template <typename T, typename U>
+SP_FORCEINLINE SP_PURE constexpr T max(T a, U b) { return a > b ? a : b; }
 
 template <typename T>
 SP_NODISCARD SP_FORCEINLINE SP_CONST T abs(T data) {

@@ -16,7 +16,9 @@
 #include "numeric/bitset.hpp"
 #include "numeric/hashes.hpp"
 #include "numeric/math.hpp"
-#include "numeric/SIMD.hpp"
+#if defined(_POSIX_THREADS) && (_POSIX_THREADS > 0)
+    #include "numeric/SIMD.hpp" // uses thread.hpp
+#endif
 #include "numeric/int128.hpp"
 
 // Algorithms & Iteration
@@ -32,7 +34,11 @@
 
 // OS & System Abstractions
 #include "system/console.hpp"
-#include "system/highrestimer.hpp"
-#include "system/thread.hpp"
+#if defined( __MACH__) && defined (__APPLE__)
+    #include "system/highrestimer.hpp"
+#endif
+#if defined(_POSIX_THREADS) && (_POSIX_THREADS > 0)
+    #include "system/thread.hpp"
+#endif
 
 #endif // ____SPIRALIS_CPP____

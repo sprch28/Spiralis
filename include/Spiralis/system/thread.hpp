@@ -6,10 +6,9 @@
 #include "../collections/array.hpp"
 #include "../core/pair.hpp"
 
-#include <pthread/pthread.h>
+#include <pthread.h>
 #include <unistd.h>
 #include <tuple>
-
 namespace sp{
 
 template <bool autoJoin = true>
