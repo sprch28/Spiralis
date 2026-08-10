@@ -13,9 +13,17 @@
 // ===========================// ===========================// ===========================// ===========================
 // THREE UNDERSCORES: SYSTEM DETECTION
 // ---------------------------------------------------------------------------------------------------------------------
-#if !defined(__LITTLE_ENDIAN__)
-#error "Big endian is currently not supported for Spiral-cpp."
+
+// must be little-endian system
+static_assert([]() constexpr {
+#if defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__)
+    return __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__;
+#elif defined(_MSC_VER)
+    return true;
+#else
+    #error "Unable to determine endianness at compile-time"
 #endif
+}(), "Big-endian is not supported.");
 
 #ifdef __cplusplus
     #if __cplusplus <= 201103L
