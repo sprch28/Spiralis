@@ -99,7 +99,7 @@ static_assert([]() constexpr {
     #define __SP_DEFAULT_SAFETY_LEVEL__ 1
 #endif
 #ifndef __SP_SIZE_TYPE__
-    #define __SP_SIZE_TYPE__ decltype(sizeof(0));
+    #define __SP_SIZE_TYPE__ decltype(sizeof(0))
 #endif
 #ifndef __SP_IO_BUFFER_SIZE__
     #define __SP_IO_BUFFER_SIZE__ 32768 // 1 << 15

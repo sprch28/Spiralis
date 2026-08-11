@@ -27,7 +27,7 @@ template <typename T>
 SP_FORCEINLINE SP_CONST T clearFirstSet(T n) { return n & (n-1); }
 
 template <typename T>
-SP_FORCEINLINE T isolateFirstSet(T n) { return n | (1ULL << find_first_set(n)); }
+SP_FORCEINLINE T isolateFirstSet(T n) { return n & -n; }
 
 template <typename T>
 SP_FORCEINLINE SP_CONST T setFirstUnset(T n) { return n | (n+1); }
@@ -146,67 +146,89 @@ SP_NODISCARD SP_FORCEINLINE SP_PURE SP_COLD T next_pow2(T min) {
         return val + 1;
     #endif
 }
-
     template <typename T>
     SP_FORCEINLINE SP_PURE ull popcount(T val){
-    #if ___SP_DETECTED_COMPILER___ == clang
+    #if ___SP_DETECTED_COMPILER___ == clang || ___SP_DETECTED_COMPILER___ == gcc
         if constexpr(spt::is_same_v<T, ull>||spt::is_same_v<T, ll>) return __builtin_popcountll(val);
         if constexpr(spt::is_same_v<T, unsigned long>||spt::is_same_v<T, long>) return __builtin_popcountl(val);
         return __builtin_popcount(val);
     #elif ___SP_DETECTED_COMPILER___ == msvc
-        if constexpr(spt::is_same_v<T, ull>||spt::is_same_v<T, ll>) return __popcnt64(val);
-        if constexpr(spt::is_same_v<T, unsigned long>||spt::is_same_v<T, long>) return __popcnt(val);
-        return __popcnt(val);
+        if constexpr(sizeof(T) > 4) return __popcnt64(val);
+        return __popcnt((unsigned long)val);
+    #else
+        // Fallback popcount if needed
+        ull c = 0;
+        for (ull v = val; v; c++) v &= v - 1;
+        return c;
     #endif
     }
 
     template <typename T>
     SP_FORCEINLINE SP_PURE T reverse_bits(T val){
-    #if ___SP_DETECTED_COMPILER___ == clang
+    #if ___SP_DETECTED_COMPILER___ == clang || ___SP_DETECTED_COMPILER___ == gcc
         if constexpr(spt::is_same_v<T, ull>||spt::is_same_v<T, ll>) return __builtin_bswap64(val);
         return __builtin_bswap32(val);
     #elif ___SP_DETECTED_COMPILER___ == msvc
-        if constexpr(spt::is_same_v<T, ull>||spt::is_same_v<T, ll>) return _byteswap_uint64(val);
-        return _byteswap_uint32(val);
+        if constexpr(sizeof(T) > 4) return _byteswap_uint64(val);
+        return _byteswap_ulong(val);
+    #else
+        return sp::reverseBits(val);
     #endif
     }
 
     template <typename T>
     SP_FORCEINLINE SP_PURE ull leading_zeros(T val){
-    #if ___SP_DETECTED_COMPILER___ == clang
+        SP_IF_NOT_EXPECT(val == 0) return sizeof(T) * 8;
+    #if ___SP_DETECTED_COMPILER___ == clang || ___SP_DETECTED_COMPILER___ == gcc
         if constexpr(spt::is_same_v<T,ull>||spt::is_same_v<T,ll>) return __builtin_clzll(val);
         if constexpr(spt::is_same_v<T,unsigned long>||spt::is_same_v<T,long>) return __builtin_clzl(val);
         return __builtin_clz(val);
     #elif ___SP_DETECTED_COMPILER___ == msvc
-        if constexpr(spt::is_same_v<T,ull>||spt::is_same_v<T,ll>) return _BitScanReverse(&index, val);
-        if constexpr(spt::is_same_v<T,unsigned long>||spt::is_same_v<T,long>) return _BitScanReverse(&index, val);
-        return _BitScanReverse(&index, val);
+        unsigned long index;
+        if constexpr (sizeof(T) > 4) {
+            _BitScanReverse64(&index, val);
+            return (sizeof(T) * 8 - 1) - index;
+        } else {
+            _BitScanReverse(&index, (unsigned long)val);
+            return 31 - index;
+        }
     #endif
     }
 
     template <typename T>
     SP_FORCEINLINE SP_PURE ull trailing_zeros(T val){
-    #if ___SP_DETECTED_COMPILER___ == clang
+        SP_IF_NOT_EXPECT(val == 0) return sizeof(T) * 8;
+    #if ___SP_DETECTED_COMPILER___ == clang || ___SP_DETECTED_COMPILER___ == gcc
         if constexpr(spt::is_same_v<T, ull>||spt::is_same_v<T,ll>) return __builtin_ctzll(val);
         if constexpr(spt::is_same_v<T, unsigned long>||spt::is_same_v<T, long>) return __builtin_ctzl(val);
         return __builtin_ctz(val);
     #elif ___SP_DETECTED_COMPILER___ == msvc
-        if constexpr(spt::is_same_v<T, ull>||spt::is_same_v<T, ll>) return _BitScanForward(&index, val);
-        if constexpr(spt::is_same_v<T, unsigned long>||spt::is_same_v<T, long>) return _BitScanForward(&index, val);
-        return _BitScanForward(&index, val);
+        unsigned long index;
+        if constexpr (sizeof(T) > 4) {
+            _BitScanForward64(&index, val);
+            return index;
+        } else {
+            _BitScanForward(&index, (unsigned long)val);
+            return index;
+        }
     #endif
     }
 
     template <typename T>
     SP_FORCEINLINE SP_PURE ull find_first_set(T val){
-    #if ___SP_DETECTED_COMPILER___ == clang
+        SP_IF_NOT_EXPECT(val == 0) return 0;
+    #if ___SP_DETECTED_COMPILER___ == clang || ___SP_DETECTED_COMPILER___ == gcc
         if constexpr(spt::is_same_v<T, ull>||spt::is_same_v<T, ll>) return __builtin_ffsll(val);
         if constexpr(spt::is_same_v<T, unsigned long>||spt::is_same_v<T, long>) return __builtin_ffsl(val);
         return __builtin_ffs(val);
     #elif ___SP_DETECTED_COMPILER___ == msvc
-        if constexpr(spt::is_same_v<T, ull>||spt::is_same_v<T, ll>) return _BitScanForward(&index, val);
-        if constexpr(spt::is_same_v<T, unsigned long>||spt::is_same_v<T, long>) return _BitScanForward(&index, val);
-        return _BitScanForward(&index, val);
+        unsigned long index;
+        if constexpr (sizeof(T) > 4) {
+            if (_BitScanForward64(&index, val)) return index + 1;
+        } else {
+            if (_BitScanForward(&index, (unsigned long)val)) return index + 1;
+        }
+        return 0;
     #endif
     }
 };

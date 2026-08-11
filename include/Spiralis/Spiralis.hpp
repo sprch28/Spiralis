@@ -1,5 +1,5 @@
-#ifndef ____SPIRALIS_CPP____
-#define ____SPIRALIS_CPP____
+#ifndef ____SPIRALIS_HPP____
+#define ____SPIRALIS_HPP____
 
 // Setup & Environment
 #include "setup/init.hpp"
@@ -41,4 +41,4 @@
     #include "system/thread.hpp"
 #endif
 
-#endif // ____SPIRALIS_CPP____
+#endif // ____SPIRALIS_HPP____

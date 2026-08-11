@@ -397,7 +397,7 @@ public:
     SP_FORCEINLINE IO& output_to_file(const sp::file& f){ if(f.get_mode()!=file_mode::read) { __sp_backend_o.flush(); __sp_backend_o._fd = f.get_fd(); } return *this; }
 
     SP_FORCEINLINE IO& input_to_console(){ __sp_backend_i._fd = 0; return *this;}
-    SP_FORCEINLINE IO& input_to_cerr(){ __sp_backend_i._fd = 0; return *this; }
+    SP_FORCEINLINE IO& input_to_cerr(){ __sp_backend_i._fd = 2; return *this; }
     SP_FORCEINLINE IO& input_to_file(const sp::file& f){ __sp_backend_i._fd = f.get_fd(); return *this; }
 
     SP_FORCEINLINE IO& to_console(){ return output_to_console().input_to_console(); }
@@ -476,7 +476,7 @@ public:
         }else if constexpr(SP_HAS_METHOD(T, data)) {
             if constexpr(SP_HAS_METHOD(T, size)) {
                 auto dta = value.data();
-                ull size = sizeof(spt::remove_reference_t<decltype(*dta)>);
+                ull size = sizeof(spt::remove_reference_t<decltype(*dta)>) * value.size();
                 ull bytes_read = __sp_backend_i.readBinary(dta, size);
                 return bytes_read == size;
             } else {

@@ -16,6 +16,7 @@
 #include <cstring>
 #include <algorithm>
 #include <memory>
+#include <limits>
 
 #if defined(__APPLE__)
     #include <mach/vm_statistics.h>

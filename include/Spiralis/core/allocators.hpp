@@ -5,6 +5,7 @@
 #include "../core/type_traits.hpp"
 
 #include <new>
+#include <cstdlib>
 
 #if defined(_WIN32)
     #include <windows.h>
@@ -38,7 +39,7 @@ struct allocator_traits : public _spiral_alloc_traits{
     using propagate_on_container_copy_assignment = spt::false_type;
     using propagate_on_container_move_assignment = spt::false_type;
     using propagate_on_container_swap            = spt::false_type;
-    using is_always_equal                        = spt::true_type;
+    using is_always_equal = spt::bool_constant<spt::is_empty_v<Alloc>>;
     
     template <typename A, typename T, typename... Args>
     using construct_expr = decltype(spt::declval<A>().construct(spt::declval<T*>(), spt::declval<Args>()...));
@@ -78,20 +79,19 @@ template <typename T>
 class allocator : public _spiral_alloc_traits{
 public:
     using value_type = T;
-
     allocator() noexcept = default;
-
     template <typename U>
     allocator(const allocator<U>&) noexcept {}
 
     T* allocate(size_type n){
-        return static_cast<T*>(std::malloc(n * sizeof(T)));
+        void* p = std::malloc(n * sizeof(T));
+        SP_IF_NOT_EXPECT(!p && n != 0) throw std::bad_alloc();
+        return static_cast<T*>(p);
     }
 
     void deallocate(T* p, size_type n)noexcept{
         std::free(p);
     }
-
     static constexpr bool is_aligned() { return 0; }
 };
 
@@ -134,17 +134,18 @@ class page_allocator : public _spiral_alloc_traits {
 public:
     using value_type = T;
     using size_type = __SP_SIZE_TYPE__;
+    
     static constexpr size_type capacity_for(size_type n) noexcept {
         SP_IF_NOT_EXPECT(n == 0) return 0;
         size_type requested_bytes = n * sizeof(T);
-        size_type page_size = 4096;
-        size_type allocated_bytes = ((requested_bytes + page_size - 1) / page_size) * page_size;
+        size_type allocated_bytes = (requested_bytes + 4095) & ~4095; // nearest 4096
         return allocated_bytes / sizeof(T);
     }
 
     T* allocate(size_type n) {
         SP_IF_NOT_EXPECT(n == 0) return nullptr;
-        size_type bytes = capacity_for(n) * sizeof(T);
+        size_type bytes = (n * sizeof(T) + 4095) & ~4095; // avoiding truncation loss
+        
     #if defined(_WIN32)
         void* ptr = VirtualAlloc(nullptr, bytes, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     #else
@@ -157,7 +158,7 @@ public:
 
     void deallocate(T* p, size_type n) noexcept {
         SP_IF_NOT_EXPECT(!p) return;
-        size_type bytes = capacity_for(n) * sizeof(T);
+        size_type bytes = (n * sizeof(T) + 4095) & ~4095;
     #if defined(_WIN32)
         VirtualFree(p, 0, MEM_RELEASE);
     #else
@@ -181,18 +182,24 @@ private:
 public:
     using value_type = T;
     using size_type = __SP_SIZE_TYPE__;
-    static constexpr size_type capacity_for(size_type n) noexcept {
-        return N;
-    }
+    
+    unbinded_stack_allocator() = default;
+    
+    unbinded_stack_allocator(const unbinded_stack_allocator&) noexcept : offset(0) {}
+    unbinded_stack_allocator(unbinded_stack_allocator&&) noexcept : offset(0) {}
+    unbinded_stack_allocator& operator=(const unbinded_stack_allocator&) noexcept { offset = 0; return *this; }
+    unbinded_stack_allocator& operator=(unbinded_stack_allocator&&) noexcept { offset = 0; return *this; }
+
+    static constexpr size_type capacity_for(size_type n) noexcept { return N; }
+    
     SP_FORCEINLINE T* allocate(size_type n) {
         size_type bytes_requested = n * sizeof(T);
         SP_IF_NOT_EXPECT(offset + bytes_requested > sizeof(buffer)) { throw std::bad_alloc(); }
-
         void* raw_ptr = &buffer[offset];
         offset += bytes_requested;
-
         return static_cast<T*>(raw_ptr);
     }
+    
     void deallocate(T* p, size_type n) noexcept{}
 };
 template <ull N = 1024>

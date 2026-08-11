@@ -1,5 +1,5 @@
-#ifndef ____SP_HBA2____
-#define ____SP_HBA2____
+#ifndef ____SP_HBA____
+#define ____SP_HBA____
 // hirearchial bitmask array
 #pragma once
 #include "../setup/init.hpp"
@@ -107,8 +107,10 @@ SP_FORCEINLINE SP_HOT void _descend_layers(size_type& remaining, size_type& hole
         _descend_layers<CurrentLayer - 1>(remaining, hole_offset, block_offset);
     }
 }
+
+
 // O(L*log_(64^L) N) -> O(log_64 N)
-SP_NODISCARD SP_FORCEINLINE SP_HOT size_type get_idx(size_type target_idx) {
+SP_NODISCARD SP_FORCEINLINE SP_HOT const size_type get_idx(size_type target_idx) const {
     size_type block_offset = 0;
     size_type hole_offset = 0;
     size_type remaining = target_idx;
@@ -122,13 +124,15 @@ SP_NODISCARD SP_FORCEINLINE SP_HOT size_type get_idx(size_type target_idx) {
     }
     ull meta_val = _meta[probe_idx];
 // Priority Path: Hardware PDEP + LZCNT (x86 BMI2)
-#if defined(__BMI2__) && !defined(__aarch64__)
-    // Deposit a set bit at the location of the 'remaining'-th set bit
-    // (Note: Uses 1ULL << remaining, which is 0-indexed)
-    ull selected_bit = _pdep_u64(1ULL << remaining, meta_val);
-    size_type bit_pos = leading_zeros(selected_bit);
-    hole_offset += bit_pos;
-#else
+// Unfortunately, the bitmask layout will need to be reversed which makes more logical sense to the computer,
+// But is a pain in the ass for people to visualize.
+// #if defined(__BMI2__) && !defined(__aarch64__)
+//     // Deposit a set bit at the location of the 'remaining'-th set bit
+//     // (Note: Uses 1ULL << remaining, which is 0-indexed)
+//     ull selected_bit = _pdep_u64(1ULL << remaining, meta_val);
+//     size_type bit_pos = leading_zeros(selected_bit);
+//     hole_offset += bit_pos;
+// #else
     // Initial binary split chosen empirically.
     // 32 consistently provides the best overall performance across
     // lookup-heavy and erase-heavy benchmarks. Smaller splits (e.g. 16)
@@ -151,7 +155,7 @@ SP_NODISCARD SP_FORCEINLINE SP_HOT size_type get_idx(size_type target_idx) {
         next_set_bit = leading_zeros(meta_val);
     }
     if(meta_val) hole_offset += next_set_bit;
-#endif
+//#endif
     return target_idx + hole_offset;
 }
 
@@ -235,18 +239,27 @@ hba(std::initializer_list<T> list){
     }
     build_meta();
 }
+#undef _SP_INIT_CDM_TS
+
 SP_FORCEINLINE hba(const hba& other) : _size(other._size), _capacity(other._capacity), _is_contiguous(other._is_contiguous){
     const size_type sz = _calculate_meta_size(_capacity);
     _data = sp::allocator_traits<Alloc<T>>::allocate(_alloc,_capacity);
     _meta = sp::allocator_traits<Alloc<ull>>::allocate(_meta_alloc,sz);
+    
     if constexpr(spt::is_trivially_copyable_v<T>){
-        memcpy(_data,other._data,_size*sizeof(T));
-        memcpy(_meta,other._meta,sz*sizeof(ull));
+        if(_is_contiguous) memcpy(_data, other._data, _size*sizeof(T));
+        else{
+            _SP_APPLY_UNROLLED_(_capacity, {if(other._is_slot_active(i)) _data[i] = other._data[i];});
+        }
+        memcpy(_meta, other._meta, sz*sizeof(ull));
     }else{
-        _SP_APPLY_UNROLLED_(_size,_data[i] = other._data[i]);
-        _SP_APPLY_UNROLLED_(sz,_meta[i] = other._meta[i]);
+        _SP_APPLY_UNROLLED_(_capacity, {
+            if(other._is_slot_active(i)) {
+                sp::allocator_traits<Alloc<T>>::construct(_alloc, _data + i, other._data[i]);
+            }
+        });
+        _SP_APPLY_UNROLLED_(sz, _meta[i] = other._meta[i]);
     }
-    build_meta();
 }
 SP_FORCEINLINE hba(hba&& other) : _size(other._size), _capacity(other._capacity), 
 _is_contiguous(other._is_contiguous),_data(sp::move(other._data)),_meta(sp::move(other._meta)),
@@ -255,7 +268,7 @@ _alloc(sp::move(other._alloc)),_meta_alloc(sp::move(other._meta_alloc)){
     other._data = nullptr; other._meta = nullptr;
 }
 
-~hba(){ // TEMPORARY: super inefficient
+~hba(){ // TEMPORARY: inefficient
     if(_data){
         for(size_type i = 0; i < _capacity; ++i){
             if(_is_slot_active(i)){
@@ -296,6 +309,7 @@ SP_FORCEINLINE hba& compress(){
         ++read_ptr;
     }
     build_meta();
+    _is_contiguous = true;
     return *this;
 }
 

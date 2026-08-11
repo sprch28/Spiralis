@@ -9,6 +9,8 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <tuple>
+#include <queue>
+#include <functional>
 namespace sp{
 
 template <bool autoJoin = true>
@@ -24,6 +26,8 @@ private:
         ThreadData(F&& f, Args&&... a) : func(std::forward<F>(f)), args(std::forward<Args>(a)...) {}
     };
 public:
+    thread(const thread&) = delete;
+    thread& operator=(const thread&) = delete;
     template <typename Func, typename... Args>
     SP_FORCEINLINE thread(Func f, Args&&... args){
         // Package the function arguments
@@ -74,6 +78,7 @@ public:
 
     SP_FORCEINLINE void detach(){
         pthread_detach(_thread);
+        _is_joinable = false;
     }
 
     SP_FORCEINLINE ~thread(){
@@ -93,6 +98,8 @@ private:
     pthread_cond_t _cond = PTHREAD_COND_INITIALIZER;
     pthread_cond_t _wait_cond = PTHREAD_COND_INITIALIZER;
 public:
+    thread_pool(const thread_pool&) = delete;
+    thread_pool& operator=(const thread_pool&) = delete;
     void join_all(){
         pthread_mutex_lock(&_lock);
         _end = true;

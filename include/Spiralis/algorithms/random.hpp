@@ -68,7 +68,11 @@ public:
     uniform_distribution(T low, T high) : m_min(low), m_max(high) {}
     template <typename Engine>
     T operator()(Engine& eng){
-        ull range = static_cast<ull>(m_max-m_min+1);
+        using UnsignedT = spt::make_unsigned_t<T>;
+        ull range = static_cast<ull>(static_cast<UnsignedT>(m_max) - static_cast<UnsignedT>(m_min)) + 1;
+        
+        if(range == 0) return m_min + static_cast<T>(eng());
+
         ull x = eng();
         unsigned __int128 m = static_cast<unsigned __int128>(x) * static_cast<unsigned __int128>(range);
         ull l = static_cast<ull>(m);

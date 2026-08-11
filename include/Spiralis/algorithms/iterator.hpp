@@ -10,11 +10,12 @@ class iterator{
 private:
     T* _data;
 public:
-    using __iterator_category = std::random_access_iterator_tag;
+    using iterator_category = std::random_access_iterator_tag;
     using value_type = T;
     using pointer = T*;
     using reference = T&;
     using difference_type = ptrdiff_t;
+    // size_type is defined in init.hpp global namespace
 
     SP_FORCEINLINE iterator(pointer p = nullptr) : _data(p){}
     SP_FORCEINLINE iterator(const iterator& other) : _data(other._data) {}
@@ -35,6 +36,9 @@ public:
 
     SP_FORCEINLINE iterator operator++(int) { iterator tmp(*this); ++_data; return tmp; }
     SP_FORCEINLINE iterator operator--(int) { iterator tmp(*this); --_data; return tmp; }
+
+    SP_FORCEINLINE iterator& operator+=(difference_type n) { _data += n; return *this; }
+    SP_FORCEINLINE iterator& operator-=(difference_type n) { _data -= n; return *this; }
 
     SP_FORCEINLINE friend bool operator==(const iterator& a, const iterator& b) { return a._data == b._data; }
     SP_FORCEINLINE friend bool operator!=(const iterator& a, const iterator& b) { return a._data != b._data; }
@@ -58,17 +62,10 @@ SP_FORCEINLINE It operator+(typename It::difference_type n, const It& it) { retu
 namespace sp{
 
 template <typename T>
-class string_iterator : public iterator<T>{
-public:
-    using iterator<T>::iterator;
-};
+using string_iterator = iterator<T>;
 
-
-template<typename T>
-class array_iterator : public iterator<T> {
-public:
-    using iterator<T>::iterator;
-};
+template <typename T>
+using array_iterator = iterator<T>;
 
 }; // namespace sp
 
