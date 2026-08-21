@@ -288,7 +288,7 @@ private:
     }
 
     SP_COLD SP_FLATTEN void rehash(size_type bucket_count=0){ // OPTIMIZATION AVAILABLE: NOT and ctzll to find next hole
-        size_type count = (bucket_count==0) ? next_pow2(_buckets.size()/threshold) : next_pow2(bucket_count);
+        size_type count = (bucket_count==0) ? next_pow2((size_type)(_buckets.size()/threshold)) : next_pow2(bucket_count);
         sp::array<Entry, 0, Allocator> temp(count);
         sp::array<ull, 0, Allocator> temp_states(p_state_array_size(count));
         _max_count = static_cast<size_type>(count * threshold);
@@ -474,7 +474,7 @@ public:
         SP_IF_NOT_EXPECT(n<=_count) return;
         SP_IF_NOT_EXPECT(n<=_buckets.size()) return;
         SP_IF_NOT_EXPECT(_count==0){
-            size_type new_cap = next_pow2(n/threshold);
+            size_type new_cap = next_pow2((size_type)(n/threshold));
             _buckets = array<Entry, 0>(new_cap);
             _states = array<ull, 0, Allocator>(p_state_array_size(new_cap));
             _max_count = (size_type)(_buckets.size() * threshold);
@@ -950,6 +950,21 @@ public:
         );
         return cend();
     }
+
+    template <typename K, short safety = _safety_level>
+    _SP_FUNC_NI_ iterator find(const K& key){
+        _SP_PROBE_LOOP_(
+            return iterator(_buckets.data(), _states.data(), probe, _buckets.size(), (load_factor()<0.3)?true:false);
+        );
+        return end();
+    }
+    template <typename K, short safety = _safety_level>
+    _SP_FUNC_NIP_ const_iterator find(const K& key) const{
+        _SP_PROBE_LOOP_(
+            return const_iterator(_buckets.data(), _states.data(), probe, _buckets.size(), (load_factor()<0.3)?true:false);
+        );
+        return cend();
+    }
     _SP_SAFETY_TEMPLATE_
     _SP_FUNC_NIP_ bool contains(const Key& key) const{
         return count(key) != 0;
@@ -1275,7 +1290,12 @@ public:
         _SP_PROBE_LOOP_(
             return {iterator(_buckets.data(), _states.data(), probe, _buckets.size(), (load_factor()<0.3)?true:false), false};
         );
-        SP_IF_NOT_EXPECT(!would_fit_without_rehash(1)) return {end(), false};
+        
+        SP_IF_NOT_EXPECT(!would_fit_without_rehash(1)) {
+            rehash(_buckets.size() * 2); // (Or whatever your growth factor logic is)
+            goto __sp_start; 
+        }
+        
         _count++;
         set_state(probe);
         _buckets[probe] = Entry(sp::move(key), Value(sp::forward<Args>(args)...));
@@ -1463,6 +1483,14 @@ public:
     }
     sp::array<sp::pair<Key,Value>> to_array() const{
         sp::array<sp::pair<Key, Value>> result;
+        result.reserve(_count);
+        for(const_entry_loop_type e : *this){
+            result.template push_back<0>(sp::pair<Key, Value>(e.first, e.second));
+        }
+        return result;
+    }
+    sp::vector<sp::pair<Key,Value>> to_sp_vector() const{
+        sp::vector<sp::pair<Key, Value>> result;
         result.reserve(_count);
         for(const_entry_loop_type e : *this){
             result.template push_back<0>(sp::pair<Key, Value>(e.first, e.second));

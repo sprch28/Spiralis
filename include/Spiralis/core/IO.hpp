@@ -471,13 +471,13 @@ public:
             return bytes_read == sizeof(T);
         }else if constexpr(spt::has_getSpiralBinary_v<T>){
             auto [data, size] = value.__getSpiralBinary();
-            ull bytes_read = __sp_backend_i.readBinary(data, size);
+            ull bytes_read = __sp_backend_i.readBinary((void*)data, size);
             return bytes_read == size; 
         }else if constexpr(SP_HAS_METHOD(T, data)) {
             if constexpr(SP_HAS_METHOD(T, size)) {
                 auto dta = value.data();
                 ull size = sizeof(spt::remove_reference_t<decltype(*dta)>) * value.size();
-                ull bytes_read = __sp_backend_i.readBinary(dta, size);
+                ull bytes_read = __sp_backend_i.readBinary((void*)dta, size);
                 return bytes_read == size;
             } else {
                 static_assert(false, "Target data type for read() does not have required method size().");

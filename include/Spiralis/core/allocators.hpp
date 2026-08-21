@@ -4,6 +4,7 @@
 #include "../setup/init.hpp"
 #include "../core/type_traits.hpp"
 
+#include <iostream>
 #include <new>
 #include <cstdlib>
 
@@ -85,7 +86,7 @@ public:
 
     T* allocate(size_type n){
         void* p = std::malloc(n * sizeof(T));
-        SP_IF_NOT_EXPECT(!p && n != 0) throw std::bad_alloc();
+        SP_IF_NOT_EXPECT(!p && n != 0) { std::cout << "ERROR: Could not allocate in sp::allocator\nRequested bytes: " << n << std::endl; throw std::bad_alloc(); }
         return static_cast<T*>(p);
     }
 

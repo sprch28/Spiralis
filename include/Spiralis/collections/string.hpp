@@ -37,41 +37,6 @@ SP_HOT SP_FORCEINLINE constexpr ull strlen(const char* s) noexcept {
 
 SP_FORCEINLINE bool isspace(char c) { return (c >= 0 && c <= 127) && (c == ' ' || (c >= '\t' && c <= '\r')); }
 
-class string_view{
-public:
-    char* data;
-    size_type size;
-    size_type max_size;
-    string_view& move_to_front(){
-        data -= (max_size - size);
-        size = max_size;
-        return *this;
-    }
-    string_view& move_to_back(){
-        data += (size-1);
-        size = 1;
-        return *this;
-    }
-    string_view& operator++(){
-        if(size>1) { data++; size--; }
-        return *this;
-    }
-    string_view& operator--(){
-        if(size<max_size) { data--; size++; }
-        return *this;
-    }
-    string_view operator++(int) {
-        string_view temp = *this;
-        ++(*this);
-        return temp;
-    }
-    string_view operator--(int) {
-        string_view temp = *this;
-        --(*this);
-        return temp;
-    }
-};
-
 
 template <short _safety_level = __SP_DEFAULT_SAFETY_LEVEL__, template <typename> typename Allocator = sp::allocator, bool _use_sso=true>
 class string_impl{
@@ -89,7 +54,7 @@ private:
     };
     struct __small_mode{
         char _data[23];
-        unsigned char _flag;   // Overlaps with the last byte of big mode _capacity
+        unsigned char _flag = 0;   // Overlaps with the last byte of big mode _capacity
         void push_back(char element) {
             _flag &= 0x7F; // remove MSB
             _data[_flag] = element; // replace null terminator with element
@@ -144,7 +109,7 @@ private:
         }
 
         SP_FORCEINLINE SP_HOT void push_back(char elem){
-            _SP_CHECK_SAFETY_LEVEL_(1) SP_IF_NOT_EXPECT(_size==_capacity) reallocate(next_pow2(_capacity));
+            _SP_CHECK_SAFETY_LEVEL_(1) SP_IF_NOT_EXPECT(_size==_capacity) reallocate(next_pow2(_capacity+1));
             if constexpr(spt::is_base_of_v<_spiral_alloc_traits,Allocator<char>>){
                 if constexpr(Allocator<char>::can_avoid_construct_on_trivially_copyable){
                     _data[_size++] = elem;
@@ -278,7 +243,7 @@ SP_FORCEINLINE string_impl& __priv_insert(size_type index, const char* other, si
         dta[combined_len] = '\0'; // null terminate at end
     }else{
         SP_IF_NOT_EXPECT(is_small()) _inflate(combined_len+1); // create big data
-        else SP_IF_NOT_EXPECT(combined_len > B()._capacity) B().reallocate(next_pow2(combined_len)); // reallocation check
+        else SP_IF_NOT_EXPECT(combined_len > B()._capacity) B().reallocate(next_pow2(combined_len+1)); // reallocation check
         char* SP_RESTRICT dta = B()._data;
         memmove(dta + index + len, dta + index, current_len - index); // Shift existing data to the right
         memcpy(dta + index, other, len); // Insert new data
@@ -1242,6 +1207,123 @@ SP_FORCEINLINE bool operator==(const char* other,const string_impl<level, alloc,
     return str==other;
 }
 
+class string_view{
+public:
+    string_view(const char* cstr, size_type sz) : data(cstr), size(sz), max_size(sz){}
+    string_view() : data(nullptr), size(0), max_size(0){}
+    const char* data;
+    size_type size;
+    size_type max_size;
+    string_view& move_to_front(){
+        data -= (max_size - size);
+        size = max_size;
+        return *this;
+    }
+    string_view& move_to_back(){
+        data += (size-1);
+        size = 1;
+        return *this;
+    }
+    string_view& operator++(){
+        if(size>1) { data++; size--; }
+        return *this;
+    }
+    string_view& operator--(){
+        if(size<max_size) { data--; size++; }
+        return *this;
+    }
+    string_view operator++(int) {
+        string_view temp = *this;
+        ++(*this);
+        return temp;
+    }
+    string_view operator--(int) {
+        string_view temp = *this;
+        --(*this);
+        return temp;
+    }
+    string_view& advance_window(){
+        ++data; ++max_size;
+        return *this;
+    }
+};
+
+inline bool operator==(const string_view& lhs, const string_view& rhs) {
+    if (lhs.size != rhs.size) {
+        return false;
+    }
+    return std::memcmp(lhs.data, rhs.data, lhs.size) == 0;
+}
+
+template <short safety>
+inline bool operator==(const string_view& sv, const sp::string_impl<safety>& str) {
+    if (sv.size != str.size()) {
+        return false;
+    }
+    return std::memcmp(sv.data, str.c_str(), sv.size) == 0;
+}
+
+template <short safety>
+inline bool operator==(const sp::string_impl<safety>& str, const string_view& sv) {
+    return sv == str;
+}
+
+
+class compressed_string_view{
+public:
+    compressed_string_view(const char* cstr, size_type sz) : _data(cstr), _size(sz){}
+    compressed_string_view() : _data(nullptr), _size(0){}
+    private:
+    const char* _data;
+    size_type _size;
+    public:
+    compressed_string_view& operator++(){
+        if(_size>1) { _data++; _size--; }
+        return *this;
+    }
+    compressed_string_view& operator--(){
+        --_data; ++_size;
+        return *this;
+    }
+    compressed_string_view operator++(int) {
+        compressed_string_view temp = *this;
+        ++(*this);
+        return temp;
+    }
+    compressed_string_view operator--(int) {
+        compressed_string_view temp = *this;
+        --(*this);
+        return temp;
+    }
+    compressed_string_view& advance_window(){
+        ++_data;
+        return *this;
+    }
+    SP_FORCEINLINE size_type size() const { return _size; }
+    SP_FORCEINLINE const char* c_str() const { return _data; }
+    SP_FORCEINLINE const char* data() const { return _data; }
+};
+
+inline bool operator==(const compressed_string_view& lhs, const compressed_string_view& rhs) {
+    if (lhs.size() != rhs.size()) {
+        return false;
+    }
+    return std::memcmp(lhs.data(), rhs.data(), lhs.size()) == 0;
+}
+
+template <short safety>
+inline bool operator==(const compressed_string_view& sv, const sp::string_impl<safety>& str) {
+    if (sv.size() != str.size()) {
+        return false;
+    }
+    return std::memcmp(sv.data(), str.c_str(), sv.size()) == 0;
+}
+
+template <short safety>
+inline bool operator==(const sp::string_impl<safety>& str, const compressed_string_view& sv) {
+    return sv == str;
+}
+
 // // operator<<
 // template <short level>
 // std::ostream& operator<<(std::ostream& os, const string_impl<level>& str){
@@ -1259,7 +1341,7 @@ SP_FORCEINLINE bool operator==(const char* other,const string_impl<level, alloc,
 using string = string_impl<1>;
 using ustring = string_impl<0>;
 } // namespace sp
-SP_FORCEINLINE sp::string_impl<__SP_DEFAULT_SAFETY_LEVEL__,sp::allocator,true> operator""_sp(const char* str, size_t N){
+SP_FORCEINLINE sp::string_impl<__SP_DEFAULT_SAFETY_LEVEL__,sp::allocator,true> operator""_sp(const char* str, size_type N){
     return sp::string_impl<__SP_DEFAULT_SAFETY_LEVEL__,sp::allocator,true>(str, N);
 }
 #endif // ____SP_STRING____

@@ -300,14 +300,17 @@ static_assert([]() constexpr {
 // ===========================// ===========================// ===========================// ===========================
 // VARIABLES AND UTILITY FUNCTIONS
 // ---------------------------------------------------------------------------------------------------------------------
+
 typedef unsigned long long ull;
 typedef long long ll;
-using size_type = __SP_SIZE_TYPE__;
 
 namespace sp {
     // Forward declarations
     enum Device { CPU, GPU };
     class IO;
+
+    using size_type = __SP_SIZE_TYPE__;
+    using ptrdiff_t = decltype(static_cast<int*>(nullptr) - static_cast<int*>(nullptr));
 
     // Page size
     SP_FORCEINLINE ull get_system_page_size() {
@@ -332,9 +335,9 @@ namespace sp {
     #endif
 
     static constexpr size_type npos = (size_type)(-1);
-
-    using ptrdiff_t = decltype(static_cast<int*>(nullptr) - static_cast<int*>(nullptr));
 } // namespace sp
+
+typedef sp::size_type size_type;
 
 // -----------------------------------------------------------------------
 #endif // ____SPIRALIS_INIT____

@@ -80,7 +80,7 @@ SP_FORCEINLINE SP_CONST char toggleCase(char c) { return c ^ ' '; }
 
 
 template <typename T>
-SP_FORCEINLINE T reverseBits(T n) {
+SP_FORCEINLINE T reverseBits(T n){
     using U = spt::make_unsigned_t<T>;
     U val = (U)(n);
     if constexpr(sizeof(T) == 8){
@@ -113,38 +113,43 @@ SP_FORCEINLINE T reverseBits(T n) {
     return (T)(val);
 }
 template <typename T>
-SP_NODISCARD SP_FORCEINLINE SP_PURE SP_COLD T next_pow2(T min) {
-    SP_IF_NOT_EXPECT(min <= 1) return 1;
-    T val = min;
-    #if defined(__GNUC__) || defined(__clang__)
-        constexpr int total_bits = sizeof(T) * 8;
+SP_NODISCARD SP_FORCEINLINE SP_PURE T next_pow2(T min) {
+    if (min <= 1) return 1;
+    
+    constexpr T max_pow2 = (T)1 << ((sizeof(T) * 8) - 1);
+    if (min > max_pow2) return max_pow2; // or throw/assert
 
-        if constexpr (sizeof(T) <= sizeof(unsigned int)) {
-            return (T)1 << (total_bits - __builtin_clz((unsigned int)val));
-        } else if constexpr (sizeof(T) <= sizeof(unsigned long)) {
-            return (T)(1 << (total_bits - __builtin_clzl((unsigned long)val)));
-        } else {
-            return (T)1 << (total_bits - __builtin_clzll((ull)val));
-        }
+    T val = min - 1; // Correctly handle exact powers of 2
 
-    #elif defined(_MSC_VER)
-        unsigned long index;
-        if constexpr (sizeof(T) > 4) {
-            if (_BitScanReverse64(&index, (unsigned __int64)val)) return (T)1 << (index + 1);
-        } else {
-            if (_BitScanReverse(&index, (unsigned long)val)) return (T)1 << (index + 1);
-        }
-        return 1;
+#if defined(__GNUC__) || defined(__clang__)
+    constexpr int total_bits = sizeof(T) * 8;
 
-    #else
-        val |= val >> 1;
-        val |= val >> 2;
-        val |= val >> 4;
-        if constexpr(sizeof(T) > 1) val |= val >> 8;
-        if constexpr(sizeof(T) > 2) val |= val >> 16;
-        if constexpr(sizeof(T) > 4) val |= val >> 32;
-        return val + 1;
-    #endif
+    if constexpr (sizeof(T) <= sizeof(unsigned int)) {
+        return (T)1 << (total_bits - __builtin_clz((unsigned int)val));
+    } else if constexpr (sizeof(T) <= sizeof(unsigned long)) {
+        return (T)1 << (total_bits - __builtin_clzl((unsigned long)val)); // Fixed (T)1
+    } else {
+        return (T)1 << (total_bits - __builtin_clzll((unsigned long long)val));
+    }
+
+#elif defined(_MSC_VER)
+    unsigned long index;
+    if constexpr (sizeof(T) > 4) {
+        if (_BitScanReverse64(&index, (unsigned __int64)val)) return (T)1 << (index + 1);
+    } else {
+        if (_BitScanReverse(&index, (unsigned long)val)) return (T)1 << (index + 1);
+    }
+    return 1;
+
+#else
+    val |= val >> 1;
+    val |= val >> 2;
+    val |= val >> 4;
+    if constexpr(sizeof(T) > 1) val |= val >> 8;
+    if constexpr(sizeof(T) > 2) val |= val >> 16;
+    if constexpr(sizeof(T) > 4) val |= val >> 32;
+    return val + 1;
+#endif
 }
     template <typename T>
     SP_FORCEINLINE SP_PURE ull popcount(T val){
