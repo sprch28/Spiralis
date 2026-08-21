@@ -4,23 +4,6 @@
 #include "policies.hpp"
 #include <cstdint>
 #include <cstring>
-
-SP_FORCEINLINE uint64_t pack_chars(const char* ptr, size_type n){
-    uint64_t result = 0;
-    std::memcpy(&result, ptr, n);
-    return result;
-}
-
-SP_FORCEINLINE sp::string unpack_chars(ull packed, size_type n) {
-    sp::string result(n, '\0');
-    std::memcpy(result.data(), &packed, n);
-    return result;
-}
-// sp::tokenizer<uint16_t, 20'000, sp_pol::subword_tokenizer<3,5>> tkn;
-// tkn.build_mapping(train_str);
-// tokens = tkn.tokenize(test_str);
-// str_array = tkn.from_tokens(tokens);
-// bare_str = ""_sp.join(tkn.from_tokens(tokens));
 namespace sp{
 template <ull vocab_size = 25'000, class policy = sp_pol::greedy_subword_tokenizer<2,4,uint32_t>>
 class tokenizer{
