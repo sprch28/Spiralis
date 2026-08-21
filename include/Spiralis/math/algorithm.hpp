@@ -2,8 +2,8 @@
 #define ____SP_ALGORITHM____
 #pragma once
 #include "../setup/init.hpp"
-#include "../collections/array.hpp"
-#include "../collections/string.hpp"
+#include "../containers/array.hpp"
+#include "../containers/string.hpp"
 #include <string>
 
 namespace sp {

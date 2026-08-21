@@ -3,8 +3,8 @@
 #pragma once
 
 #include "../setup/init.hpp"
-#include "../collections/string.hpp"
-#include "../numeric/bit_manip.hpp"
+#include "../containers/string.hpp"
+#include "../math/bit_manip.hpp"
 
 namespace sp {
 

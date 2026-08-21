@@ -3,9 +3,9 @@
 #pragma once
 #include "../setup/init.hpp"
 #include "../core/type_traits.hpp"
-#include "../numeric/int128.hpp"
-#include "../core/pair.hpp"
-#include "../collections/string.hpp"
+#include "../math/int128.hpp"
+#include "../containers/pair.hpp"
+#include "../containers/string.hpp"
 
 #include <unistd.h>
 #include <cstdio>

@@ -3,11 +3,11 @@
 // hirearchial bitmask array
 #pragma once
 #include "../setup/init.hpp"
-#include "../core/IO.hpp"
+#include "../io/IO.hpp"
 #include "../core/allocators.hpp"
 #include "../core/type_traits.hpp"
-#include "../numeric/bit_manip.hpp"
-#include "../algorithms/algorithm.hpp"
+#include "../math/bit_manip.hpp"
+#include "../math/algorithm.hpp"
 #include <initializer_list>
 #include <cstring>
 #if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)

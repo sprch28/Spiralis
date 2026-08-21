@@ -1,7 +1,7 @@
 #ifndef ____SP_EXCEPTIONS____
 #define ____SP_EXCEPTIONS____
 #pragma once
-#include "../system/console.hpp"
+#include "../io/console.hpp"
 #include "../setup/init.hpp"
 #include <exception>
 #include <string>

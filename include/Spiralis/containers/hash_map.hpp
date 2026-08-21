@@ -8,10 +8,10 @@
 
 #include "../setup/init.hpp"
 #include "../core/type_traits.hpp"
-#include "../collections/string.hpp"
-#include "../collections/array.hpp" // uses backend of my array class in "unsafe mode": 5x faster than clang/LLVM vector class
-#include "../numeric/hashes.hpp" // the class with default hash function
-#include "../numeric/bit_manip.hpp" // includes useful functions such as wrappers for __builtin_ctzll (count trailing zeros on a long long)
+#include "../containers/string.hpp"
+#include "../containers/array.hpp" // uses backend of my array class in "unsafe mode": 5x faster than clang/LLVM vector class
+#include "../math/hashes.hpp" // the class with default hash function
+#include "../math/bit_manip.hpp" // includes useful functions such as wrappers for __builtin_ctzll (count trailing zeros on a long long)
 
 #ifndef _SP_CHECK_SAFETY_
     #define _SP_CHECK_SAFETY_(level) if constexpr(safety>=level)

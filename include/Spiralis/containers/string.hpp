@@ -3,11 +3,11 @@
 #pragma once
 #include "../setup/init.hpp"
 #include "../core/allocators.hpp"
-#include "../core/pair.hpp"
+#include "../containers/pair.hpp"
 #include "../core/exceptions.hpp"
-#include "../numeric/math.hpp"
-#include "../numeric/bit_manip.hpp"
-#include "../algorithms/iterator.hpp"
+#include "../math/math.hpp"
+#include "../math/bit_manip.hpp"
+#include "../core/iterator.hpp"
 #include <cstring>
 namespace sp{
 

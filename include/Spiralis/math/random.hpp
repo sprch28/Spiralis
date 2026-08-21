@@ -2,8 +2,8 @@
 #define ____SP_RANDOM____
 #pragma once
 #include "../setup/init.hpp"
-#include "../numeric/int128.hpp"
-#include "../numeric/bit_manip.hpp"
+#include "../math/int128.hpp"
+#include "../math/bit_manip.hpp"
 #include <stdlib.h>
 #if defined(__arm64__) || defined(__aarch64__)
     #include <sys/random.h>

@@ -5,10 +5,10 @@
 #include "../core/exceptions.hpp"
 #include "../core/type_traits.hpp"
 #include "../core/allocators.hpp"
-#include "../core/pair.hpp"
-#include "../numeric/bit_manip.hpp"
-#include "../numeric/math.hpp"
-#include "../algorithms/iterator.hpp"
+#include "../containers/pair.hpp"
+#include "../math/bit_manip.hpp"
+#include "../math/math.hpp"
+#include "../core/iterator.hpp"
 
 #include <iostream>
 #include <new>

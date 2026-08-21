@@ -3,8 +3,8 @@
 #pragma once
 
 #include "../setup/init.hpp"
-#include "../collections/array.hpp"
-#include "../core/pair.hpp"
+#include "../containers/array.hpp"
+#include "../containers/pair.hpp"
 
 #include <pthread.h>
 #include <unistd.h>
