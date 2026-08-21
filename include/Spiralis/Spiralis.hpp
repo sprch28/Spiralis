@@ -3,6 +3,7 @@
 #include "core/allocators.hpp"
 #include "core/exceptions.hpp"
 #include "core/iterator.hpp"
+#include "core/pointer.hpp"
 #include "core/type_traits.hpp"
 
 #include "io/console.hpp"
