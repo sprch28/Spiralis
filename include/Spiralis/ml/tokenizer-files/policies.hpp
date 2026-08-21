@@ -1,30 +1,14 @@
 #ifndef ____SP_POLICIES_HPP____
 #define ____SP_POLICIES_HPP____
 #pragma once
-#include "../../io/IO.hpp"
-#include "../../setup/init.hpp"
-#include "../../containers/array.hpp"
-#include "../../containers/hash_map.hpp"
-#include "../../containers/pair.hpp"
-#include "../../containers/string.hpp"
-namespace sp_pol{
-    template <typename T>
-    class TokenizerPolicy{
-    public:
-        using s_t = T;
-        SP_FORCEINLINE TokenizerPolicy() { }
-        SP_FORCEINLINE virtual void build_mapping(const sp::string& text, ull vocab_size) {}
-        SP_FORCEINLINE virtual void build_mapping_debug(const sp::string& text, ull vocab_size) { return build_mapping(text, vocab_size); }
-        SP_FORCEINLINE virtual sp::vector<T> tokenize(const sp::string& text) const { return sp::vector<T>(); }
-        SP_FORCEINLINE virtual sp::vector<sp::string> reconstructed(const sp::vector<T> tokens) const { return sp::vector<sp::string>(); }
-        SP_FORCEINLINE virtual void to_file(const sp::string& filename) const{}
-        SP_FORCEINLINE virtual void from_file(const sp::string& filename) {}
-        SP_FORCEINLINE virtual sp::vector<sp::vector<T>> tokenize_batch(const sp::vector<sp::string>& texts, sp::thread_pool& pool) const{ return sp::vector<sp::vector<T>>(); }
-    };
-}
+#include "base_policy.hpp"
 
-
+// =================== // =================== // =================== // =================== // =================== 
+// =================== // =================== // =================== // =================== // =================== 
 // GREEDY SUBWORD TOKENIZER
+// =================== // =================== // =================== // =================== // =================== 
+// =================== // =================== // =================== // =================== // =================== 
+
 namespace sp_pol{
 template <ull min_len, ull max_len, typename T = uint32_t>
 class greedy_subword_tokenizer : public TokenizerPolicy<T>{
@@ -51,13 +35,11 @@ private:
 
         ull num_threads = pool.size();
         
-        // Grid of maps: partition_maps[worker_id][target_partition]
         sp::vector<sp::vector<sp::hash_map<ull, ull>>> partition_maps(num_threads);
         for (auto& worker_partitions : partition_maps) {
             worker_partitions.resize(num_threads);
         }
 
-        //for(ull sp_i = min_len; sp_i <= max_len; ++sp_i){
         for (ull sp_i = max_len; sp_i >= min_len; --sp_i) {
             if constexpr(debug) sp::println("At char count: ", sp_i);
             ull size = text.size();
@@ -90,13 +72,13 @@ private:
                     const uint64_t mask = (sp_i == 8) ? ~0ULL : ((1ULL << (sp_i * 8)) - 1);
                     auto& my_partitions = partition_maps[t];
 
-                    if constexpr (debug) {
+                    if constexpr(debug){
                         ull idx = 0;
-                        if (t == num_threads - 1) {
+                        if(t == num_threads - 1){
                             uint64_t total = end_idx - start_idx;
                             uint64_t step = total / 100;
 
-                            for (ull i = start_idx; i < end_idx; ++i) {
+                            for(ull i = start_idx; i < end_idx; ++i){
                                 uint64_t packed = 0;
                                 std::memcpy(&packed, ptr + i, sp::min<size_type>(sp_i, 8));
                                 packed &= mask;
@@ -108,7 +90,7 @@ private:
                                 idx = (idx + 1) & 7;
                             }
                             sp::println();
-                        } else {
+                        }else{
                             for (ull i = start_idx; i < end_idx; ++i) {
                                 uint64_t packed = 0;
                                 std::memcpy(&packed, ptr + i, sp::min<size_type>(sp_i, 8));
@@ -118,7 +100,7 @@ private:
                                 my_partitions[target_partition][packed]++;
                             }
                         }
-                    } else {
+                    }else{
                         for (ull i = start_idx; i < end_idx; ++i) {
                             uint64_t packed = 0;
                             std::memcpy(&packed, ptr + i, sp::min<size_type>(sp_i, 8));
@@ -132,24 +114,22 @@ private:
             }
             pool.wait_all();
 
-            // PHASE 2: Parallel In-Partition Aggregation & Top-K Trimming
             ull potential = vocab_size / (max_len - min_len + 1);
             
-            // Use auto decltype to dynamically match the exact array element type returned by hash_map::to_array()
             using ArrayType = decltype(spt::declval<sp::hash_map<ull, ull>>().to_array());
             sp::vector<ArrayType> partition_top_k(num_threads);
 
-            for (ull p = 0; p < num_threads; ++p) {
+            for(ull p = 0; p < num_threads; ++p){
                 pool.enqueue([p, num_threads, potential, &partition_maps, &partition_top_k]() {
                     sp::hash_map<ull, ull> final_partition_map;
 
                     ull total_elements = 0;
-                    for (ull worker = 0; worker < num_threads; ++worker) {
+                    for(ull worker = 0; worker < num_threads; ++worker){
                         total_elements += partition_maps[worker][p].size();
                     }
                     final_partition_map.reserve(total_elements);
 
-                    for (ull worker = 0; worker < num_threads; ++worker) {
+                    for(ull worker = 0; worker < num_threads; ++worker){
                         auto& src_map = partition_maps[worker][p];
                         for (const auto& [key, count] : src_map) {
                             final_partition_map[key] += count;
@@ -160,7 +140,7 @@ private:
                     auto local_arr = final_partition_map.to_array();
                     final_partition_map.clear();
 
-                    if (local_arr.size() > potential) {
+                    if(local_arr.size() > potential){
                         std::nth_element(local_arr.begin(), local_arr.begin() + potential, local_arr.end(),
                             [](const auto& a, const auto& b) {
                                 return a.second > b.second;
@@ -173,12 +153,11 @@ private:
             }
             pool.wait_all();
 
-            // PHASE 3: Flatten candidate arrays using push_back instead of vector range insert
             using ElementType = sp::pair<ull,ull>;
             sp::vector<ElementType> global_candidates;
 
             ull total_candidates = 0;
-            for (const auto& top_k : partition_top_k) {
+            for (const auto& top_k : partition_top_k){
                 total_candidates += top_k.size();
             }
             global_candidates.reserve(total_candidates);
@@ -190,7 +169,7 @@ private:
                 top_k.clear();
             }
 
-            if (global_candidates.size() > potential) {
+            if(global_candidates.size() > potential){
                 std::nth_element(global_candidates.begin(), global_candidates.begin() + potential, global_candidates.end(),
                     [](const auto& a, const auto& b) {
                         return a.second > b.second;
@@ -198,7 +177,7 @@ private:
                 global_candidates.resize(potential);
             }
 
-            for (const auto& p : global_candidates) {
+            for(const auto& p : global_candidates){
                 sp::string str;
                 str.resize(sp_i);
                 for (ull b = 0; b < sp_i; ++b) {
@@ -210,9 +189,9 @@ private:
             }
         }
 
-        for (int i = 0; i < 256; ++i) {
+        for (int i = 0; i < 256; ++i){
             sp::string c(1, (char)i);
-            if (stoi_mapping.find(c) == stoi_mapping.end()) stoi_mapping.insert(c, idx++);
+            if(stoi_mapping.find(c) == stoi_mapping.end()) stoi_mapping.insert(c, idx++);
         }
 
         itos_mapping = sp::vector<sp::compressed_string_view>(stoi_mapping.size());
@@ -310,10 +289,7 @@ public:
         mapping_built = true;
     }
 
-    sp::vector<sp::vector<T>> tokenize_batch(
-        const sp::vector<sp::string>& texts, 
-        sp::thread_pool& pool
-    ) const override {
+    sp::vector<sp::vector<T>> tokenize_batch(const sp::vector<sp::string>& texts, sp::thread_pool& pool) const override{
         const size_type num_texts = texts.size();
         SP_IF_NOT_EXPECT(num_texts == 0) return {};
         sp::vector<sp::vector<T>> results(num_texts);
@@ -333,6 +309,11 @@ public:
         return results;
     }
 };
+
+// =================== // =================== // =================== // =================== // =================== 
+// =================== // =================== // =================== // =================== // =================== 
+// =================== // =================== // =================== // =================== // =================== 
+// =================== // =================== // =================== // =================== // =================== 
 
 
 }
