@@ -359,7 +359,7 @@ SP_NODISCARD SP_FORCEINLINE string_impl clone() const { return string_impl(*this
 
 _SP_FUNC_NIP_ bool operator==(const string_impl& other)const{
     SP_IF_NOT_EXPECT(this==&other) return true;
-    return memcmp(c_str(), other.c_str(), size()-1) == 0;
+    return memcmp(c_str(), other.c_str(), size()) == 0;
 }
 _SP_FUNC_NIP_ bool operator==(const char* other)const{
     return (size() == sp::strlen(other)) && (memcmp(c_str(), other, size()-1) == 0);
