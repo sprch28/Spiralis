@@ -6,7 +6,7 @@
 #include "../core/type_traits.hpp"
 #include "../core/pointer.hpp"
 #include "../io/IO.hpp"
-#include "../math/math.hpp"
+#include "../math/math.hpp" 
 #include "../containers/array.hpp"
 #include "../parallel/SIMD.hpp"
 class spml;
