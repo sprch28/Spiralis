@@ -82,7 +82,7 @@ public:
     }
 
     SP_FORCEINLINE ~thread(){
-        if constexpr(autoJoin){
+        SP_IF_CONSTEXPR(autoJoin){
             join();
         }
     }

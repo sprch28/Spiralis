@@ -17,7 +17,7 @@ private:
 
     constexpr void sanitize() noexcept {
         constexpr ull unused = (num_chunks * bits_per_chunk) - num_bits;
-        if constexpr (unused > 0 && num_chunks > 0) {
+        SP_IF_CONSTEXPR(unused > 0 && num_chunks > 0){
             chunks[num_chunks - 1] &= (~0ULL >> unused);
         }
     }
@@ -56,7 +56,7 @@ public:
     constexpr bitset() noexcept = default;
 
     constexpr bitset(ull val) noexcept {
-        if constexpr (num_chunks > 0) {
+        SP_IF_CONSTEXPR (num_chunks > 0) {
             chunks[0] = val;
             sanitize();
         }

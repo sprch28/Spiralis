@@ -3,6 +3,7 @@
 #pragma once
 #include "../setup/init.hpp"
 #include "../core/type_traits.hpp"
+#include "../containers/pair.hpp"
 namespace sp{
 
 template <typename T, bool track_size = true, template <typename> class Allocator = sp::allocator>
@@ -21,7 +22,7 @@ public:
     SP_FORCEINLINE constexpr ptr_list(T val){
         data = sp::allocator_traits<Allocator<T>>::allocate(alloc, 1);
         sp::allocator_traits<Allocator<T>>::construct(alloc, data, val);
-        if constexpr(track_size) size = 1;
+        SP_IF_CONSTEXPR(track_size) size = 1;
     }
     SP_FORCEINLINE constexpr ptr_list(std::initializer_list<T> vals){
         size = vals.size();
@@ -47,7 +48,11 @@ public:
     SP_FORCEINLINE constexpr const T* cget() const { return data; }
     SP_FORCEINLINE constexpr sp::pair<T*, size_type> get_pair() { return {data, size}; }
     SP_FORCEINLINE constexpr const sp::pair<T*, size_type> cget_pair() const { return {data, size}; }
-    SP_FORCEINLINE constexpr ~ptr_list(){ 
+    SP_FORCEINLINE 
+    #if ___SP_CPP_VER___ >= 20 
+    constexpr 
+    #endif
+    ~ptr_list(){ 
         destroy();
     }
 };
@@ -68,7 +73,11 @@ public:
         data = sp::allocator_traits<Allocator<T>>::allocate(alloc, 1);
         sp::allocator_traits<Allocator<T>>::construct(alloc, data, val);
     }
-    SP_FORCEINLINE constexpr ~ptr(){
+    SP_FORCEINLINE 
+    #if ___SP_CPP_VER___ >= 20 
+    constexpr 
+    #endif
+    ~ptr(){
         destroy();
     }
     SP_FORCEINLINE constexpr ptr(const ptr& other) = delete;

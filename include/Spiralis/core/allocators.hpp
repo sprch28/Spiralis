@@ -50,7 +50,7 @@ struct allocator_traits : public _spiral_alloc_traits{
 
     template <typename T, typename... Args>
     static SP_FORCEINLINE void construct(Alloc& a, T* p, Args&&... args) {
-        if constexpr (spt::is_detected_v<construct_expr, Alloc, T, Args...>) {
+        SP_IF_CONSTEXPR((spt::is_detected_v<construct_expr, Alloc, T, Args...>)) {
             a.construct(p, sp::forward<Args>(args)...);
         }else{
             ::new (static_cast<void*>(p)) T(sp::forward<Args>(args)...);
@@ -59,7 +59,7 @@ struct allocator_traits : public _spiral_alloc_traits{
 
     template <typename T>
     static SP_FORCEINLINE void destroy(Alloc& a, T* p) {
-        if constexpr (spt::is_detected_v<destroy_expr, Alloc, T>) {
+        SP_IF_CONSTEXPR((spt::is_detected_v<destroy_expr, Alloc, T>)) {
             a.destroy(p);
         }else{
             p->~T();
@@ -93,7 +93,7 @@ public:
     void deallocate(T* p, size_type n)noexcept{
         std::free(p);
     }
-    static constexpr bool is_aligned() { return 0; }
+    static constexpr size_type get_alignment() { return 0; }
 };
 
 template <typename T>
@@ -127,7 +127,7 @@ public:
     #endif
     }
 
-    static constexpr bool is_aligned() { return 1; }
+    static constexpr size_type get_alignment() { return sp_cache_line_size; }
 };
 
 template <typename T>
@@ -167,7 +167,7 @@ public:
     #endif
     }
 
-    static constexpr bool is_aligned() { return 1; }
+    static constexpr size_type get_alignment() { return 4096; }
 };
 template <typename T, typename U>
 bool operator==(const page_allocator<T>&, const page_allocator<U>&) noexcept { return true; }

@@ -32,10 +32,15 @@ namespace sp{
 class simd{
 private:
 
-#if ___SP_FOUND_SIMD___ == 1
-    template<typename T> struct TypeTraits;
-#endif
+//#if ___SP_FOUND_SIMD___ == 1
+    template<typename T> struct TypeTraits{
+        static constexpr bool exists = false;
+    };
+//#endif
 
+public:
+template <typename T>
+static constexpr bool supports() { return TypeTraits<T>::exists; }
 
 
 // =================================================== // ===================================================
@@ -95,22 +100,20 @@ private:
 
 // =================================================== // ===================================================
 
-#define _SP_DEF_LOADS_(intrinsic512, intrinsic256, intrinsic128, prim_type) \
-    static SP_FORCEINLINE Vec load512(const prim_type* p){ return intrinsic512(p); } \
-    static SP_FORCEINLINE Vec2 load256(const prim_type* p) { return intrinsic256(p); } \
-    static SP_FORCEINLINE Vec3 load128(const prim_type* p) { return intrinsic128(p); }
+#define _SP_DEF_LOADS_(intrinsic512, intrinsic256, intrinsic128, prim_type, simd_type) \
+    static SP_FORCEINLINE Vec load512(const prim_type* p){ return intrinsic512(reinterpret_cast<const simd_type*>(p)); } \
+    static SP_FORCEINLINE Vec2 load256(const prim_type* p) { return intrinsic256(reinterpret_cast<const simd_type*>(p)); } \
+    static SP_FORCEINLINE Vec3 load128(const prim_type* p) { return intrinsic128(reinterpret_cast<const simd_type*>(p)); }
 
-// =================================================== // ===================================================
+#define _SP_DEF_STORES_(intrinsic512, intrinsic256, intrinsic128, prim_type, simd_type) \
+    static SP_FORCEINLINE void store512(prim_type* p, Vec v) { intrinsic512(reinterpret_cast<simd_type*>(p), v); } \
+    static SP_FORCEINLINE void store256(prim_type* p, Vec2 v) { intrinsic256(reinterpret_cast<simd_type*>(p), v); } \
+    static SP_FORCEINLINE void store128(prim_type* p, Vec3 v) { intrinsic128(reinterpret_cast<simd_type*>(p), v); }
 
-#define _SP_DEF_STORES_(intrinsic512, intrinsic256, intrinsic128, prim_type) \
-    static SP_FORCEINLINE void store512(prim_type* p, Vec v) { intrinsic512(p, v); } \
-    static SP_FORCEINLINE void store256(prim_type* p, Vec2 v) { intrinsic256(p, v); } \
-    static SP_FORCEINLINE void store128(prim_type* p, Vec3 v) { intrinsic128(p, v); }
-
-#define _SP_DEF_CMP_STORES_(intrinsic512, intrinsic256, intrinsic128, dtype) \
-    static SP_FORCEINLINE void cmpstore512(dtype* p, CmpVec v) { intrinsic512(p, v); } \
-    static SP_FORCEINLINE void cmpstore256(dtype* p, CmpVec2 v) { intrinsic256(p, v); } \
-    static SP_FORCEINLINE void cmpstore128(dtype* p, CmpVec3 v) { intrinsic128(p, v); }
+#define _SP_DEF_CMP_STORES_(intrinsic512, intrinsic256, intrinsic128, dtype, simd_type) \
+    static SP_FORCEINLINE void cmpstore512(dtype* p, CmpVec v) { intrinsic512(reinterpret_cast<simd_type*>(p), v); } \
+    static SP_FORCEINLINE void cmpstore256(dtype* p, CmpVec2 v) { intrinsic256(reinterpret_cast<simd_type*>(p), v); } \
+    static SP_FORCEINLINE void cmpstore128(dtype* p, CmpVec3 v) { intrinsic128(reinterpret_cast<simd_type*>(p), v); }
 
 // =================================================== // ===================================================
 
@@ -119,7 +122,8 @@ private:
     using CmpVec = uint##bits##x##x4_t; using CmpVec2 = uint##bits##x##x2_t; using CmpVec3 = uint##bits##x##_t; \
     static constexpr long step512 = (512 / (sizeof(dtype)*8)); \
     static constexpr long step256 = (256 / (sizeof(dtype)*8)); \
-    static constexpr long step128 = (128 / (sizeof(dtype)*8));
+    static constexpr long step128 = (128 / (sizeof(dtype)*8)); \
+    static constexpr bool exists = true;
 
 // =================================================== // ===================================================
 
@@ -131,62 +135,62 @@ private:
 
 // =================================================== // ===================================================
 
-#define _SP_DEFINE_BASE_STRUCT_TRAITS_(_Vec, bits, x, dtype, intrinsic_shortcut, intrinsic_shortcut2, mulSupport, divSupport, fmaSupport) \
+#define _SP_DEFINE_BASE_STRUCT_TRAITS_(_Vec, bits, x, dtype, simd_type, intrinsic_shortcut, intrinsic_shortcut2, mulSupport, divSupport, fmaSupport) \
     _SP_DEFINE_SIMD_STRUCT_TRAITS_(_Vec, bits, x, dtype) \
     static constexpr bool supportsMul = mulSupport; \
     static constexpr bool supportsDiv = divSupport; \
     static constexpr bool supportsFma = fmaSupport; \
-    _SP_DEF_LOADS_(vld1q_##intrinsic_shortcut##_x4, vld1q_##intrinsic_shortcut##_x2, vld1q_##intrinsic_shortcut, dtype) \
-    _SP_DEF_STORES_(vst1q_##intrinsic_shortcut##_x4, vst1q_##intrinsic_shortcut##_x2, vst1q_##intrinsic_shortcut, dtype) \
-    _SP_DEF_CMP_STORES_(vst1q_##intrinsic_shortcut2##_x4, vst1q_##intrinsic_shortcut2##_x2, vst1q_##intrinsic_shortcut2, _SP_DEF_ON_SIZE_##bits##_) \
+    _SP_DEF_LOADS_(vld1q_##intrinsic_shortcut##_x4, vld1q_##intrinsic_shortcut##_x2, vld1q_##intrinsic_shortcut, dtype, simd_type) \
+    _SP_DEF_STORES_(vst1q_##intrinsic_shortcut##_x4, vst1q_##intrinsic_shortcut##_x2, vst1q_##intrinsic_shortcut, dtype, simd_type) \
+    _SP_DEF_CMP_STORES_(vst1q_##intrinsic_shortcut2##_x4, vst1q_##intrinsic_shortcut2##_x2, vst1q_##intrinsic_shortcut2, _SP_DEF_ON_SIZE_##bits##_, _SP_DEF_ON_SIZE_##bits##_) \
     _SP_DEFINE_BASE_OPS_(dtype, vaddq_##intrinsic_shortcut, vsubq_##intrinsic_shortcut, \
         vceqq_##intrinsic_shortcut, vcgtq_##intrinsic_shortcut, vcltq_##intrinsic_shortcut, \
         vcgeq_##intrinsic_shortcut, vcleq_##intrinsic_shortcut, vdupq_n_##intrinsic_shortcut \
     ) _SP_DEF_SELECT_OP_(vbslq_##intrinsic_shortcut, Vec, Vec2, Vec3)
 
-#define _SP_DEF_ON_SIZE_64_ ull 
-#define _SP_DEF_ON_SIZE_32_ unsigned int
-#define _SP_DEF_ON_SIZE_8_ unsigned char
-// =================================================== // ===================================================
-
-#define _SP_DEFINE_FLOAT_OPS_(_Vec, bits, x, dtype, intrinsic_shortcut, intrinsic_shortcut2) \
-    _SP_DEFINE_BASE_STRUCT_TRAITS_(_Vec, bits, x, dtype, intrinsic_shortcut, intrinsic_shortcut2, true, true, true) \
+#define _SP_DEFINE_FLOAT_OPS_(_Vec, bits, x, dtype, simd_type, intrinsic_shortcut, intrinsic_shortcut2) \
+    _SP_DEFINE_BASE_STRUCT_TRAITS_(_Vec, bits, x, dtype, simd_type, intrinsic_shortcut, intrinsic_shortcut2, true, true, true) \
     _SP_DEF_OP_(mul, vmulq_##intrinsic_shortcut, Vec, Vec2, Vec3, Vec, Vec2, Vec3, T, 2) \
     _SP_DEF_OP_(div, vdivq_##intrinsic_shortcut, Vec, Vec2, Vec3, Vec, Vec2, Vec3, T, 2) \
     _SP_DEF_OP_(fma, vfmaq_##intrinsic_shortcut, Vec, Vec2, Vec3, Vec, Vec2, Vec3, T, 3) 
 
-#define _SP_DEFINE_INT_OPS_(_Vec, bits, x, dtype, intrinsic_shortcut, intrinsic_shortcut2) \
-    _SP_DEFINE_BASE_STRUCT_TRAITS_(_Vec, bits, x, dtype, intrinsic_shortcut, intrinsic_shortcut2, true, false, false) \
+#define _SP_DEFINE_INT_OPS_(_Vec, bits, x, dtype, simd_type, intrinsic_shortcut, intrinsic_shortcut2) \
+    _SP_DEFINE_BASE_STRUCT_TRAITS_(_Vec, bits, x, dtype, simd_type, intrinsic_shortcut, intrinsic_shortcut2, true, false, false) \
     _SP_DEF_OP_(mul, vmulq_##intrinsic_shortcut, Vec, Vec2, Vec3, Vec, Vec2, Vec3, T, 2) 
      
-#define _SP_DEFINE_LONG_OPS_(_Vec, bits, x, dtype, intrinsic_shortcut, intrinsic_shortcut2) \
-    _SP_DEFINE_BASE_STRUCT_TRAITS_(_Vec, bits, x, dtype, intrinsic_shortcut, intrinsic_shortcut2, false, false, false) 
+#define _SP_DEFINE_LONG_OPS_(_Vec, bits, x, dtype, simd_type, intrinsic_shortcut, intrinsic_shortcut2) \
+    _SP_DEFINE_BASE_STRUCT_TRAITS_(_Vec, bits, x, dtype, simd_type, intrinsic_shortcut, intrinsic_shortcut2, false, false, false)
+
+#define _SP_DEF_ON_SIZE_64_ ull 
+#define _SP_DEF_ON_SIZE_32_ unsigned int
+#define _SP_DEF_ON_SIZE_8_ unsigned char
 
 // =================================================== // ===================================================
 
-#define _SP_MAKE_INT_STRUCT_(dtype, _Vec, bits, x, intrinsic_shortcut, intrinsic_shortcut2) \
-    template<> struct TypeTraits<dtype> { _SP_DEFINE_INT_OPS_(_Vec, bits, x, dtype, intrinsic_shortcut, intrinsic_shortcut2) };
+#define _SP_MAKE_INT_STRUCT_(dtype, simd_type, _Vec, bits, x, intrinsic_shortcut, intrinsic_shortcut2) \
+    template<> struct TypeTraits<dtype> { _SP_DEFINE_INT_OPS_(_Vec, bits, x, dtype, simd_type, intrinsic_shortcut, intrinsic_shortcut2) };
 
-#define _SP_MAKE_FLOAT_STRUCT_(dtype, _Vec, bits, x, intrinsic_shortcut, intrinsic_shortcut2) \
-    template<> struct TypeTraits<dtype> { _SP_DEFINE_FLOAT_OPS_(_Vec, bits, x, dtype, intrinsic_shortcut, intrinsic_shortcut2) };
+#define _SP_MAKE_FLOAT_STRUCT_(dtype, simd_type, _Vec, bits, x, intrinsic_shortcut, intrinsic_shortcut2) \
+    template<> struct TypeTraits<dtype> { _SP_DEFINE_FLOAT_OPS_(_Vec, bits, x, dtype, simd_type, intrinsic_shortcut, intrinsic_shortcut2) };
 
-#define _SP_MAKE_LONG_STRUCT_(dtype, _Vec, bits, x, intrinsic_shortcut, intrinsic_shortcut2) \
-    template<> struct TypeTraits<dtype> { _SP_DEFINE_LONG_OPS_(_Vec, bits, x, dtype, intrinsic_shortcut, intrinsic_shortcut2) };
+#define _SP_MAKE_LONG_STRUCT_(dtype, simd_type, _Vec, bits, x, intrinsic_shortcut, intrinsic_shortcut2) \
+    template<> struct TypeTraits<dtype> { _SP_DEFINE_LONG_OPS_(_Vec, bits, x, dtype, simd_type, intrinsic_shortcut, intrinsic_shortcut2) };
 
-#define _SP_MAKE_STRUCT_8_(prim_type, method, shortcut, letter) _SP_MAKE_##method##_STRUCT_(prim_type, shortcut##8x16, 8, x16, letter##8, u##8);
-#define _SP_MAKE_STRUCT_32_(prim_type, method, shortcut, letter) _SP_MAKE_##method##_STRUCT_(prim_type, shortcut##32x4, 32, x4, letter##32, u##32)
-#define _SP_MAKE_STRUCT_64_(prim_type, method, shortcut, letter) _SP_MAKE_##method##_STRUCT_(prim_type, shortcut##64x2, 64, x2, letter##64, u##64)
-
+#define _SP_MAKE_STRUCT_8_(prim_type, simd_type, method, shortcut, letter) _SP_MAKE_##method##_STRUCT_(prim_type, simd_type, shortcut##8x16, 8, x16, letter##8, u##8);
+#define _SP_MAKE_STRUCT_32_(prim_type, simd_type, method, shortcut, letter) _SP_MAKE_##method##_STRUCT_(prim_type, simd_type, shortcut##32x4, 32, x4, letter##32, u##32)
+#define _SP_MAKE_STRUCT_64_(prim_type, simd_type, method, shortcut, letter) _SP_MAKE_##method##_STRUCT_(prim_type, simd_type, shortcut##64x2, 64, x2, letter##64, u##64)
 
 // =================================================== // ===================================================
 
-_SP_MAKE_STRUCT_32_(float, FLOAT, float, f);
-_SP_MAKE_STRUCT_64_(double, FLOAT, float, f);
-_SP_MAKE_STRUCT_32_(int, INT, int, s);
-_SP_MAKE_STRUCT_32_(unsigned int, INT, uint, u);
-_SP_MAKE_STRUCT_64_(long long, LONG, int, s);
-_SP_MAKE_STRUCT_64_(ull, LONG, uint, u);
-_SP_MAKE_STRUCT_8_(unsigned char, INT, uint, u);
+_SP_MAKE_STRUCT_32_(float, float, FLOAT, float, f);
+_SP_MAKE_STRUCT_64_(double, double, FLOAT, float, f);
+_SP_MAKE_STRUCT_32_(int, int, INT, int, s);
+_SP_MAKE_STRUCT_32_(unsigned int, unsigned int, INT, uint, u);
+_SP_MAKE_STRUCT_64_(long long, long long, LONG, int, s);
+_SP_MAKE_STRUCT_64_(ull, ull, LONG, uint, u);
+_SP_MAKE_STRUCT_64_(unsigned long, ull, LONG, uint, u); // <-- Maps 'unsigned long*' to 'ull*' inside the intrinsics
+_SP_MAKE_STRUCT_64_(long, long long, LONG, int, s);
+_SP_MAKE_STRUCT_8_(unsigned char, unsigned char, INT, uint, u);
 
 // =================================================== // ===================================================
 
@@ -253,7 +257,7 @@ static SP_FORCEINLINE void name##suffix(_SP_STRIP params, long long n) { \
     long long i = 0; \
     _SP_IF_FOUND( \
         using Tr = TypeTraits<T>; \
-        if constexpr(constexpr_check) simd_loop; \
+        SP_IF_CONSTEXPR((constexpr_check)) simd_loop; \
     ) \
     for(; i < n; i++) { scalar_op; } \
 }
@@ -262,7 +266,7 @@ static SP_FORCEINLINE void name##suffix(_SP_STRIP params, long long n) { \
     _SP_BACKEND_TEMPLATE(name, _generic, (const T& num, T* SP_RESTRICT result), _SP_LOOP_NOLOAD_SIMD_1_(name), result[i] = num, constexpr_check)
 
 #define _SP_DEF_BACKEND_GENERIC_2_(name, op, constexpr_check) \
-    _SP_BACKEND_TEMPLATE(name, _generic, (T* SP_RESTRICT arr1, T* SP_RESTRICT arr2, T* SP_RESTRICT result), \
+    _SP_BACKEND_TEMPLATE(name, _generic, (const T* SP_RESTRICT arr1, const T* SP_RESTRICT arr2, T* SP_RESTRICT result), \
     _SP_LOOP_SIMD_2_(name), \
     result[i] = arr1[i] op arr2[i], constexpr_check)
 
@@ -274,7 +278,7 @@ static SP_FORCEINLINE void name##suffix(_SP_STRIP params, long long n) { \
 #define _SP_DEF_BACKEND_VEC_CMP_2_(name, op, t, f, constexpr_check) \
     template <typename T, typename U> \
     static SP_FORCEINLINE void name##_vec_generic(T* SP_RESTRICT arr1, T* SP_RESTRICT arr2, U* SP_RESTRICT result, long long n) { \
-        long long i = 0; _SP_IF_FOUND(using Tr = TypeTraits<T>; if constexpr(constexpr_check) { _SP_LOOP_CMP_SIMD_2_(name); }) \
+        long long i = 0; _SP_IF_FOUND(using Tr = TypeTraits<T>; SP_IF_CONSTEXPR((constexpr_check)) { _SP_LOOP_CMP_SIMD_2_(name); }) \
         for(; i < n; i++) result[i] = (arr1[i] op arr2[i]) ? t : f; \
     }
 
@@ -315,22 +319,22 @@ _SP_DEF_BACKEND_ALL_CMP_VARIANTS_(lte, <=);
 // =================================================== // ===================================================
 
 #define _SP_MAKE_GENERIC_SIMD_1_(op) \
-template <typename T> SP_FLATTEN SP_FORCEINLINE static void op(const T& num, T* SP_RESTRICT result, long long n) { op##_generic(num, result, n); }
+template <typename T> SP_FLATTEN SP_FORCEINLINE static void op(const T& num, T* SP_RESTRICT result, long long n) { op##_generic<T>(num, result, n); }
 
 #define _SP_MAKE_GENERIC_SIMD_2_(op) \
-template <typename T> SP_FLATTEN SP_FORCEINLINE static void op(T* SP_RESTRICT arr1, T* SP_RESTRICT arr2, T* SP_RESTRICT result, long long n) { op##_generic(arr1, arr2, result, n); }
+template <typename T> SP_FLATTEN SP_FORCEINLINE static void op(const T* SP_RESTRICT arr1, const T* SP_RESTRICT arr2, T* SP_RESTRICT result, long long n) { op##_generic<T>(arr1, arr2, result, n); }
 
 #define _SP_MAKE_GENERIC_SIMD_3_(op) \
-template <typename T> SP_FLATTEN SP_FORCEINLINE static void op(T* SP_RESTRICT arr1, T* SP_RESTRICT arr2, T* SP_RESTRICT arr3, T* SP_RESTRICT result, long long n) { op##_generic(arr1, arr2, arr3, result, n); }
+template <typename T> SP_FLATTEN SP_FORCEINLINE static void op(const T* SP_RESTRICT arr1, const T* SP_RESTRICT arr2, const T* SP_RESTRICT arr3, T* SP_RESTRICT result, long long n) { op##_generic<T>(arr1, arr2, arr3, result, n); }
 
 #define _SP_MAKE_CMP_SIMD_2_(op) \
-template <typename T, typename U> SP_FLATTEN SP_FORCEINLINE static void op##_vec(T* SP_RESTRICT arr1, T* SP_RESTRICT arr2, U* SP_RESTRICT result, long long n){ op##_vec_generic(arr1, arr2, result, n); }
+template <typename T, typename U> SP_FLATTEN SP_FORCEINLINE static void op##_vec(const T* SP_RESTRICT arr1, const T* SP_RESTRICT arr2, U* SP_RESTRICT result, long long n){ op##_vec_generic<T>(arr1, arr2, result, n); }
 
 #define _SP_MAKE_CMP_SEL_SIMD_2_(op) \
-template <typename T> SP_FLATTEN SP_FORCEINLINE static void op##_vec_select(T* SP_RESTRICT arr1, T* SP_RESTRICT arr2, T* SP_RESTRICT result, long long n) { op##_vec_select_generic(arr1, arr2, result, n); }
+template <typename T> SP_FLATTEN SP_FORCEINLINE static void op##_vec_select(const T* SP_RESTRICT arr1, const T* SP_RESTRICT arr2, T* SP_RESTRICT result, long long n) { op##_vec_select_generic<T>(arr1, arr2, result, n); }
 
 #define _SP_MAKE_CMP_SEL_EXPL_SIMD_2_(op) \
-template <typename T> SP_FLATTEN SP_FORCEINLINE static void op##_vec_explicit(T* SP_RESTRICT arr1, T* SP_RESTRICT arr2, T* SP_RESTRICT arr3, T* SP_RESTRICT arr4, T* SP_RESTRICT result, long long n) { op##_vec_explicit_generic(arr1, arr2, arr3, arr4, result, n); }
+template <typename T> SP_FLATTEN SP_FORCEINLINE static void op##_vec_explicit(const T* SP_RESTRICT arr1, const T* SP_RESTRICT arr2, const T* SP_RESTRICT arr3, const T* SP_RESTRICT arr4, T* SP_RESTRICT result, long long n) { op##_vec_explicit_generic<T>(arr1, arr2, arr3, arr4, result, n); }
 
 #define _SP_GENERIC_SIMD_POOL_BODY_(op, params) \
     SP_IF_NOT_EXPECT(n < (long)min_elements) { \

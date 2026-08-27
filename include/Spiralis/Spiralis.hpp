@@ -22,13 +22,19 @@
 #include "containers/hba.hpp"
 #include "containers/pair.hpp"
 #include "containers/string.hpp"
-#if defined( __MACH__) && defined (__APPLE__)
+#if defined( __MACH__) && defined (__APPLE__) // mach timer only until compatibility is expanded
     #include "containers/timer.hpp"
 #endif
 
-#if defined(_POSIX_THREADS) && (_POSIX_THREADS > 0) // SIMD uses thread, so both must require posix
+#if defined(_POSIX_THREADS) && (_POSIX_THREADS > 0) // SIMD uses thread, so both require posix until compatibility is expanded
     #include "parallel/SIMD.hpp"
     #include "parallel/thread.hpp"
 #endif
 
-#include "ml/tokenizer.hpp"
+// SPECIALIZED LIBRARIES: Optionally included
+
+#if defined(__SP_ML__)
+    #include "containers/tensor.hpp"
+    #include "ml/tokenizer.hpp"
+    #include "ml/nn.hpp"
+#endif

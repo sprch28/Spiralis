@@ -11,12 +11,12 @@ namespace sp{
         template <typename T> 
         SP_FORCEINLINE SP_PURE size_type operator()(T val, size_type bucket_size=0){ 
             size_type value = 0; 
-            if constexpr(spt::is_same<T,int>::value||spt::is_same<T, unsigned int>::value) value = static_cast<size_type>(val*2654435769U);
-            else if constexpr(spt::is_same<T,long long>::value||spt::is_same<T, ull>::value) value = static_cast<size_type>(val*11400714819323198485ULL);
-            else if constexpr(spt::is_same<T, double>::value||spt::is_same<T,float>::value) value = static_cast<size_type>(val*2654435769);
-            else if constexpr(SP_HAS_METHOD(T, c_str)&&SP_HAS_METHOD(T, size)) return ____private_string_hash(val.c_str(), val.size(), bucket_size);
-            else if constexpr(spt::is_same<T,const char*>::value||spt::is_same<T,char*>::value) return ____private_string_hash(val,sp::strlen(val));
-            else if constexpr(spt::is_same<T, char>::value) value = static_cast<size_type>(val);
+            SP_IF_CONSTEXPR((spt::is_same<T,int>::value||spt::is_same<T, unsigned int>::value)) value = static_cast<size_type>(val*2654435769U);
+            else SP_IF_CONSTEXPR((spt::is_same<T,long long>::value||spt::is_same<T, ull>::value)) value = static_cast<size_type>(val*11400714819323198485ULL);
+            else SP_IF_CONSTEXPR((spt::is_same<T, double>::value||spt::is_same<T,float>::value)) value = static_cast<size_type>(val*2654435769);
+            else SP_IF_CONSTEXPR(SP_HAS_METHOD(T, c_str)&&SP_HAS_METHOD(T, size)) return ____private_string_hash(val.c_str(), val.size(), bucket_size);
+            else SP_IF_CONSTEXPR((spt::is_same<T,const char*>::value||spt::is_same<T,char*>::value)) return ____private_string_hash(val,sp::strlen(val));
+            else SP_IF_CONSTEXPR((spt::is_same<T, char>::value)) value = static_cast<size_type>(val);
             return value;
         }
 

@@ -15,15 +15,13 @@
 // ---------------------------------------------------------------------------------------------------------------------
 
 // must be little-endian system
-static_assert([]() constexpr {
 #if defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__)
-    return __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__;
-#elif defined(_MSC_VER)
-    return true;
+    #if __BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__
+        #error "Big-endian is not supported.
+    #endif
 #else
     #error "Unable to determine endianness at compile-time"
 #endif
-}(), "Big-endian is not supported.");
 
 #ifdef __cplusplus
     #if __cplusplus <= 201103L
@@ -139,6 +137,14 @@ static_assert([]() constexpr {
         } while (__i < loop_until) { ull i = __i; operation; __i++; } ) \
         IF_NO_UNROLL( for (ull i = 0; i < loop_until; i++) { operation; } ) \
     } while (0)
+#endif
+
+#ifndef _SP_NP_APPLY_UNROLLED_
+    #if !defined(__GNUC__) && !defined(__clang__)
+        #define _SP_NP_APPLY_UNROLLED_(loop_until, operation) _SP_APPLY_UNROLLED_(loop_until,operation)
+    #else
+        #define _SP_NP_APPLY_UNROLLED_(loop_until, operation) do { for(ull i = 0; i < loop_until; ++i) { operation; } }while(0);
+    #endif
 #endif
 
 #ifndef _SP_EXPLICIT_UNROLLED_
@@ -296,6 +302,21 @@ static_assert([]() constexpr {
 #define _SP_FUNC_NFORN_ _SP_FUNC_NFO_ SP_RETURNS_NONNULL
 #define _SP_FUNC_NFOP_  _SP_FUNC_NFO_ SP_PURE
 
+#if ___SP_CPP_VER___ >= 17
+    #define SP_IF_CONSTEXPR(expr) if constexpr((expr))
+#else
+    #define SP_IF_CONSTEXPR(expr) if((expr))
+#endif
+
+#if defined(__clang__)
+    #define SP_PRAGMA_UNROLL _Pragma("clang loop unroll(enable)")
+#elif defined(__GNUC__)
+    #define SP_PRAGMA_UNROLL _Pragma("GCC unroll 4")
+#elif defined(_MSC_VER)
+    #define SP_PRAGMA_UNROLL 
+#else
+    #define SP_PRAGMA_UNROLL
+#endif
 
 // ===========================// ===========================// ===========================// ===========================
 // VARIABLES AND UTILITY FUNCTIONS

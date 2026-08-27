@@ -14,7 +14,7 @@
 #include "../math/bit_manip.hpp" // includes useful functions such as wrappers for __builtin_ctzll (count trailing zeros on a long long)
 
 #ifndef _SP_CHECK_SAFETY_
-    #define _SP_CHECK_SAFETY_(level) if constexpr(safety>=level)
+    #define _SP_CHECK_SAFETY_(level) SP_IF_CONSTEXPR(safety>=level)
 #endif
 
 #ifndef _SP_SAFETY_TEMPLATE_
@@ -25,7 +25,7 @@
         size_type cap = _buckets.size(); \
         size_type mask = cap - 1; \
         size_type probe; \
-        if constexpr(hash_with_cap) probe = (Hash()(key, cap) & mask); \
+        SP_IF_CONSTEXPR(hash_with_cap) probe = (Hash()(key, cap) & mask); \
         else probe = (Hash()(key) & mask); \
         prefetch_info(probe, mask); \
         while(get_state(probe)){ \
@@ -158,7 +158,7 @@ public:
             return *this;
         }else{
             do{
-                if constexpr(sizeof(Entry)>=16){
+                SP_IF_CONSTEXPR(sizeof(Entry)>=16){
                     size_type lookahead = (_index + lookahead_len()) & (_capacity-1);
                     _SP_PREFETCH_(&_ptr_buckets[lookahead], 0, 1);
                     _SP_PREFETCH_(&_ptr_states[lookahead >> 6], 0, 1);
@@ -260,7 +260,7 @@ private:
     }
 
     SP_FORCEINLINE void prefetch_info(size_type probe, size_type mask){
-        if constexpr(sizeof(Entry)>=16){
+        SP_IF_CONSTEXPR(sizeof(Entry)>=16){
             size_type lookahead = (probe + lookahead_len()) & mask;
             _SP_PREFETCH_(&_buckets[lookahead], 0, 1);
             _SP_PREFETCH_(&_states[lookahead >> 6], 0, 1);
@@ -268,7 +268,7 @@ private:
     }
     // const version
     SP_FORCEINLINE void prefetch_info(size_type probe, size_type mask) const {
-        if constexpr(sizeof(Entry)>=16){
+        SP_IF_CONSTEXPR(sizeof(Entry)>=16){
             size_type lookahead = (probe + lookahead_len()) & mask;
             _SP_PREFETCH_(&_buckets[lookahead], 0, 1);
             _SP_PREFETCH_(&_states[lookahead >> 6], 0, 1);
@@ -299,9 +299,9 @@ private:
                 probe = (probe + 1) & mask;
                 prefetch_info(probe, mask);
             }
-            if constexpr(key_trivially_copyable) temp[probe].first = sp::move(e.first);
+            SP_IF_CONSTEXPR(key_trivially_copyable) temp[probe].first = sp::move(e.first);
             else temp[probe].first = e.first;
-            if constexpr(value_trivially_copyable) temp[probe].second = sp::move(e.second);
+            SP_IF_CONSTEXPR(value_trivially_copyable) temp[probe].second = sp::move(e.second);
             else temp[probe].second = e.second;
             temp_states[probe >> 6] |= (1ULL << (probe & 63));
         }
@@ -500,9 +500,9 @@ public:
                     probe = (probe + 1) & mask;
                     prefetch_info(probe, mask);
                 }
-                if constexpr(key_trivially_copyable) temp[probe].first = sp::move(e.first);
+                SP_IF_CONSTEXPR(key_trivially_copyable) temp[probe].first = sp::move(e.first);
                 else temp[probe].first = e.first;
-                if constexpr(value_trivially_copyable) temp[probe].second = sp::move(e.second);
+                SP_IF_CONSTEXPR(value_trivially_copyable) temp[probe].second = sp::move(e.second);
                 else temp[probe].second = e.second;
 
                 temp_states[probe >> 6] |= (1ULL << (probe & 63));
@@ -837,7 +837,7 @@ public:
         const size_type cap = _buckets.size();
         const size_type mask = cap - 1;
         size_type hole;
-        if constexpr(hash_with_cap) hole = (Hash()(key, cap) & mask);
+        SP_IF_CONSTEXPR(hash_with_cap) hole = (Hash()(key, cap) & mask);
         else hole = (Hash()(key) & mask);
         while(get_state(hole)){
             if(_buckets[hole].first==key) goto __found;
@@ -864,7 +864,7 @@ public:
             }
             __done:
             SP_IF_NOT_EXPECT(best_candidate == hole) return 1; // No candidate found, all done
-            if constexpr(spt::is_trivially_copyable_v<Key>&&spt::is_trivially_copyable_v<Value>) _buckets[hole] = _buckets[best_candidate];
+            SP_IF_CONSTEXPR(spt::is_trivially_copyable_v<Key>&&spt::is_trivially_copyable_v<Value>) _buckets[hole] = _buckets[best_candidate];
             else _buckets[hole] = sp::move(_buckets[best_candidate]);
             clear_state(best_candidate);
             set_state(hole);
@@ -995,7 +995,7 @@ public:
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(cap==0) return false;
         const size_type mask = cap - 1;
         size_type probe;
-        if constexpr(hash_with_cap) probe = (Hash()(key, cap) & mask);
+        SP_IF_CONSTEXPR(hash_with_cap) probe = (Hash()(key, cap) & mask);
         else probe = (Hash()(key) & mask);
         prefetch_info(probe, mask);
         while(get_state(probe)){
@@ -1162,7 +1162,7 @@ public:
         const size_type cap = _buckets.size();
         const size_type mask = cap - 1;
         size_type probe;
-        if constexpr(hash_with_cap) probe = (Hash()(key, cap) & mask);
+        SP_IF_CONSTEXPR(hash_with_cap) probe = (Hash()(key, cap) & mask);
         else probe = (Hash()(key) & mask);
         prefetch_info(probe, mask);
         while(get_state(probe)){
@@ -1178,7 +1178,7 @@ public:
         const size_type cap = _buckets.size();
         const size_type mask = cap - 1;
         size_type probe;
-        if constexpr(hash_with_cap) probe = (Hash()(key, cap) & mask);
+        SP_IF_CONSTEXPR(hash_with_cap) probe = (Hash()(key, cap) & mask);
         else probe = (Hash()(key) & mask);
         prefetch_info(probe, mask);
         while(get_state(probe)){
@@ -1195,7 +1195,7 @@ public:
         const size_type cap = _buckets.size();
         const size_type mask = cap - 1;
         size_type probe;
-        if constexpr(hash_with_cap) probe = (Hash()(key, cap) & mask);
+        SP_IF_CONSTEXPR(hash_with_cap) probe = (Hash()(key, cap) & mask);
         else probe = (Hash()(key) & mask);
         prefetch_info(probe, mask);
         while(get_state(probe)){
@@ -1447,7 +1447,7 @@ public:
     }
 
     _SP_FUNC_FI_ ull hash_of(const Key& key) const{
-        if constexpr(hash_with_cap) return Hash()(key, _buckets.size());
+        SP_IF_CONSTEXPR(hash_with_cap) return Hash()(key, _buckets.size());
         else return Hash()(key);
     }
     _SP_FUNC_FI_ size_type ideal_bucket_for_hash(ull h) const{

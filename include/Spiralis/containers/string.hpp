@@ -13,7 +13,7 @@ namespace sp{
 
 #ifndef _SP_CHECK_SAFETY_LEVEL_
     #undef _SP_CHECK_SAFETY_LEVEL_
-    #define _SP_CHECK_SAFETY_LEVEL_(level) if constexpr(_safety_level>=level)
+    #define _SP_CHECK_SAFETY_LEVEL_(level) SP_IF_CONSTEXPR(_safety_level>=level)
 #endif
 
 SP_HOT SP_FORCEINLINE constexpr ull strlen(const char* s) noexcept {
@@ -110,8 +110,8 @@ private:
 
         SP_FORCEINLINE SP_HOT void push_back(char elem){
             _SP_CHECK_SAFETY_LEVEL_(1) SP_IF_NOT_EXPECT(_size==_capacity) reallocate(next_pow2(_capacity+1));
-            if constexpr(spt::is_base_of_v<_spiral_alloc_traits,Allocator<char>>){
-                if constexpr(Allocator<char>::can_avoid_construct_on_trivially_copyable){
+            SP_IF_CONSTEXPR((spt::is_base_of_v<_spiral_alloc_traits,Allocator<char>>)){
+                SP_IF_CONSTEXPR(Allocator<char>::can_avoid_construct_on_trivially_copyable){
                     _data[_size++] = elem;
                     return;
                 }
@@ -141,7 +141,7 @@ private:
 
     template <bool __is_small>
     void set_flag() {
-        if constexpr(__is_small)  S()._flag |= 0x80;  
+        SP_IF_CONSTEXPR(__is_small)  S()._flag |= 0x80;  
         else S()._flag &= 0x7F;  
     }
 
@@ -461,7 +461,7 @@ string_impl(size_type count, char ch) : string_impl() {
 template <size_t N>
 SP_FORCEINLINE string_impl(const char (&str)[N]) : string_impl(){
     constexpr size_type len = N - 1;
-    if constexpr (len <= 22) {
+    SP_IF_CONSTEXPR (len <= 22) {
         memcpy(S()._data, str, N);
         set_flag<true>();
         set_small_length(len);
@@ -893,7 +893,7 @@ SP_NODISCARD SP_HOT T split(char delimiter) const{
     T result;
     while(next<sz){
         if(ptr[next]==delimiter){
-            if constexpr(remove_empty){
+            SP_IF_CONSTEXPR(remove_empty){
                 size_type str_len = next-pos;
                 if(str_len!=0) result.template push_back<1>(string_impl(ptr+pos, str_len));
             }else{ result.template push_back<1>(string_impl(ptr+pos, next-pos)); }
@@ -901,7 +901,7 @@ SP_NODISCARD SP_HOT T split(char delimiter) const{
         }
         next++;
     }
-    if constexpr(remove_empty){
+    SP_IF_CONSTEXPR(remove_empty){
         size_type str_len = next-pos;
         if(str_len!=0) result.template push_back<1>(string_impl(ptr+pos, str_len));
     }else{ result.template push_back<1>(string_impl(ptr+pos, next-pos)); }
@@ -917,7 +917,7 @@ SP_NODISCARD SP_HOT T split(const char* delimiter) const{
     T result;
     while(next<sz){
         if(memcmp(ptr+next, delimiter, delim_sz)==0){
-            if constexpr(remove_empty){
+            SP_IF_CONSTEXPR(remove_empty){
                 size_type str_len = next-pos;
                 if(str_len!=0) result.template push_back<1>(string_impl(ptr+pos, str_len));
             }else { result.template push_back<1>(string_impl(ptr+pos, next-pos)); }
@@ -925,7 +925,7 @@ SP_NODISCARD SP_HOT T split(const char* delimiter) const{
         }
         next++;
     }
-    if constexpr(remove_empty){
+    SP_IF_CONSTEXPR(remove_empty){
         size_type str_len = next-pos;
         if(str_len!=0) result.template push_back<1>(string_impl(ptr+pos, str_len));
     }else { result.template push_back<1>(string_impl(ptr+pos, next-pos)); }

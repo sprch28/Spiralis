@@ -40,11 +40,11 @@
 // Temporary Macros
 
 #ifndef _SP_CHECK_SAFETY_
-    #define _SP_CHECK_SAFETY_(level) if constexpr(safety>=level)
+    #define _SP_CHECK_SAFETY_(level) SP_IF_CONSTEXPR(safety>=level)
 #endif
 
 #ifndef _SP_CHECK_SAFETY_LEVEL_
-    #define _SP_CHECK_SAFETY_LEVEL_(level) if constexpr(_safety_level>=level)
+    #define _SP_CHECK_SAFETY_LEVEL_(level) SP_IF_CONSTEXPR(_safety_level>=level)
 #endif
 
 #ifndef _SP_SAFETY_TEMPLATE_
@@ -84,13 +84,13 @@ private:
     SP_FORCEINLINE const char* __getSpiralMessage() const;
 
     SP_FORCEINLINE void destroy_elements(){ 
-        if constexpr(!spt::is_trivially_destructible_v<T>) _SP_APPLY_UNROLLED_(_size, sp::allocator_traits<Allocator<T>>::destroy(_alloc, _data+i)); 
+        SP_IF_CONSTEXPR(!spt::is_trivially_destructible_v<T>) _SP_APPLY_UNROLLED_(_size, sp::allocator_traits<Allocator<T>>::destroy(_alloc, _data+i)); 
     }
 
     template <bool is_new = false>
     _SP_FUNC_NI_ SP_COLD ull grow_capacity(ull min) const{
         ull new_cap;
-        if constexpr(is_new) new_cap = 8;
+        SP_IF_CONSTEXPR(is_new) new_cap = 8;
         else new_cap = _capacity + (_capacity >> 1);
         SP_IF_NOT_EXPECT(new_cap<min) new_cap = min;
     #if defined(__GNUC__) || defined(__clang__)
@@ -113,17 +113,17 @@ private:
         ull true_cap = allocator_ext<Allocator<T>>::true_capacity(new_cap);
         T* new_block = true_cap ? sp::allocator_traits<Allocator<T>>::allocate(_alloc, true_cap) : nullptr;
         if(_size && new_block){
-            if constexpr(_trivially_copyable){
+            SP_IF_CONSTEXPR(_trivially_copyable){
                 memmove(new_block, _data, _size * sizeof(T));
             }
-            else if constexpr(spt::is_nothrow_move_constructible_v<T>){
+            else SP_IF_CONSTEXPR(spt::is_nothrow_move_constructible_v<T>){
                 std::uninitialized_move(_data, _data + _size, new_block);
             }
             else{
                 std::uninitialized_copy(_data, _data + _size, new_block);
             }
         }
-        if constexpr(!spt::is_trivially_destructible_v<T>){
+        SP_IF_CONSTEXPR(!spt::is_trivially_destructible_v<T>){
             destroy_elements();
         }
         sp::allocator_traits<Allocator<T>>::deallocate(_alloc, _data, _capacity);
@@ -132,7 +132,7 @@ private:
     }
 
     SP_FORCEINLINE void move_data(size_type from, size_type to){
-        if constexpr(_trivially_copyable){
+        SP_IF_CONSTEXPR(_trivially_copyable){
             _data[to] = _data[from];
         }else{
             _data[to] = sp::move(_data[from]);
@@ -204,7 +204,7 @@ public:
     array(const T* data, ull size) : _data(nullptr), _size(0), _capacity(allocator_ext<Allocator<T>>::true_capacity(size)){
         _SP_CHECK_SAFETY_LEVEL_(1) SP_IF_NOT_EXPECT(_capacity == 0) return;
         _data = sp::allocator_traits<Allocator<T>>::allocate(_alloc, _capacity);
-        if constexpr (spt::is_nothrow_copy_constructible<T>::value) {
+        SP_IF_CONSTEXPR (spt::is_nothrow_copy_constructible<T>::value) {
             _SP_APPLY_UNROLLED_(size, sp::allocator_traits<Allocator<T>>::construct(_alloc,_data+i,data[i]); _size++);
         } else {
             try {
@@ -225,7 +225,7 @@ public:
     array(const array& other) : _alloc(other._alloc), _data(nullptr), _size(other._size), _capacity(other._capacity){
         _SP_CHECK_SAFETY_LEVEL_(1) SP_IF_NOT_EXPECT(_capacity == 0) return;
         _data = sp::allocator_traits<Allocator<T>>::allocate(_alloc, _capacity);
-        if constexpr (_trivially_copyable) {
+        SP_IF_CONSTEXPR (_trivially_copyable) {
             std::memcpy(_data, other._data, _size * sizeof(T));
         } else {
             try {
@@ -353,7 +353,7 @@ public:
      */
     _SP_SAFETY_TEMPLATE_
     SP_FORCEINLINE SP_PURE T* aligned_data() noexcept {
-        if constexpr(_is_aligned) return static_cast<T*>(_SP_ASSUME_ALIGNED_(_data, sp_cache_line_size));
+        SP_IF_CONSTEXPR(_is_aligned) return static_cast<T*>(_SP_ASSUME_ALIGNED_(_data, sp_cache_line_size));
         else return _data;
     }
 
@@ -417,14 +417,14 @@ private:
     }
 public:
     _SP_FUNC_NI_ T& access_and_prefetch(ull index) {
-        if constexpr(_is_aligned){
+        SP_IF_CONSTEXPR(_is_aligned){
             _SP_PREFETCH_(&_data[index+get_lookahead()], 0, 1);
         }
         return _data[index];
     }
 
     _SP_FUNC_NI_ const T& access_and_prefetch(ull index) const {
-        if constexpr(_is_aligned){
+        SP_IF_CONSTEXPR(_is_aligned){
             _SP_PREFETCH_(&_data[index+get_lookahead()], 0, 1);
         }
         return _data[index];
@@ -521,7 +521,7 @@ public:
      */
     SP_NODISCARD bool equals(const array<T, _safety_level>& other) const {
         SP_IF_NOT_EXPECT(_size != other._size) return false;
-        if constexpr (_trivially_copyable && sizeof(T) == sizeof(int)){
+        SP_IF_CONSTEXPR (_trivially_copyable && sizeof(T) == sizeof(int)){
             return std::memcmp(_data, other._data, _size * sizeof(T)) == 0;
         }
     _SP_APPLY_UNROLLED_(_size, SP_IF_NOT_EXPECT(!(_data[i]==other._data[i])) return false);
@@ -536,7 +536,7 @@ public:
      * @brief Get a pointer to the underlying data.
      * @return pointer to the underlying data
      */
-    _SP_FUNC_NIFP_ T* data() noexcept { if constexpr(_is_aligned) return aligned_data(); else return _data; }
+    _SP_FUNC_NIFP_ T* data() noexcept { SP_IF_CONSTEXPR(_is_aligned) return aligned_data(); else return _data; }
     /**
      * @brief Get a const pointer to the underlying data.
      * @return const pointer to the underlying data
@@ -686,7 +686,7 @@ public:
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(_size >= _capacity) reallocate(grow_capacity(_size + 1));
         T* pos = _data + index;
         if(index == _size) sp::allocator_traits<Allocator<T>>::construct(_alloc, pos, sp::forward<Args>(args)...);
-        else if constexpr (_trivially_copyable) {
+        else SP_IF_CONSTEXPR (_trivially_copyable) {
             memmove(pos + 1, pos, (_size - index) * sizeof(T));
             sp::allocator_traits<Allocator<T>>::construct(_alloc, pos, sp::forward<Args>(args)...);
         }else{
@@ -723,7 +723,7 @@ public:
     template <short safety = _safety_level, typename... Args>
     SP_FORCEINLINE SP_HOT void emplace_back(Args&&... args) {
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(_size >= _capacity) reallocate(grow_capacity(_size + 1));
-        if constexpr (sizeof(T) >= 32) { 
+        SP_IF_CONSTEXPR (sizeof(T) >= 32) { 
             _SP_PREFETCH_(&_data[_size + 1], 1, 3);
         }
         sp::allocator_traits<Allocator<T>>::construct(_alloc, _data + _size, sp::forward<Args>(args)...);
@@ -778,9 +778,9 @@ public:
     void resize(ull count) {
         if(count > _size){
             if (count > _capacity) reallocate(grow_capacity(count));
-            if constexpr (!spt::is_trivially_default_constructible<T>::value) _SP_EXPLICIT_UNROLLED_(i, _size, count, sp::allocator_traits<Allocator<T>>::construct(_alloc,_data+i));
+            SP_IF_CONSTEXPR (!spt::is_trivially_default_constructible<T>::value) _SP_EXPLICIT_UNROLLED_(i, _size, count, sp::allocator_traits<Allocator<T>>::construct(_alloc,_data+i));
         }
-        else if(count < _size) if constexpr (!spt::is_trivially_destructible_v<T>) _SP_EXPLICIT_UNROLLED_(i, count, _size, sp::allocator_traits<Allocator<T>>::destroy(_alloc,_data+i));
+        else if(count < _size) SP_IF_CONSTEXPR (!spt::is_trivially_destructible_v<T>) _SP_EXPLICIT_UNROLLED_(i, count, _size, sp::allocator_traits<Allocator<T>>::destroy(_alloc,_data+i));
         _size = count;
     }
 
@@ -800,7 +800,7 @@ public:
     void erase(ull index){
     _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(index >= _size) return;
         sp::allocator_traits<Allocator<T>>::destroy(_alloc,_data+index);
-        if constexpr(_trivially_copyable){
+        SP_IF_CONSTEXPR(_trivially_copyable){
             memmove(_data + index, _data + index + 1, (_size - index - 1) * sizeof(T));
         }else{
             _SP_EXPLICIT_UNROLLED_(i, index, _size - 1, _data[i] = sp::move(_data[i + 1]));
@@ -1256,7 +1256,7 @@ public:
     _SP_SAFETY_TEMPLATE_
     SP_FORCEINLINE array& fill(type_param value) {
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(_size == 0) throw exceptions::ArrayException("Cannot fill an empty array.");
-        if constexpr(_trivially_copyable){
+        SP_IF_CONSTEXPR(_trivially_copyable){
             std::memset(_data, value, _size * sizeof(T));
         }else _SP_APPLY_UNROLLED_(_size, _data[i] = value);
         return *this;
@@ -1305,7 +1305,7 @@ public:
     _SP_SAFETY_TEMPLATE_
     SP_NODISCARD SP_PURE SP_FORCEINLINE bool equals(const array<T, _safety_level>& other) const {
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(_size != other._size) return false;
-        if constexpr (_trivially_copyable && sizeof(T) == sizeof(int)){
+        SP_IF_CONSTEXPR (_trivially_copyable && sizeof(T) == sizeof(int)){
             return std::memcmp(_data, other._data, _size * sizeof(T)) == 0;
         }
         _SP_APPLY_UNROLLED_(_size, SP_IF_NOT_EXPECT(!(_data[i]==other._data[i])) return false);

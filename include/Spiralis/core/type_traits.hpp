@@ -1197,8 +1197,11 @@ inline constexpr bool is_detected_v = is_detected_impl<void, Op, Args...>::value
 // Put this in your type_traits.hpp once:
 #define SP_DEFINE_METHOD_CHECKER(Method) \
     namespace detail { \
-        template <typename T, typename = void> struct has_##Method : false_type {}; \
-        template <typename T> struct has_##Method<T, void_t<decltype(&T::Method)>> : true_type {}; \
+        template <typename T, typename = void> \
+        struct has_##Method : spt::false_type {}; \
+        \
+        template <typename T> \
+        struct has_##Method<T, spt::void_t<decltype(spt::declval<T&>().Method())>> : spt::true_type {}; \
     }
 
 #define SP_HAS_METHOD(Class, Method) spt::detail::has_##Method<Class>::value
@@ -1207,15 +1210,15 @@ SP_DEFINE_METHOD_CHECKER(with_cap);
 SP_DEFINE_METHOD_CHECKER(c_str);
 SP_DEFINE_METHOD_CHECKER(data);
 SP_DEFINE_METHOD_CHECKER(size);
-SP_DEFINE_METHOD_CHECKER(is_aligned);
+SP_DEFINE_METHOD_CHECKER(get_alignment);
 SP_DEFINE_METHOD_CHECKER(to_string)
 
 template <typename Alloc>
-constexpr bool get_allocator_alignment() {
-    if constexpr (SP_HAS_METHOD(Alloc, is_aligned)) {
-        return Alloc::is_aligned();
-    } else {
-        return false;
+constexpr size_type get_allocator_alignment() {
+    SP_IF_CONSTEXPR((SP_HAS_METHOD(Alloc, get_alignment))) {
+        return Alloc::get_alignment();
+    }else{
+        return 0;
     }
 }
 

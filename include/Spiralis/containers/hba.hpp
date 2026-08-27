@@ -95,7 +95,7 @@ SP_NODISCARD SP_FORCEINLINE ull grow_capacity(ull size){ return sp::max((size_ty
  
 template <ull CurrentLayer>
 SP_FORCEINLINE SP_HOT void _descend_layers(size_type& remaining, size_type& hole_offset, size_type& block_offset) const noexcept {
-    if constexpr (CurrentLayer >= 2){
+    SP_IF_CONSTEXPR(CurrentLayer >= 2){
         size_type probe_idx = _layer_offset(CurrentLayer, _capacity) + block_offset;
         static constexpr ull multiplied = 6 * CurrentLayer;
         while(_meta[probe_idx] < remaining){
@@ -168,7 +168,7 @@ SP_FORCEINLINE void build_meta(){
         remaining -= 64;
     }if(remaining) _meta[idx] = ~0ULL << (64 - remaining);
 
-    if constexpr(_num_layers>1){
+    SP_IF_CONSTEXPR(_num_layers>1){
         ull child_start = _layer_offset(1, _capacity);
         ull child_count = _layer_size(1, _capacity);
 
@@ -246,7 +246,7 @@ SP_FORCEINLINE hba(const hba& other) : _size(other._size), _capacity(other._capa
     _data = sp::allocator_traits<Alloc<T>>::allocate(_alloc,_capacity);
     _meta = sp::allocator_traits<Alloc<ull>>::allocate(_meta_alloc,sz);
     
-    if constexpr(spt::is_trivially_copyable_v<T>){
+    SP_IF_CONSTEXPR(spt::is_trivially_copyable_v<T>){
         if(_is_contiguous) memcpy(_data, other._data, _size*sizeof(T));
         else{
             _SP_APPLY_UNROLLED_(_capacity, {if(other._is_slot_active(i)) _data[i] = other._data[i];});
@@ -303,7 +303,7 @@ SP_FORCEINLINE hba& compress(){
     size_type write_ptr = 0;
     while(read_ptr<_capacity){
         if(_is_slot_active(read_ptr)){
-            if constexpr(spt::is_trivially_copyable_v<T>) _data[write_ptr++] = _data[read_ptr];
+            SP_IF_CONSTEXPR(spt::is_trivially_copyable_v<T>) _data[write_ptr++] = _data[read_ptr];
             else _data[write_ptr++] = sp::move(_data[read_ptr]);
         }
         ++read_ptr;

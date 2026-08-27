@@ -41,7 +41,7 @@ private:
         }
 
         for (ull sp_i = max_len; sp_i >= min_len; --sp_i) {
-            if constexpr(debug) sp::println("At char count: ", sp_i);
+            SP_IF_CONSTEXPR(debug) sp::println("At char count: ", sp_i);
             ull size = text.size();
             const char* ptr = text.c_str();
 
@@ -72,7 +72,7 @@ private:
                     const uint64_t mask = (sp_i == 8) ? ~0ULL : ((1ULL << (sp_i * 8)) - 1);
                     auto& my_partitions = partition_maps[t];
 
-                    if constexpr(debug){
+                    SP_IF_CONSTEXPR(debug){
                         ull idx = 0;
                         if(t == num_threads - 1){
                             uint64_t total = end_idx - start_idx;

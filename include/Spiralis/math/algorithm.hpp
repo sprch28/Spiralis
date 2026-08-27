@@ -17,7 +17,7 @@ sp::string to_string(T&& value) {
 template <typename T, bool one_indexed = true>
 SP_FORCEINLINE sp::vector<T> prefix_vector(const sp::vector<T>& arr) {
     SP_IF_NOT_EXPECT(arr.is_empty()) return {};
-    if constexpr (one_indexed) {
+    SP_IF_CONSTEXPR (one_indexed) {
         sp::vector<T> result(arr.size() + 1, T());
         for (ull i = 1; i < result.size(); i++) result[i] = result[i - 1] + arr[i - 1];
         return result;
@@ -36,7 +36,7 @@ SP_FORCEINLINE sp::vector<sp::vector<T>> prefix_vector(const sp::vector<sp::vect
     ull rows = arr.size();
     ull cols = arr[0].size();
 
-    if constexpr (one_indexed) {
+    SP_IF_CONSTEXPR (one_indexed) {
         sp::vector<sp::vector<T>> result(rows + 1, sp::vector<T>(cols + 1, T()));
         for (ull i = 1; i <= rows; i++) {
             for (ull j = 1; j <= cols; j++) {

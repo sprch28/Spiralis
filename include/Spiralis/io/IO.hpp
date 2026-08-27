@@ -276,6 +276,9 @@ bool _boolalpha=false;
         }
     }
 
+    SP_FLATTEN SP_FORCEINLINE void writeUL(unsigned long n){ writeULL(n); }
+    SP_FLATTEN SP_FORCEINLINE void writeL(long n) { writeLL(n); }
+
     void writeDouble(double d){
         char local_buf[32];
         int len = std::snprintf(local_buf, 32, "%lf", d); // placeholder until i implement a better function
@@ -350,6 +353,8 @@ public:
     SP_FORCEINLINE IO& print(long long msg) { __sp_backend_o.writeLL(msg); return *this; }
     SP_FORCEINLINE IO& print(double msg) { __sp_backend_o.writeDouble(msg); return *this; }
     SP_FORCEINLINE IO& print(float msg) { __sp_backend_o.writeDouble(static_cast<double>(msg)); return *this; }
+    SP_FORCEINLINE IO& print(unsigned long msg) { __sp_backend_o.writeUL(msg); return *this; }
+    SP_FORCEINLINE IO& print(long msg) { __sp_backend_o.writeL(msg); return *this; }
     SP_FORCEINLINE IO& print(bool msg) {
         if (__sp_backend_o._boolalpha) __sp_backend_o.writeString(msg ? "true" : "false");
         else __sp_backend_o.writeChar(msg ? '1' : '0');
@@ -421,7 +426,7 @@ public:
         bool seen_input = false;
         while(__sp_backend_i.readChar(&c)!=-1){
             seen_input = true;
-            if constexpr(include_nl){
+            SP_IF_CONSTEXPR(include_nl){
                 str.push_back(c);
                 SP_IF_NOT_EXPECT(c==(char)13||c==(char)10) break;
             }else{
@@ -440,12 +445,12 @@ public:
     }
     template <typename T>
     SP_FORCEINLINE IO& write(const T& value) {
-        if constexpr(spt::is_trivially_copyable_v<T>){
+        SP_IF_CONSTEXPR(spt::is_trivially_copyable_v<T>){
             __sp_backend_o.writeBinary(sp::addressof(value), sizeof(T));
-        }else if constexpr(spt::has_getSpiralBinary_v<T>){
+        }else SP_IF_CONSTEXPR(spt::has_getSpiralBinary_v<T>){
             auto [data, size] = value.__getSpiralBinary();
             __sp_backend_o.writeBinary(data, size);
-        }else if constexpr(spt::has_contiguous_storage_v<T>){
+        }else SP_IF_CONSTEXPR(spt::has_contiguous_storage_v<T>){
             auto dta = value.data();
             ull size = sizeof(spt::remove_reference_t<decltype(*dta)>) * value.size();
             __sp_backend_o.writeBinary(dta, size);
@@ -466,15 +471,15 @@ public:
     }
     template <typename T>
     SP_FORCEINLINE bool read(T& value) {
-        if constexpr(spt::is_trivially_copyable_v<T>){
+        SP_IF_CONSTEXPR(spt::is_trivially_copyable_v<T>){
             ull bytes_read = __sp_backend_i.readBinary(sp::addressof(value), sizeof(T));
             return bytes_read == sizeof(T);
-        }else if constexpr(spt::has_getSpiralBinary_v<T>){
+        }else SP_IF_CONSTEXPR(spt::has_getSpiralBinary_v<T>){
             auto [data, size] = value.__getSpiralBinary();
             ull bytes_read = __sp_backend_i.readBinary((void*)data, size);
             return bytes_read == size; 
-        }else if constexpr(SP_HAS_METHOD(T, data)) {
-            if constexpr(SP_HAS_METHOD(T, size)) {
+        }else SP_IF_CONSTEXPR((SP_HAS_METHOD(T, data))) {
+            SP_IF_CONSTEXPR((SP_HAS_METHOD(T, size))) {
                 auto dta = value.data();
                 ull size = sizeof(spt::remove_reference_t<decltype(*dta)>) * value.size();
                 ull bytes_read = __sp_backend_i.readBinary((void*)dta, size);
