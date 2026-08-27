@@ -36,5 +36,5 @@
 #if defined(__SP_ML__)
     #include "containers/tensor.hpp"
     #include "ml/tokenizer.hpp"
-    #include "ml/nn.hpp"
+    //#include "ml/nn.hpp"
 #endif
