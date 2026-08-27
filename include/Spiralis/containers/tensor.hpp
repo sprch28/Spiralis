@@ -30,9 +30,8 @@ private:
     static constexpr bool _trivially_copyable = spt::is_trivially_copyable_v<T>;
     SP_FORCEINLINE constexpr void destroy_data(){
         SP_IF_CONSTEXPR(!_trivially_copyable){
-            for(size_type i = 0; i < _size; ++i){
+            for(size_type i = 0; i < _size; ++i)
                 sp::allocator_traits<Allocator<T>>::destroy(_data_alloc, _data+i);
-            }
         }
         sp::allocator_traits<Allocator<T>>::deallocate(_data_alloc,_data,_size);
     }
@@ -569,38 +568,29 @@ public:
     SP_FORCEINLINE T argmin() { SP_IF_NOT_EXPECT(_size==0) return T(); T tracker = _data[0]; T result = 0; _SP_EXPLICIT_UNROLLED_(i, 1, _size, if(_data[i]<tracker) { tracker = _data[i]; result = i; }); return result; }
     SP_FORCEINLINE T argmax() { SP_IF_NOT_EXPECT(_size==0) return T(); T tracker = _data[0]; T result = 0; _SP_EXPLICIT_UNROLLED_(i, 1, _size, if(_data[i]>tracker) { tracker = _data[i]; result = i; }); return result; }
 
-    template <typename Other>
-    SP_FORCEINLINE tensor matmul(const Other& other) const {
-        // 1. Basic Dimension Validation
-        // Assuming your class has a way to access shape at a specific dimension
-        // For now, we assume 2D tensors and use index 0 as rows, 1 as cols
-        size_t M = _shapes[0]; 
-        size_t K_this = _shapes[1];
-        size_t K_other = other._shapes[0];
-        size_t N = other._shapes[1];
+    // When multiplying matrix A (M × K) by matrix B (K × N), result will be of (M × N)
+    // offset(i, j) = (i * _strides[0]) + (j * _strides[1])
+    // Original commit was an LLM-generated naive implementation as a placeholder
+    // Future commits of matmul will be human-written code, such as the one seen below.
+    // Use of template <typename Other> on this function is disabled for now
+    SP_FORCEINLINE tensor matmul(const tensor& B) const{
+        const tensor& A = *this;
+        if(A._shape_size != B._shape_size) throw sp::exceptions::spiral_exception("Error: matmul() expects 2D tensors");
 
-        // In a real library, you'd throw an error or assert here:
-        if(K_this != K_other) throw std::runtime_error("Dimension mismatch");
+        if(A._shapes[1]!=B._shapes[0]) throw sp::exceptions::spiral_exception("Dimension mismatch for matmul");
 
-        // 2. Initialize result tensor with shape (M, N)
-        tensor result(M, N); // Assumes constructor exists: tensor(dims...)
+        tensor C(A._shapes[0], B._shapes[1]);
 
-        // 3. The Computation (Naive Triple Loop)
-        // We use strides to ensure this works even if the input tensors are views/slices
-        for (size_t i = 0; i < M; ++i) {
-            for (size_t j = 0; j < N; ++j) {
-                T sum = 0;
-                for (size_t k = 0; k < K_this; ++k) {
-                    // Indexing via strides: base + (row * row_stride) + (col * col_stride)
-                    T val_a = _data[i * _strides[0] + k * _strides[1]];
-                    T val_b = other._data[k * other._strides[0] + j * other._strides[1]];
-                    sum += val_a * val_b;
+        // i-k-j (contiguous access)
+        for(size_type i = 0; i < A._shapes[0]; ++i){
+            for(size_type k = 0; k < A._shapes[1]; ++k){
+                T valA = A._data[i * A._strides[0] + k * A._strides[1]];
+                for(size_type j = 0; j < B._shapes[1]; ++j){
+                    C._data[i * C._strides[0] + j * C._strides[1]] += valA * B._data[k * B._strides[0] + j * B._strides[1]];
                 }
-                result._data[i * result._strides[0] + j * result._strides[1]] = sum;
             }
         }
-
-        return result;
+        return C;
     }
 
 }; // class tensor
