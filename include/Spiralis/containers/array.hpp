@@ -88,7 +88,7 @@ private:
     }
 
     template <bool is_new = false>
-    _SP_FUNC_NI_ SP_COLD ull grow_capacity(ull min) const{
+    _SP_FUNC_NI_ SP_COLD constexpr ull grow_capacity(ull min) const{
         ull new_cap;
         SP_IF_CONSTEXPR(is_new) new_cap = 8;
         else new_cap = _capacity + (_capacity >> 1);
@@ -109,7 +109,7 @@ private:
     #endif
     }
 
-    SP_NOINLINE SP_COLD void reallocate(ull new_cap){
+    SP_NOINLINE SP_COLD constexpr void reallocate(ull new_cap){
         ull true_cap = allocator_ext<Allocator<T>>::true_capacity(new_cap);
         T* new_block = true_cap ? sp::allocator_traits<Allocator<T>>::allocate(_alloc, true_cap) : nullptr;
         if(_size && new_block){
@@ -131,7 +131,7 @@ private:
         _capacity = true_cap;
     }
 
-    SP_FORCEINLINE void move_data(size_type from, size_type to){
+    SP_FORCEINLINE constexpr void move_data(size_type from, size_type to){
         SP_IF_CONSTEXPR(_trivially_copyable){
             _data[to] = _data[from];
         }else{
@@ -155,13 +155,13 @@ public:
     /**
      * @brief default constructor
      */
-    array() : _data(nullptr), _size(0), _capacity(0) { }
+    constexpr array() : _data(nullptr), _size(0), _capacity(0) { }
 
     /**
      * @brief constructor with size
      * @param size initial size of array
      */
-    array(ull size) : _data(nullptr), _size(0), _capacity(allocator_ext<Allocator<T>>::true_capacity(grow_capacity<true>(size))) {
+    constexpr array(ull size) : _data(nullptr), _size(0), _capacity(allocator_ext<Allocator<T>>::true_capacity(grow_capacity<true>(size))) {
         _SP_CHECK_SAFETY_LEVEL_(1) SP_IF_NOT_EXPECT(_capacity == 0) return;
         _data = sp::allocator_traits<Allocator<T>>::allocate(_alloc, _capacity); //sp::allocator_traits<Allocator<T>>::allocate(_alloc, _capacity);
         try {
@@ -180,7 +180,7 @@ public:
      * @param count initial size of array
      * @param value default value to fill array with
      */
-    array(ull count, type_param value)
+    constexpr array(ull count, type_param value)
         : _data(nullptr), _size(0), _capacity(allocator_ext<Allocator<T>>::true_capacity((ull)(count + (count >> 1))))
     {
         _SP_CHECK_SAFETY_LEVEL_(1) SP_IF_NOT_EXPECT(_capacity == 0) return;
@@ -201,7 +201,7 @@ public:
      * @param data pointer to the raw data
      * @param size size of the array
      */
-    array(const T* data, ull size) : _data(nullptr), _size(0), _capacity(allocator_ext<Allocator<T>>::true_capacity(size)){
+    constexpr array(const T* data, ull size) : _data(nullptr), _size(0), _capacity(allocator_ext<Allocator<T>>::true_capacity(size)){
         _SP_CHECK_SAFETY_LEVEL_(1) SP_IF_NOT_EXPECT(_capacity == 0) return;
         _data = sp::allocator_traits<Allocator<T>>::allocate(_alloc, _capacity);
         SP_IF_CONSTEXPR (spt::is_nothrow_copy_constructible<T>::value) {
@@ -222,7 +222,7 @@ public:
      * @brief copy constructor
      * @param other array to copy from
      */
-    array(const array& other) : _alloc(other._alloc), _data(nullptr), _size(other._size), _capacity(other._capacity){
+    constexpr array(const array& other) : _alloc(other._alloc), _data(nullptr), _size(other._size), _capacity(other._capacity){
         _SP_CHECK_SAFETY_LEVEL_(1) SP_IF_NOT_EXPECT(_capacity == 0) return;
         _data = sp::allocator_traits<Allocator<T>>::allocate(_alloc, _capacity);
         SP_IF_CONSTEXPR (_trivially_copyable) {
@@ -242,7 +242,7 @@ public:
      * @brief move constructor
      * @param other array to move from
      */
-    array(array&& other) noexcept
+    constexpr array(array&& other) noexcept
         : _data(other._data),
           _size(other._size),
           _capacity(other._capacity)
@@ -256,7 +256,7 @@ public:
      * @brief initializer list constructor
      * @param list initializer list to copy from
      */
-    array(std::initializer_list<T> list)
+    constexpr array(std::initializer_list<T> list)
         : _data(nullptr), _size(0), _capacity(allocator_ext<Allocator<T>>::true_capacity(list.size()))
     {
         _SP_CHECK_SAFETY_LEVEL_(1) SP_IF_NOT_EXPECT(_capacity == 0) return;
@@ -280,7 +280,7 @@ public:
      * @param list initializer list to copy from
      * @param extra_capacity additional capacity to allocate
      */
-    array(std::initializer_list<T> list, ull extra_capacity)
+    constexpr array(std::initializer_list<T> list, ull extra_capacity)
         : _data(nullptr), _size(0), _capacity(allocator_ext<Allocator<T>>::true_capacity(list.size()+extra_capacity))
     {
         _SP_CHECK_SAFETY_LEVEL_(1) if (_capacity == 0)_SP_UNLIKELY_ return;
@@ -323,6 +323,9 @@ public:
     /**
      * @brief destructor
      */
+    #if ___SP_CPP_VER___ >= 20
+    constexpr 
+    #endif 
     ~array() noexcept {
         destroy_elements();
         sp::allocator_traits<Allocator<T>>::deallocate(_alloc, _data, _capacity);//sp::allocator_traits<Allocator<T>>::deallocate(_alloc, _data, _capacity);
@@ -342,7 +345,7 @@ public:
 //==========================================================================================================================================
 //==========================================================================================================================================
 
-    SP_FORCEINLINE bool is_aligned() const{
+    SP_FORCEINLINE constexpr bool is_aligned() const{
         return _is_aligned;
     }
 
@@ -352,7 +355,7 @@ public:
      * @warning can fail silently if data isn't aligned/constructed
      */
     _SP_SAFETY_TEMPLATE_
-    SP_FORCEINLINE SP_PURE T* aligned_data() noexcept {
+    SP_FORCEINLINE SP_PURE constexpr T* aligned_data() noexcept {
         SP_IF_CONSTEXPR(_is_aligned) return static_cast<T*>(_SP_ASSUME_ALIGNED_(_data, sp_cache_line_size));
         else return _data;
     }
@@ -363,7 +366,7 @@ public:
      * @param capacity new capacity
      */
     _SP_SAFETY_TEMPLATE_
-    SP_COLD SP_FORCEINLINE void reserve_exact(ull capacity){
+    SP_COLD SP_FORCEINLINE constexpr void reserve_exact(ull capacity){
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(capacity < _size) throw exceptions::ArrayException("Cannot reserve less than current size.");
         SP_IF_NOT_EXPECT(capacity != _capacity) reallocate(capacity);
     }
@@ -373,7 +376,7 @@ public:
      * @param new_capacity the new capacity to reserve
      */
     _SP_SAFETY_TEMPLATE_
-    SP_COLD SP_FORCEINLINE void reserve(ull new_capacity){
+    SP_COLD SP_FORCEINLINE constexpr void reserve(ull new_capacity){
         ull target = grow_capacity(new_capacity);
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(target <= _capacity) return;
         reallocate(target);
@@ -384,7 +387,7 @@ public:
      * @param new_capacity the new capacity to add
      */
     _SP_SAFETY_TEMPLATE_
-    SP_FORCEINLINE void reserve_extra(ull new_capacity){
+    SP_FORCEINLINE constexpr void reserve_extra(ull new_capacity){
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(new_capacity<1) return;
         reallocate(_capacity+new_capacity);
     }
@@ -394,7 +397,7 @@ public:
      * @param new_capacity the new capacity to add
      */
     _SP_SAFETY_TEMPLATE_
-    SP_FORCEINLINE void reserve_extra_rounded(ull new_capacity){
+    SP_FORCEINLINE constexpr void reserve_extra_rounded(ull new_capacity){
         ull target = grow_capacity(new_capacity+_capacity);
         reallocate(target);
     }
@@ -404,26 +407,26 @@ public:
      * @param index index of the element to access
      * @return reference to the element at the specified index
      */
-    _SP_FUNC_NIP_ T& operator[](ull index) { return _data[index]; }
+    _SP_FUNC_NIP_ constexpr T& operator[](ull index) { return _data[index]; }
     /**
      * @brief Access element at index (const version).
      * @param index index of the element to access
      * @return const reference to the element at the specified index
      */
-    _SP_FUNC_NIP_ const T& operator[](ull index) const { return _data[index]; }
+    _SP_FUNC_NIP_ constexpr const T& operator[](ull index) const { return _data[index]; }
 private:
     static constexpr SP_FORCEINLINE size_type get_lookahead(){
         return sp_cache_line_size / sizeof(T);//(sizeof(T) + sp_cache_line_size - 1) / sp_cache_line_size;
     }
 public:
-    _SP_FUNC_NI_ T& access_and_prefetch(ull index) {
+    _SP_FUNC_NI_ constexpr T& access_and_prefetch(ull index) {
         SP_IF_CONSTEXPR(_is_aligned){
             _SP_PREFETCH_(&_data[index+get_lookahead()], 0, 1);
         }
         return _data[index];
     }
 
-    _SP_FUNC_NI_ const T& access_and_prefetch(ull index) const {
+    _SP_FUNC_NI_ constexpr const T& access_and_prefetch(ull index) const {
         SP_IF_CONSTEXPR(_is_aligned){
             _SP_PREFETCH_(&_data[index+get_lookahead()], 0, 1);
         }
@@ -437,7 +440,7 @@ public:
      * @throws ArrayException if index is out of bounds & safety level is 1+
      */
     _SP_SAFETY_TEMPLATE_
-    _SP_FUNC_NIP_ T& at(ull index){
+    _SP_FUNC_NIP_ constexpr T& at(ull index){
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(index>=_size) throw exceptions::ArrayException("Index out of range.");
         return _data[index];
     }
@@ -449,7 +452,7 @@ public:
      * @throws ArrayException if index is out of bounds & safety level is 1+
      */
     _SP_SAFETY_TEMPLATE_
-    _SP_FUNC_NIP_ const T& at(ull index) const{
+    _SP_FUNC_NIP_ constexpr const T& at(ull index) const{
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(index>=_size) throw exceptions::ArrayException("Index out of range.");
         return _data[index];
     }
@@ -458,7 +461,7 @@ public:
      * @brief Get the current size of the array.
      * @return current size of the array
      */
-    _SP_FUNC_NIP_ ull length() const { return _size; }
+    _SP_FUNC_NIP_ constexpr ull length() const { return _size; }
     /**
      * @brief Get the current size of the array.
      * @return current size of the array
@@ -468,7 +471,7 @@ public:
      * @brief Get the current capacity of the array.
      * @return current capacity of the array
      */
-    _SP_FUNC_NIP_ ull capacity() const noexcept { return _capacity; }
+    _SP_FUNC_NIP_ constexpr ull capacity() const noexcept { return _capacity; }
     /**
      * @brief Check if the array is empty.
      * @return true if the array is empty, false otherwise
@@ -490,28 +493,28 @@ public:
     /**
      * @brief explicit bool conversion
      */
-    explicit operator bool() const noexcept { return !is_empty(); }
+    explicit constexpr operator bool() const noexcept { return !is_empty(); }
 
     /**
      * @brief Get a reference to the front element in the array.
      * @return reference to the front element
      */
-    _SP_FUNC_NIP_ T& front() { return _data[0]; }
+    _SP_FUNC_NIP_ constexpr T& front() { return _data[0]; }
     /**
      * @brief Get a const reference to the front element in the array.
      * @return const reference to the front element
      */
-    _SP_FUNC_NIP_ const T& front() const { return _data[0]; }
+    _SP_FUNC_NIP_ constexpr const T& front() const { return _data[0]; }
     /**
      * @brief Get a reference to the last element in the array.
      * @return reference to the last element
      */
-    _SP_FUNC_NIP_ T& back() { return _data[_size - 1]; }
+    _SP_FUNC_NIP_ constexpr T& back() { return _data[_size - 1]; }
     /**
      * @brief Get a const reference to the last element in the array.
      * @return const reference to the last element
      */
-    _SP_FUNC_NIP_ const T& back() const { return _data[_size - 1]; }
+    _SP_FUNC_NIP_ constexpr const T& back() const { return _data[_size - 1]; }
 
 
     /**
@@ -519,7 +522,7 @@ public:
      * @param other array to check against
      * @return true if the arrays are equal, false otherwise
      */
-    SP_NODISCARD bool equals(const array<T, _safety_level>& other) const {
+    SP_NODISCARD constexpr bool equals(const array<T, _safety_level>& other) const {
         SP_IF_NOT_EXPECT(_size != other._size) return false;
         SP_IF_CONSTEXPR (_trivially_copyable && sizeof(T) == sizeof(int)){
             return std::memcmp(_data, other._data, _size * sizeof(T)) == 0;
@@ -529,48 +532,48 @@ public:
     }
 
 
-    SP_FLATTEN friend bool operator==(const array& a, const array& b) noexcept { return a.equals(b); }
-    SP_FLATTEN friend bool operator!=(const array& a, const array& b) noexcept { return !a.equals(b); }
+    SP_FLATTEN constexpr friend bool operator==(const array& a, const array& b) noexcept { return a.equals(b); }
+    SP_FLATTEN constexpr friend bool operator!=(const array& a, const array& b) noexcept { return !a.equals(b); }
 
     /**
      * @brief Get a pointer to the underlying data.
      * @return pointer to the underlying data
      */
-    _SP_FUNC_NIFP_ T* data() noexcept { SP_IF_CONSTEXPR(_is_aligned) return aligned_data(); else return _data; }
+    _SP_FUNC_NIFP_ constexpr T* data() noexcept { SP_IF_CONSTEXPR(_is_aligned) return aligned_data(); else return _data; }
     /**
      * @brief Get a const pointer to the underlying data.
      * @return const pointer to the underlying data
      */
-    _SP_FUNC_NIP_ const T* data() const noexcept { return _data; }
+    _SP_FUNC_NIP_ constexpr const T* data() const noexcept { return _data; }
 
-    _SP_FUNC_NIFP_ T* D() noexcept { return data(); }
-    _SP_FUNC_NIFP_ T* D() const noexcept { return data(); }
+    _SP_FUNC_NIFP_ constexpr T* D() noexcept { return data(); }
+    _SP_FUNC_NIFP_ constexpr T* D() const noexcept { return data(); }
 
     /**
      * @brief Get an iterator to the beginning of the array.
      * @return iterator to the beginning
      */
-    _SP_FUNC_NI_ iterator begin() noexcept { return iterator(_data); }
+    _SP_FUNC_NI_ constexpr iterator begin() noexcept { return iterator(_data); }
     /**
      * @brief Get an iterator to the end of the array.
      * @return iterator to the end
      */
-    _SP_FUNC_NI_ iterator end() noexcept { return iterator(_data + _size); }
+    _SP_FUNC_NI_ constexpr iterator end() noexcept { return iterator(_data + _size); }
 
     // in array.hpp
-    _SP_FUNC_NI_ const_iterator begin() const noexcept { return const_iterator(_data); }
-    _SP_FUNC_NI_ const_iterator end() const noexcept { return const_iterator(_data + _size); }
+    _SP_FUNC_NI_ constexpr const_iterator begin() const noexcept { return const_iterator(_data); }
+    _SP_FUNC_NI_ constexpr const_iterator end() const noexcept { return const_iterator(_data + _size); }
 
     /**
      * @brief Get a const iterator to the beginning of the array.
      * @return const iterator to the beginning
      */
-    _SP_FUNC_NI_ const_iterator cbegin() const noexcept { return const_iterator(_data); }
+    _SP_FUNC_NI_ constexpr const_iterator cbegin() const noexcept { return const_iterator(_data); }
     /**
      * @brief Get a const iterator to the end of the array.
      * @return const iterator to the end
      */
-    _SP_FUNC_NI_ const_iterator cend() const noexcept { return const_iterator(_data + _size); }
+    _SP_FUNC_NI_ constexpr const_iterator cend() const noexcept { return const_iterator(_data + _size); }
 
     using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
@@ -579,30 +582,30 @@ public:
      * @brief Get a reverse iterator to the beginning of the array.
      * @return reverse iterator to the beginning
      */
-    _SP_FUNC_NI_ reverse_iterator rbegin() noexcept{ return reverse_iterator(end()); }
+    _SP_FUNC_NI_ constexpr reverse_iterator rbegin() noexcept{ return reverse_iterator(end()); }
     /**
      * @brief Get a reverse iterator to the end of the array.
      * @return reverse iterator to the end
      */
-    _SP_FUNC_NIF_ reverse_iterator rend() noexcept{ return reverse_iterator(begin()); }
+    _SP_FUNC_NIF_ constexpr reverse_iterator rend() noexcept{ return reverse_iterator(begin()); }
 
     /**
      * @brief Get a const reverse iterator to the beginning of the array.
      * @return const reverse iterator to the beginning
      */
-    _SP_FUNC_NI_ const reverse_iterator crbegin() const noexcept{ return const_reverse_iterator(end()); }
+    _SP_FUNC_NI_ constexpr const reverse_iterator crbegin() const noexcept{ return const_reverse_iterator(end()); }
     /**
      * @brief Get a const reverse iterator to the end of the array.
      * @return const reverse iterator to the end
      */
-    _SP_FUNC_NI_ const reverse_iterator crend() const noexcept{ return const_reverse_iterator(begin()); }
+    _SP_FUNC_NI_ constexpr const reverse_iterator crend() const noexcept{ return const_reverse_iterator(begin()); }
 
     /**
      * @brief copy assignment operator
      * @param other array to copy from
      * @return reference to this array
      */
-    array& operator=(const array& other){
+    constexpr array& operator=(const array& other){
         SP_IF_NOT_EXPECT(this == &other) return *this;
         array temp(other);
         sp::swap(_data, temp._data);
@@ -618,7 +621,7 @@ public:
      * @param other array to move from
      * @return reference to this array
      */
-    array& operator=(array&& other) noexcept {
+    constexpr array& operator=(array&& other) noexcept {
         SP_IF_EXPECT(this != &other){
             destroy_elements();
             sp::allocator_traits<Allocator<T>>::deallocate(_alloc, _data, _capacity);
@@ -644,7 +647,7 @@ public:
      * @brief Print the contents of the array to the console.
      */
     _SP_SAFETY_TEMPLATE_
-    SP_FORCEINLINE void print() const {
+    SP_FORCEINLINE constexpr void print() const {
         // 1. Save state
         std::ios_base::fmtflags old_flags = std::cout.flags();
         std::streamsize old_prec = std::cout.precision();
@@ -681,7 +684,7 @@ public:
      * @param args arguments to forward to the element constructor
      */
     template <short safety = _safety_level, typename... Args>
-    SP_HOT void emplace(ull index, Args&&... args) {
+    SP_HOT constexpr void emplace(ull index, Args&&... args) {
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(index > _size) throw exceptions::ArrayException("Index out of range.");
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(_size >= _capacity) reallocate(grow_capacity(_size + 1));
         T* pos = _data + index;
@@ -703,7 +706,7 @@ public:
      * @param args arguments to forward to the element constructor
      */
     template <short safety = _safety_level, typename... Args>
-    SP_FORCEINLINE SP_HOT void emplace_front(Args&&... args) {
+    SP_FORCEINLINE SP_HOT constexpr void emplace_front(Args&&... args) {
         emplace<safety>(0, sp::forward<Args>(args)...);
     }
 
@@ -712,7 +715,7 @@ public:
      * @param item element to insert
      */
     _SP_SAFETY_TEMPLATE_
-    SP_HOT SP_FLATTEN void push_front(type_param item) { 
+    SP_HOT SP_FLATTEN constexpr void push_front(type_param item) { 
         emplace_front<safety>(sp::move(item)); 
     }
 
@@ -721,7 +724,7 @@ public:
      * @param args arguments to forward to the element constructor
      */
     template <short safety = _safety_level, typename... Args>
-    SP_FORCEINLINE SP_HOT void emplace_back(Args&&... args) {
+    SP_FORCEINLINE SP_HOT constexpr void emplace_back(Args&&... args) {
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(_size >= _capacity) reallocate(grow_capacity(_size + 1));
         SP_IF_CONSTEXPR (sizeof(T) >= 32) { 
             _SP_PREFETCH_(&_data[_size + 1], 1, 3);
@@ -735,14 +738,14 @@ public:
      * @param item element to push
      */
     _SP_SAFETY_TEMPLATE_
-    SP_FORCEINLINE SP_HOT SP_FLATTEN void push_back(type_param item) { emplace_back<safety>(item); }
+    SP_FORCEINLINE SP_HOT SP_FLATTEN constexpr void push_back(type_param item) { emplace_back<safety>(item); }
 
     /**
      * @brief Clear the array and resize to a new size.
      * @param new_size new size of the array
      */
     _SP_SAFETY_TEMPLATE_
-    void clear_and_resize(ull new_size) {
+    constexpr void clear_and_resize(ull new_size) {
         destroy_elements();
         ull final_size = new_size>0 ? next_pow2(new_size) : new_size;
         if(new_size > _capacity){
@@ -762,7 +765,7 @@ public:
      * @return the removed element
      */
     _SP_SAFETY_TEMPLATE_
-    T pop(ull index) {
+    constexpr T pop(ull index) {
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(index >= _size) throw exceptions::ArrayException("Index out of range.");
         T removed_element = sp::move(_data[index]);
         if(index < _size - 1) _SP_EXPLICIT_UNROLLED_(i, index, _size - 1, _data[i] = sp::move(_data[i + 1]));
@@ -775,7 +778,7 @@ public:
      * @param count new size of the array
      */
     _SP_SAFETY_TEMPLATE_
-    void resize(ull count) {
+    constexpr void resize(ull count) {
         if(count > _size){
             if (count > _capacity) reallocate(grow_capacity(count));
             SP_IF_CONSTEXPR (!spt::is_trivially_default_constructible<T>::value) _SP_EXPLICIT_UNROLLED_(i, _size, count, sp::allocator_traits<Allocator<T>>::construct(_alloc,_data+i));
@@ -790,14 +793,14 @@ public:
      * @param value element to insert
      */
     _SP_SAFETY_TEMPLATE_
-    void insert(ull index, type_param value) { emplace<safety>(index, value); }
+    constexpr void insert(ull index, type_param value) { emplace<safety>(index, value); }
 
     /**
      * @brief Erase the element at the specified index.
      * @param index index of the element to erase
      */
     _SP_SAFETY_TEMPLATE_
-    void erase(ull index){
+    constexpr void erase(ull index){
     _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(index >= _size) return;
         sp::allocator_traits<Allocator<T>>::destroy(_alloc,_data+index);
         SP_IF_CONSTEXPR(_trivially_copyable){
@@ -814,7 +817,7 @@ public:
      * @param index index of the element to erase
      */
     _SP_SAFETY_TEMPLATE_
-    void erase_swap(ull index){
+    constexpr void erase_swap(ull index){
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(index>=_size) throw exceptions::ArrayException("Index out of range.");
         SP_IF_EXPECT(index!=_size-1) _data[index] = sp::move(_data[_size-1]);
         sp::allocator_traits<Allocator<T>>::destroy(_alloc,_data+_size-1);
@@ -825,7 +828,7 @@ public:
      * @brief Shrink the capacity of the array to fit its size.
      */
     _SP_SAFETY_TEMPLATE_
-    SP_FORCEINLINE void shrink_to_fit(){
+    SP_FORCEINLINE constexpr void shrink_to_fit(){
         SP_IF_EXPECT(_size < _capacity){
             SP_IF_NOT_EXPECT(_size == 0){
                 sp::allocator_traits<Allocator<T>>::deallocate(_alloc, _data, _capacity);
@@ -839,7 +842,7 @@ public:
      * @brief Clear the array's size
      */
     _SP_SAFETY_TEMPLATE_
-    SP_FORCEINLINE void clear() noexcept{
+    SP_FORCEINLINE constexpr void clear() noexcept{
         destroy_elements();
         _size = 0;
     }
@@ -849,14 +852,14 @@ public:
      * @return the popped value
      */
     _SP_SAFETY_TEMPLATE_
-    T pop_front() { return pop(0); }
+    constexpr T pop_front() { return pop(0); }
 
     /**
      * @brief Remove the back element from the array.
      * @return the popped value
      */
     _SP_SAFETY_TEMPLATE_
-    T pop_back(){ return (SP_EXPECT(_size>0,true)) ? pop(_size-1) : pop(0); }
+    constexpr T pop_back(){ return (SP_EXPECT(_size>0,true)) ? pop(_size-1) : pop(0); }
 
     /**
      * @brief Check if the array contains the specified element.
@@ -864,7 +867,7 @@ public:
      * @return true if the element is found, false otherwise
      */
     _SP_SAFETY_TEMPLATE_
-    _SP_FUNC_NIP_ bool contains(type_param item){
+    _SP_FUNC_NIP_ constexpr bool contains(type_param item){
         _SP_APPLY_UNROLLED_(_size, SP_IF_EXPECT(_data[i]==item) return true);
         return false;
     }
@@ -875,7 +878,7 @@ public:
      * @return true if all elements are found, false otherwise
      */
     _SP_SAFETY_TEMPLATE_
-    _SP_FUNC_NIP_ bool contains_all(const array<T, _safety_level>& other){
+    _SP_FUNC_NIP_ constexpr bool contains_all(const array<T, _safety_level>& other){
         _SP_APPLY_UNROLLED_(other._size, SP_IF_NOT_EXPECT(!contains(other[i])) return false);
         return true;
     }
@@ -886,7 +889,7 @@ public:
      * @return true if any element is found, false otherwise
      */
     _SP_SAFETY_TEMPLATE_
-    _SP_FUNC_NIP_ bool contains_any(const array<T, _safety_level>& other){
+    _SP_FUNC_NIP_ constexpr bool contains_any(const array<T, _safety_level>& other){
         _SP_APPLY_UNROLLED_(other._size, SP_IF_NOT_EXPECT(contains(other[i])) return true);
         return false;
     }
@@ -897,7 +900,7 @@ public:
      * @return index of the element, or -1 if not found
      */
     _SP_SAFETY_TEMPLATE_
-    _SP_FUNC_NIP_ long long index_of(type_param item) noexcept{
+    _SP_FUNC_NIP_ constexpr long long index_of(type_param item) noexcept{
         _SP_APPLY_UNROLLED_(_size, SP_IF_NOT_EXPECT(_data[i]==item) return i);
         return -1;
     }
@@ -908,7 +911,7 @@ public:
      * @param b index of the second element
      */
     _SP_SAFETY_TEMPLATE_
-    void swap_elements(ull a, ull b){
+    constexpr void swap_elements(ull a, ull b){
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(a >= _size || b >= _size) throw exceptions::ArrayException("Index out of range.");
         sp::swap(_data[a], _data[b]);
     }
@@ -918,7 +921,7 @@ public:
      * @return array<T, _safety_level>
      */
     _SP_SAFETY_TEMPLATE_
-    array<T, _safety_level> reverse() const {
+    constexpr array<T, _safety_level> reverse() const {
         array<T, _safety_level> result(_size);
         _SP_APPLY_UNROLLED_(_size, result._data[i] = _data[_size - 1 - i]);
         return result;
@@ -929,7 +932,7 @@ public:
      * @return *this: enables chaining
      */
     _SP_SAFETY_TEMPLATE_
-    array<T, _safety_level>& reverse_(){
+    constexpr array<T, _safety_level>& reverse_(){
         ull i = 0, j = _size - 1;
         while (i < j) {
             T temp = _data[i];
@@ -946,7 +949,7 @@ public:
      * @return new array with reversed elements in the specified range
      */
     _SP_SAFETY_TEMPLATE_
-    array<T, _safety_level> reverse_range(ull start, ull end) const {
+    constexpr array<T, _safety_level> reverse_range(ull start, ull end) const {
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(start>=end||end>_size||_size==0) throw exceptions::ArrayException("Invalid range.");
         array<T, _safety_level> result = *this;
         --end;
@@ -966,7 +969,7 @@ public:
      * @warning modifies the original array
      */
     _SP_SAFETY_TEMPLATE_
-    array<T, _safety_level>& reverse_range_(ull start, ull end){
+    constexpr array<T, _safety_level>& reverse_range_(ull start, ull end){
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(start>=end||end>_size||_size==0) throw exceptions::ArrayException("Invalid range.");
         --end;
         while(start<end){
@@ -983,7 +986,7 @@ public:
      * @return new array with rotated elements
      */
     _SP_SAFETY_TEMPLATE_
-    array<T, _safety_level> rotate_left(ull num) const {
+    constexpr array<T, _safety_level> rotate_left(ull num) const {
         array<T, _safety_level> result = *this;
         result.template rotate_left_<safety>(num);
         return result;
@@ -996,7 +999,7 @@ public:
      * @warning modifies the original array
      */
     _SP_SAFETY_TEMPLATE_
-    array<T, _safety_level>& rotate_left_(ull num) {
+    constexpr array<T, _safety_level>& rotate_left_(ull num) {
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(_size <= 1 || num == 0) return *this;
         num %= _size;
         reverse_range_(0, num);
@@ -1011,7 +1014,7 @@ public:
      * @return new array with rotated elements
      */
     _SP_SAFETY_TEMPLATE_
-    array<T, _safety_level> rotate_right(ull num) const {
+    constexpr array<T, _safety_level> rotate_right(ull num) const {
         array<T, _safety_level> result = *this;
         result.template rotate_right_<safety>(num);
         return result;
@@ -1024,7 +1027,7 @@ public:
      * @warning modifies the original array
      */
     _SP_SAFETY_TEMPLATE_
-    array<T, _safety_level>& rotate_right_(ull num) {
+    constexpr array<T, _safety_level>& rotate_right_(ull num) {
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(_size <= 1 || num == 0) return *this;
         num = num % _size;
         return rotate_left_<safety>(_size - num);
@@ -1036,7 +1039,7 @@ public:
      * @return index of the element, or _size if not found
      */
     _SP_SAFETY_TEMPLATE_
-    SP_NODISCARD SP_PURE SP_FORCEINLINE ull find(type_param value) const noexcept {
+    SP_NODISCARD SP_PURE SP_FORCEINLINE constexpr ull find(type_param value) const noexcept {
         const ull block_size = 4;
         ull blocks = _size / block_size;
     #if __SP_UNROLL_LOOPS__ == 1
@@ -1063,7 +1066,7 @@ public:
      * @return index of the element, or _size if not found
      */
     _SP_SAFETY_TEMPLATE_
-    SP_NODISCARD SP_PURE SP_FORCEINLINE ull find_last(type_param value) const{
+    SP_NODISCARD SP_PURE SP_FORCEINLINE constexpr ull find_last(type_param value) const{
     #if __SP_UNROLL_LOOPS__ == 1
         ull i = _size-1;
         while(i>=3){
@@ -1087,7 +1090,7 @@ public:
      * @return index of the element, or _size if not found
      */
     template <short safety = _safety_level, typename Func>
-    SP_NODISCARD SP_PURE SP_FORCEINLINE ull find_if(Func predicate) const{
+    SP_NODISCARD SP_PURE SP_FORCEINLINE constexpr ull find_if(Func predicate) const{
         const ull block_size = 4;
         ull blocks = _size / block_size;
     #if __SP_UNROLL_LOOPS__ == 1
@@ -1111,7 +1114,7 @@ public:
      * @return index of the element, or _size if not found
      */
     template <short safety = _safety_level, typename Func>
-    SP_NODISCARD SP_PURE SP_FORCEINLINE ull find_last_if(Func predicate) const{
+    SP_NODISCARD SP_PURE SP_FORCEINLINE constexpr ull find_last_if(Func predicate) const{
     #if __SP_UNROLL_LOOPS__ == 1
         ull i = _size-1;
         while(i>=3){
@@ -1135,7 +1138,7 @@ public:
      * @warning if lambda takes refrenced T as param, original can be modified
      */
     template <short safety = _safety_level, typename Func>
-    SP_FORCEINLINE void for_each(Func func) { _SP_APPLY_UNROLLED_(_size, func(_data[i])); }
+    SP_FORCEINLINE constexpr void for_each(Func func) { _SP_APPLY_UNROLLED_(_size, func(_data[i])); }
 
     /**
      * @brief Count the occurrences of the specified value.
@@ -1143,7 +1146,7 @@ public:
      * @return number of occurrences
      */
     _SP_SAFETY_TEMPLATE_
-    SP_NODISCARD SP_PURE SP_FORCEINLINE ull count(type_param value){
+    SP_NODISCARD SP_PURE SP_FORCEINLINE constexpr ull count(type_param value){
         ull counter = 0;
         _SP_APPLY_UNROLLED_(_size, if(_data[i]==value) counter++);
         return counter;
@@ -1155,7 +1158,7 @@ public:
      * @return array of indices where the element is found
      */
     _SP_SAFETY_TEMPLATE_
-    SP_FORCEINLINE array<ull> indices_of(type_param value) const{
+    SP_FORCEINLINE constexpr array<ull> indices_of(type_param value) const{
         array<ull> result;
         _SP_APPLY_UNROLLED_(_size, if(_data[i]==value) result.push_back(i));
         return result;
@@ -1168,7 +1171,7 @@ public:
      * @warning modifies the original array
      */
     _SP_SAFETY_TEMPLATE_
-    SP_FORCEINLINE bool remove_mid(type_param value){
+    SP_FORCEINLINE constexpr bool remove_mid(type_param value){
         ull idx = find(value);
         SP_IF_NOT_EXPECT(idx==_size) return false;
         erase(idx);
@@ -1181,7 +1184,7 @@ public:
      * @return true if the element was found and removed, false otherwise
      * @warning modifies the original array
      */
-    SP_FORCEINLINE bool remove_last(type_param value){
+    SP_FORCEINLINE constexpr bool remove_last(type_param value){
         ull idx = find_last(value);
         SP_IF_NOT_EXPECT(idx==_size) return false;
         erase(idx);
@@ -1195,7 +1198,7 @@ public:
      * @warning modifies the original array
      */
     template <short safety = _safety_level, typename Pred>
-    SP_FORCEINLINE ull remove_if(Pred pred){
+    SP_FORCEINLINE constexpr ull remove_if(Pred pred){
         ull counter = 0;    
         while(true){
             ull idx = find_if(pred);
@@ -1212,7 +1215,7 @@ public:
      * @warning modifies the original array
      */
     _SP_SAFETY_TEMPLATE_
-    SP_FORCEINLINE ull remove_all(type_param value){
+    SP_FORCEINLINE constexpr ull remove_all(type_param value){
         ull counter = 0;
         while(true){
             ull idx = find(value);
@@ -1229,7 +1232,7 @@ public:
      * @return *this: enables chaining
      */
     template <typename Comp>
-    SP_FORCEINLINE array<T, _safety_level>& sort_by_(Comp comp) {
+    SP_FORCEINLINE constexpr array<T, _safety_level>& sort_by_(Comp comp) {
         _SP_CHECK_SAFETY_LEVEL_(1) SP_IF_NOT_EXPECT(_size == 0) throw exceptions::ArrayException("Cannot sort an empty array.");
         std::sort(_data, _data + _size, comp);
         return *this;
@@ -1242,7 +1245,7 @@ public:
      * @note uses std::sort backend
      */
     template <typename Comp>
-    SP_FORCEINLINE array<T, _safety_level> sort_by(Comp comp) {
+    SP_FORCEINLINE constexpr array<T, _safety_level> sort_by(Comp comp) {
         _SP_CHECK_SAFETY_LEVEL_(1) SP_IF_NOT_EXPECT(_size == 0)throw exceptions::ArrayException("Cannot sort an empty array.");
         array<T, _safety_level> result(*this);
         std::sort(result._data, result._data + result._size, comp);
@@ -1254,7 +1257,7 @@ public:
      * @param value element to fill the array with
      */
     _SP_SAFETY_TEMPLATE_
-    SP_FORCEINLINE array& fill(type_param value) {
+    SP_FORCEINLINE constexpr array& fill(type_param value) {
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(_size == 0) throw exceptions::ArrayException("Cannot fill an empty array.");
         SP_IF_CONSTEXPR(_trivially_copyable){
             std::memset(_data, value, _size * sizeof(T));
@@ -1267,7 +1270,7 @@ public:
      * @param other array to swap with
      */
     _SP_SAFETY_TEMPLATE_
-    SP_FORCEINLINE void swap(array<T, _safety_level>& other) noexcept{
+    SP_FORCEINLINE constexpr void swap(array<T, _safety_level>& other) noexcept{
         sp::swap(_data, other._data);
         sp::swap(_size, other._size);
         sp::swap(_capacity, other._capacity);
@@ -1279,7 +1282,7 @@ public:
      * @return true if the array starts with the prefix, false otherwise
      */
     _SP_SAFETY_TEMPLATE_
-    SP_NODISCARD SP_PURE SP_FORCEINLINE bool starts_with(const array<T, _safety_level>& prefix) const {
+    SP_NODISCARD SP_PURE SP_FORCEINLINE constexpr bool starts_with(const array<T, _safety_level>& prefix) const {
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(prefix._size > _size) return false;
         _SP_APPLY_UNROLLED_(prefix._size, SP_IF_NOT_EXPECT(!(_data[i]==prefix._data[i])) return false);
         return true;
@@ -1291,7 +1294,7 @@ public:
      * @return true if the array ends with the suffix, false otherwise
      */
     _SP_SAFETY_TEMPLATE_
-    SP_NODISCARD SP_PURE SP_FORCEINLINE bool ends_with(const array<T, _safety_level>& suffix) const {
+    SP_NODISCARD SP_PURE SP_FORCEINLINE constexpr bool ends_with(const array<T, _safety_level>& suffix) const {
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(suffix._size > _size) return false;
         _SP_APPLY_UNROLLED_(suffix._size, SP_IF_NOT_EXPECT(!(_data[_size - suffix._size + i] == suffix._data[i])) return false);
         return true;
@@ -1303,7 +1306,7 @@ public:
      * @return true if the arrays are equal, false otherwise
      */
     _SP_SAFETY_TEMPLATE_
-    SP_NODISCARD SP_PURE SP_FORCEINLINE bool equals(const array<T, _safety_level>& other) const {
+    SP_NODISCARD SP_PURE SP_FORCEINLINE constexpr bool equals(const array<T, _safety_level>& other) const {
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(_size != other._size) return false;
         SP_IF_CONSTEXPR (_trivially_copyable && sizeof(T) == sizeof(int)){
             return std::memcmp(_data, other._data, _size * sizeof(T)) == 0;
@@ -1320,7 +1323,7 @@ public:
      * @return true if the ranges are equal, false otherwise
      */
     _SP_SAFETY_TEMPLATE_
-    SP_NODISCARD SP_PURE SP_FORCEINLINE bool equals_range(const array<T, _safety_level>& other, ull start, ull length) const {
+    SP_NODISCARD SP_PURE SP_FORCEINLINE constexpr bool equals_range(const array<T, _safety_level>& other, ull start, ull length) const {
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(start + length > _size || length > other._size) return false;
         _SP_APPLY_UNROLLED_(length, SP_IF_NOT_EXPECT(!(_data[start + i] == other._data[i])) return false);
         return true;
@@ -1332,7 +1335,7 @@ public:
      * @return index of the first element that does not match, or size() if all match
      */
     template <typename Func>
-    SP_NODISCARD SP_PURE SP_FORCEINLINE ull find_if_not(Func predicate) const{
+    SP_NODISCARD SP_PURE SP_FORCEINLINE constexpr ull find_if_not(Func predicate) const{
         _SP_APPLY_UNROLLED_(_size, SP_IF_NOT_EXPECT(!predicate(_data[i])) return i);
         return _size;
     }
@@ -1343,7 +1346,7 @@ public:
      * @return index of the last element that does not match, or size() if all match
      */
     template <typename Func>
-    SP_NODISCARD SP_PURE SP_FORCEINLINE ull find_last_if_not(Func predicate) const{
+    SP_NODISCARD SP_PURE SP_FORCEINLINE constexpr ull find_last_if_not(Func predicate) const{
         _SP_CHECK_SAFETY_LEVEL_(1) SP_IF_NOT_EXPECT(_size == 0) return _size;
     #if __SP_UNROLL_LOOPS__ == 1
         ull i = _size;
@@ -1371,7 +1374,7 @@ public:
      * @return index of the nth occurrence, or size() if not found
      */
     _SP_SAFETY_TEMPLATE_
-    SP_NODISCARD SP_PURE SP_FORCEINLINE ull find_nth(type_param value, ull n) const{
+    SP_NODISCARD SP_PURE SP_FORCEINLINE constexpr ull find_nth(type_param value, ull n) const{
         ull count = 1;
         _SP_APPLY_UNROLLED_(
             _size,
@@ -1390,7 +1393,7 @@ public:
      * @return index of the nth matching element, or size() if not found
      */
     template <typename Func>
-    SP_NODISCARD SP_PURE SP_FORCEINLINE ull find_nth_if(Func predicate, ull n) const{
+    SP_NODISCARD SP_PURE SP_FORCEINLINE constexpr ull find_nth_if(Func predicate, ull n) const{
         ull count = 1;
         _SP_APPLY_UNROLLED_(
             _size,
@@ -1408,7 +1411,7 @@ public:
      * @return index of the start of the subarray, or size() if not found
      */
     _SP_SAFETY_TEMPLATE_
-    SP_NODISCARD SP_PURE SP_FORCEINLINE ull find_range(const array<T, _safety_level>& subarray) const {
+    SP_NODISCARD SP_PURE SP_FORCEINLINE constexpr ull find_range(const array<T, _safety_level>& subarray) const {
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(subarray._size == 0 || subarray._size > _size) return _size;
         for (ull i = 0; i <= _size - subarray._size; i++) {
             bool match = true;
@@ -1429,7 +1432,7 @@ public:
      * @return index of the start of the last occurrence of the subarray, or size() if not found
      */
     _SP_SAFETY_TEMPLATE_
-    SP_NODISCARD SP_PURE SP_FORCEINLINE ull find_last_range(const array<T, _safety_level>& subarray) const {
+    SP_NODISCARD SP_PURE SP_FORCEINLINE constexpr ull find_last_range(const array<T, _safety_level>& subarray) const {
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(subarray._size == 0 || subarray._size > _size) return _size;
         for (ull i = _size - subarray._size; i != (ull)-1; i--) {
             bool match = true;
@@ -1450,7 +1453,7 @@ public:
      * @return true if any element matches, false otherwise
      */
     template <typename Func>
-    SP_NODISCARD SP_PURE SP_FORCEINLINE bool any_of(Func predicate) const {
+    SP_NODISCARD SP_PURE SP_FORCEINLINE constexpr bool any_of(Func predicate) const {
         _SP_APPLY_UNROLLED_(_size, SP_IF_NOT_EXPECT(predicate(_data[i])) return true);
         return false;
     }
@@ -1461,7 +1464,7 @@ public:
      * @return true if all elements match, false otherwise
      */
     template <typename Func>
-    SP_NODISCARD SP_PURE SP_FORCEINLINE bool all_of(Func predicate) const {
+    SP_NODISCARD SP_PURE SP_FORCEINLINE constexpr bool all_of(Func predicate) const {
         _SP_APPLY_UNROLLED_(_size, SP_IF_NOT_EXPECT(!predicate(_data[i])) return false);
         return true;
     }
@@ -1472,7 +1475,7 @@ public:
      * @return true if no elements match, false otherwise
      */
     template <typename Func>
-    SP_NODISCARD SP_PURE SP_FORCEINLINE bool none_of(Func predicate) const {
+    SP_NODISCARD SP_PURE SP_FORCEINLINE constexpr bool none_of(Func predicate) const {
         _SP_APPLY_UNROLLED_(_size, SP_IF_NOT_EXPECT(predicate(_data[i])) return false);
         return true;
     }
@@ -1484,7 +1487,7 @@ public:
      * @return a new array containing the sliced elements
      */
     _SP_SAFETY_TEMPLATE_
-    _SP_FUNC_NI_  array<T, _safety_level> slice(ull start, ull length) const {
+    _SP_FUNC_NI_ constexpr array<T, _safety_level> slice(ull start, ull length) const {
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(start + length > _size) throw exceptions::ArrayException("Slice out of range.");
         array<T, _safety_level> result(length);
         _SP_APPLY_UNROLLED_(length, result[i] = _data[start+i]);
@@ -1497,7 +1500,7 @@ public:
      * @param length length of the range
      */
     _SP_SAFETY_TEMPLATE_
-    SP_FORCEINLINE void erase_range(ull start, ull length){
+    SP_FORCEINLINE constexpr void erase_range(ull start, ull length){
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(start + length > _size) throw exceptions::ArrayException("Range out of range.");
         _SP_EXPLICIT_UNROLLED_(i, start, start + length, sp::allocator_traits<Allocator<T>>::destroy(_alloc,_data+i));
         _SP_EXPLICIT_UNROLLED_(i, start + length, _size, sp::allocator_traits<Allocator<T>>::construct(_alloc,_data+i-length,sp::move(_data[i])));
@@ -1511,7 +1514,7 @@ public:
      * @param other array to insert
      */
     _SP_SAFETY_TEMPLATE_
-    SP_FORCEINLINE void insert_range(ull index, const array<T, _safety_level>& other){
+    SP_FORCEINLINE constexpr void insert_range(ull index, const array<T, _safety_level>& other){
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(index > _size) throw exceptions::ArrayException("Index out of range.");
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(_size + other._size > _capacity) reallocate(grow_capacity(_size + other._size));
         for(ull i = _size + other._size - 1; i >= index + other._size; i--) sp::allocator_traits<Allocator<T>>::construct(_alloc,_data+i,sp::move(_data[i - other._size]));
@@ -1524,7 +1527,7 @@ public:
      * @param other array to append
      */
     _SP_SAFETY_TEMPLATE_
-    SP_FORCEINLINE void append(const array<T, _safety_level>& other){
+    SP_FORCEINLINE constexpr void append(const array<T, _safety_level>& other){
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(_size + other._size > _capacity) reallocate(grow_capacity(_size + other._size));
         _SP_APPLY_UNROLLED_(other._size, sp::allocator_traits<Allocator<T>>::construct(_alloc,_data+_size+i,other._data[i]));
         _size += other._size;
@@ -1535,7 +1538,7 @@ public:
      * @param other array to prepend
      */
     _SP_SAFETY_TEMPLATE_
-    SP_FORCEINLINE void prepend(const array<T, _safety_level>& other){
+    SP_FORCEINLINE constexpr void prepend(const array<T, _safety_level>& other){
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(_size + other._size > _capacity) reallocate(grow_capacity(_size + other._size));
         for(ull i = _size + other._size - 1; i >= other._size; i--) sp::allocator_traits<Allocator<T>>::construct(_alloc,_data+i,sp::move(_data[i - other._size]));
         _SP_APPLY_UNROLLED_(other._size, sp::allocator_traits<Allocator<T>>::construct(_alloc,_data+i,other._data[i]));
@@ -1549,7 +1552,7 @@ public:
      * @param other array to replace with
      */
     _SP_SAFETY_TEMPLATE_
-    SP_FORCEINLINE void replace_range(ull start, ull length, const array<T, _safety_level>& other){
+    SP_FORCEINLINE constexpr void replace_range(ull start, ull length, const array<T, _safety_level>& other){
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(start + length > _size) throw exceptions::ArrayException("Range out of range.");
         if(length != other._size){
             erase_range(start, length);
@@ -1562,7 +1565,7 @@ public:
      * @param amount amount to shrink by
      */
     _SP_SAFETY_TEMPLATE_
-    SP_FORCEINLINE void shrink_by(ull amount){
+    SP_FORCEINLINE constexpr void shrink_by(ull amount){
         SP_IF_NOT_EXPECT(amount >= _size) clear();
         else { _SP_APPLY_UNROLLED_(_size, sp::allocator_traits<Allocator<T>>::destroy(_alloc,_data+i)); _size -= amount; }
     }
@@ -1572,7 +1575,7 @@ public:
      * @param amount amount to grow by
      */
     _SP_SAFETY_TEMPLATE_
-    SP_FORCEINLINE void grow_by(ull amount){
+    SP_FORCEINLINE constexpr void grow_by(ull amount){
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(_size + amount > _capacity) reallocate(grow_capacity(_size + amount));
         _SP_APPLY_UNROLLED_(_size + amount, sp::allocator_traits<Allocator<T>>::construct(_alloc,_data+i));
         _size += amount;
@@ -1582,7 +1585,7 @@ public:
      * @brief Trim the array by removing trailing elements equal to the default-constructed value.
      */
     _SP_SAFETY_TEMPLATE_
-    SP_FORCEINLINE void trim(){
+    SP_FORCEINLINE constexpr void trim(){
         T comparison = T();
         while(_size > 0 && _data[_size - 1] == comparison) {
             sp::allocator_traits<Allocator<T>>::destroy(_alloc,_data+_size-1);
@@ -1596,7 +1599,7 @@ public:
      * @return new array with mapped values
      */
     template <typename Func>
-    _SP_FUNC_NI_ array<T, _safety_level> map(Func func) const {
+    _SP_FUNC_NI_ constexpr array<T, _safety_level> map(Func func) const {
         array<T, _safety_level> result(_size);
         _SP_APPLY_UNROLLED_(_size, result[i] = func(_data[i]));
         return result;
@@ -1608,7 +1611,7 @@ public:
      * @return new array with filtered values
      */
     template <typename Func>
-    _SP_FUNC_NI_ array<T, _safety_level> filter(Func predicate) const{
+    _SP_FUNC_NI_ constexpr array<T, _safety_level> filter(Func predicate) const{
         array<T, _safety_level> result;
         _SP_APPLY_UNROLLED_(_size, if(predicate(_data[i])) result.push_back(_data[i]));
         return result;
@@ -1621,7 +1624,7 @@ public:
      * @warning modifies the original
      */
     template <typename Func>
-    SP_FORCEINLINE array<T, _safety_level>& filter_(Func predicate) {
+    SP_FORCEINLINE constexpr array<T, _safety_level>& filter_(Func predicate) {
         _SP_APPLY_UNROLLED_(_size, if(!predicate(_data[i])){
             erase(i);
             i--;
@@ -1636,7 +1639,7 @@ public:
      * @return reduced value
      */
     template <typename Func>
-    _SP_FUNC_NI_ T reduce(Func func, T initial) const {
+    _SP_FUNC_NI_ constexpr T reduce(Func func, T initial) const {
         T result = initial;
         _SP_APPLY_UNROLLED_(_size, result = func(result, _data[i]));
         return result;
@@ -1647,7 +1650,7 @@ public:
      * @return resulting array
      */
     _SP_SAFETY_TEMPLATE_
-    _SP_FUNC_NI_ array<T, _safety_level> unique(){
+    _SP_FUNC_NI_ constexpr array<T, _safety_level> unique(){
         array<T, _safety_level> result;
         _SP_APPLY_UNROLLED_(_size, if(!result.contains(_data[i])) result.push_back(_data[i]));
         return result;
@@ -1659,7 +1662,7 @@ public:
      * @warning modifies the original
      */
     _SP_SAFETY_TEMPLATE_
-    SP_FORCEINLINE array<T, _safety_level>& unique_(){
+    SP_FORCEINLINE constexpr array<T, _safety_level>& unique_(){
         array<T, _safety_level> result;
         _SP_APPLY_UNROLLED_(_size, if(!result.contains(_data[i])) result.push_back(_data[i]));
         swap(result);
@@ -1671,7 +1674,7 @@ public:
      * @return result: The filtered array
      */
     _SP_SAFETY_TEMPLATE_
-    _SP_FUNC_NI_ array<T, _safety_level> dedupe_consecutive(){
+    _SP_FUNC_NI_ constexpr array<T, _safety_level> dedupe_consecutive(){
         array<T, _safety_level> result;
         result.push_back(_data[0]);
         _SP_EXPLICIT_UNROLLED_(i, 1, _size, if(!(_data[i]==_data[i-1])) result.push_back(_data[i]));
@@ -1684,7 +1687,7 @@ public:
      * @warning modifies the original
      */
     _SP_SAFETY_TEMPLATE_
-    SP_FORCEINLINE array<T, _safety_level> dedupe_consecutive_(){
+    SP_FORCEINLINE constexpr array<T, _safety_level> dedupe_consecutive_(){
         _SP_CHECK_SAFETY_(1) if(_size==0)_SP_UNLIKELY_ throw exceptions::ArrayException("Cannot dedupe an empty array.");
         array<T, _safety_level> result;
         result.push_back(_data[0]);
@@ -1699,7 +1702,7 @@ public:
      * @return true if the index is valid, false otherwise
      */
     _SP_SAFETY_TEMPLATE_
-    SP_NODISCARD SP_PURE SP_FORCEINLINE bool is_valid_index(ull index) const {
+    SP_NODISCARD SP_PURE SP_FORCEINLINE constexpr bool is_valid_index(ull index) const {
         return index < _size;
     }
 
@@ -1709,7 +1712,7 @@ public:
      * @return reference to the element
      */
     _SP_SAFETY_TEMPLATE_
-    SP_NODISCARD SP_PURE SP_FORCEINLINE T& at_unchecked(ull index) {
+    SP_NODISCARD SP_PURE SP_FORCEINLINE constexpr T& at_unchecked(ull index) {
         return _data[index];
     }
 
@@ -1719,7 +1722,7 @@ public:
      * @return reference to the array
      */
     _SP_SAFETY_TEMPLATE_
-    SP_FORCEINLINE array& assign(std::initializer_list<T> list) {
+    SP_FORCEINLINE constexpr array& assign(std::initializer_list<T> list) {
         clear_and_resize(list.size());
         ull index = 0;
         for (type_param item : list) _data[index++] = item;
@@ -1731,7 +1734,7 @@ public:
      * @return new array with copied values
      */
     _SP_SAFETY_TEMPLATE_
-    _SP_FUNC_NI_ array clone() const {
+    _SP_FUNC_NI_ constexpr array clone() const {
         array copy(_size);
         _SP_APPLY_UNROLLED_(_size, copy[i] = _data[i]);
         return copy;
@@ -1744,7 +1747,7 @@ public:
      * @return new array filled with the specified value
      */
     _SP_SAFETY_TEMPLATE_
-    _SP_FUNC_NI_ static array<T, _safety_level> filled(ull size, type_param value) {
+    _SP_FUNC_NI_ static constexpr array<T, _safety_level> filled(ull size, type_param value) {
         array<T, _safety_level> arr(size);
         _SP_APPLY_UNROLLED_(size, arr[i] = value);
         return arr;
@@ -1756,7 +1759,7 @@ public:
      * @return new array with the specified capacity
      */
     _SP_SAFETY_TEMPLATE_
-    _SP_FUNC_NI_ static array<T, _safety_level> with_capacity(ull capacity) {
+    _SP_FUNC_NI_ static constexpr array<T, _safety_level> with_capacity(ull capacity) {
         array<T, _safety_level> arr;
         arr.reserve(capacity);
         return arr;
@@ -1767,7 +1770,7 @@ public:
      * @param pivot_index index of the pivot element
      */
     _SP_SAFETY_TEMPLATE_
-    void partition(ull pivot_index){
+    constexpr void partition(ull pivot_index){
         _SP_CHECK_SAFETY_(1) if (pivot_index >= _size)_SP_UNLIKELY_ throw exceptions::ArrayException("Index out of range.");
         T pivot = _data[pivot_index];
         ull i = 0;
@@ -1788,7 +1791,7 @@ public:
      * @param pivot_index index of the pivot element
      */
     _SP_SAFETY_TEMPLATE_
-    void stable_partition(ull pivot_index){
+    constexpr void stable_partition(ull pivot_index){
         _SP_CHECK_SAFETY_(1) if (pivot_index >= _size)_SP_UNLIKELY_ throw exceptions::ArrayException("Index out of range.");
         T pivot = _data[pivot_index];
         array<T, _safety_level> less;
