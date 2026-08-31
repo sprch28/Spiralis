@@ -80,20 +80,21 @@ template <typename T>
 class allocator : public _spiral_alloc_traits{
 public:
     using value_type = T;
-    allocator() noexcept = default;
+    constexpr allocator() noexcept = default;
     template <typename U>
-    allocator(const allocator<U>&) noexcept {}
+    constexpr allocator(const allocator<U>&) noexcept {}
 
-    T* allocate(size_type n){
+    constexpr T* allocate(size_type n){
         void* p = std::malloc(n * sizeof(T));
         SP_IF_NOT_EXPECT(!p && n != 0) { std::cout << "ERROR: Could not allocate in sp::allocator\nRequested bytes: " << n << std::endl; throw std::bad_alloc(); }
         return static_cast<T*>(p);
     }
 
-    void deallocate(T* p, size_type n)noexcept{
+    constexpr void deallocate(T* p, size_type n)noexcept{
         std::free(p);
     }
     static constexpr size_type get_alignment() { return 0; }
+    SP_CONSTEXPR20 ~allocator() noexcept = default;
 };
 
 template <typename T>
@@ -101,12 +102,11 @@ class aligned_allocator : public _spiral_alloc_traits{
 public:
     using value_type = T;
 
-    aligned_allocator() noexcept = default;
-
+    constexpr aligned_allocator() noexcept = default;
     template <typename U>
-    aligned_allocator(const aligned_allocator<U>&) noexcept {}
+    constexpr aligned_allocator(const aligned_allocator<U>&) noexcept {}
 
-    T* allocate(size_type n){
+    constexpr T* allocate(size_type n){
         SP_IF_NOT_EXPECT(n==0) return nullptr;
         ull bytes = (sizeof(T) * n + sp_cache_line_size - 1) & ~(sp_cache_line_size - 1);
         void* p = nullptr;
@@ -119,7 +119,7 @@ public:
         return static_cast<T*>(p);
     }
 
-    void deallocate(T* p, size_type n)noexcept{
+    constexpr void deallocate(T* p, size_type n)noexcept{
     #if defined(_MSC_VER) || defined(__MINGW32__)
         _aligned_free(p);
     #else
@@ -128,6 +128,7 @@ public:
     }
 
     static constexpr size_type get_alignment() { return sp_cache_line_size; }
+    SP_CONSTEXPR20 ~aligned_allocator() noexcept = default;
 };
 
 template <typename T>
@@ -135,6 +136,10 @@ class page_allocator : public _spiral_alloc_traits {
 public:
     using value_type = T;
     using size_type = __SP_SIZE_TYPE__;
+
+    constexpr page_allocator() noexcept = default;
+    template <typename U>
+    constexpr page_allocator(const page_allocator<U>& other) noexcept {}
     
     static constexpr size_type capacity_for(size_type n) noexcept {
         SP_IF_NOT_EXPECT(n == 0) return 0;
@@ -143,7 +148,7 @@ public:
         return allocated_bytes / sizeof(T);
     }
 
-    T* allocate(size_type n) {
+    constexpr T* allocate(size_type n) {
         SP_IF_NOT_EXPECT(n == 0) return nullptr;
         size_type bytes = (n * sizeof(T) + 4095) & ~4095; // avoiding truncation loss
         
@@ -157,7 +162,7 @@ public:
         return static_cast<T*>(ptr);
     }
 
-    void deallocate(T* p, size_type n) noexcept {
+    constexpr void deallocate(T* p, size_type n) noexcept {
         SP_IF_NOT_EXPECT(!p) return;
         size_type bytes = (n * sizeof(T) + 4095) & ~4095;
     #if defined(_WIN32)
@@ -168,6 +173,7 @@ public:
     }
 
     static constexpr size_type get_alignment() { return 4096; }
+    SP_CONSTEXPR20 ~page_allocator() noexcept = default;
 };
 template <typename T, typename U>
 bool operator==(const page_allocator<T>&, const page_allocator<U>&) noexcept { return true; }
@@ -184,24 +190,25 @@ public:
     using value_type = T;
     using size_type = __SP_SIZE_TYPE__;
     
-    unbinded_stack_allocator() = default;
+    constexpr unbinded_stack_allocator() = default;
     
-    unbinded_stack_allocator(const unbinded_stack_allocator&) noexcept : offset(0) {}
-    unbinded_stack_allocator(unbinded_stack_allocator&&) noexcept : offset(0) {}
-    unbinded_stack_allocator& operator=(const unbinded_stack_allocator&) noexcept { offset = 0; return *this; }
-    unbinded_stack_allocator& operator=(unbinded_stack_allocator&&) noexcept { offset = 0; return *this; }
+    constexpr unbinded_stack_allocator(const unbinded_stack_allocator&) noexcept : offset(0) {}
+    constexpr unbinded_stack_allocator(unbinded_stack_allocator&&) noexcept : offset(0) {}
+    constexpr unbinded_stack_allocator& operator=(const unbinded_stack_allocator&) noexcept { offset = 0; return *this; }
+    constexpr unbinded_stack_allocator& operator=(unbinded_stack_allocator&&) noexcept { offset = 0; return *this; }
 
     static constexpr size_type capacity_for(size_type n) noexcept { return N; }
     
-    SP_FORCEINLINE T* allocate(size_type n) {
+    SP_FORCEINLINE constexpr T* allocate(size_type n) {
         size_type bytes_requested = n * sizeof(T);
         SP_IF_NOT_EXPECT(offset + bytes_requested > sizeof(buffer)) { throw std::bad_alloc(); }
-        void* raw_ptr = &buffer[offset];
+        void* raw_ptr = (void*)(&buffer[offset]);
         offset += bytes_requested;
         return static_cast<T*>(raw_ptr);
     }
     
-    void deallocate(T* p, size_type n) noexcept{}
+    constexpr void deallocate(T* p, size_type n) noexcept{}
+    SP_CONSTEXPR20 ~unbinded_stack_allocator() noexcept = default;
 };
 template <ull N = 1024>
 struct binded_stack_allocator {
