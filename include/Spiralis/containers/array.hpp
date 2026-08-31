@@ -89,7 +89,7 @@ private:
 
     template <bool is_new = false>
     _SP_FUNC_NI_ SP_COLD constexpr ull grow_capacity(ull min) const{
-        ull new_cap;
+        ull new_cap = 0;
         SP_IF_CONSTEXPR(is_new) new_cap = 8;
         else new_cap = _capacity + (_capacity >> 1);
         SP_IF_NOT_EXPECT(new_cap<min) new_cap = min;
@@ -161,7 +161,7 @@ public:
      * @brief constructor with size
      * @param size initial size of array
      */
-    constexpr array(ull size) : _data(nullptr), _size(0), _capacity(allocator_ext<Allocator<T>>::true_capacity(grow_capacity<true>(size))) {
+    SP_CONSTEXPR20 array(ull size) : _data(nullptr), _size(0), _capacity(allocator_ext<Allocator<T>>::true_capacity(grow_capacity<true>(size))) {
         _SP_CHECK_SAFETY_LEVEL_(1) SP_IF_NOT_EXPECT(_capacity == 0) return;
         _data = sp::allocator_traits<Allocator<T>>::allocate(_alloc, _capacity); //sp::allocator_traits<Allocator<T>>::allocate(_alloc, _capacity);
         try {
@@ -180,7 +180,7 @@ public:
      * @param count initial size of array
      * @param value default value to fill array with
      */
-    constexpr array(ull count, type_param value)
+    SP_CONSTEXPR20 array(ull count, type_param value)
         : _data(nullptr), _size(0), _capacity(allocator_ext<Allocator<T>>::true_capacity((ull)(count + (count >> 1))))
     {
         _SP_CHECK_SAFETY_LEVEL_(1) SP_IF_NOT_EXPECT(_capacity == 0) return;
@@ -201,7 +201,7 @@ public:
      * @param data pointer to the raw data
      * @param size size of the array
      */
-    constexpr array(const T* data, ull size) : _data(nullptr), _size(0), _capacity(allocator_ext<Allocator<T>>::true_capacity(size)){
+    SP_CONSTEXPR20 array(const T* data, ull size) : _data(nullptr), _size(0), _capacity(allocator_ext<Allocator<T>>::true_capacity(size)){
         _SP_CHECK_SAFETY_LEVEL_(1) SP_IF_NOT_EXPECT(_capacity == 0) return;
         _data = sp::allocator_traits<Allocator<T>>::allocate(_alloc, _capacity);
         SP_IF_CONSTEXPR (spt::is_nothrow_copy_constructible<T>::value) {
@@ -222,7 +222,7 @@ public:
      * @brief copy constructor
      * @param other array to copy from
      */
-    constexpr array(const array& other) : _alloc(other._alloc), _data(nullptr), _size(other._size), _capacity(other._capacity){
+    SP_CONSTEXPR20 array(const array& other) : _alloc(other._alloc), _data(nullptr), _size(other._size), _capacity(other._capacity){
         _SP_CHECK_SAFETY_LEVEL_(1) SP_IF_NOT_EXPECT(_capacity == 0) return;
         _data = sp::allocator_traits<Allocator<T>>::allocate(_alloc, _capacity);
         SP_IF_CONSTEXPR (_trivially_copyable) {
@@ -256,7 +256,7 @@ public:
      * @brief initializer list constructor
      * @param list initializer list to copy from
      */
-    constexpr array(std::initializer_list<T> list)
+    SP_CONSTEXPR20 array(std::initializer_list<T> list)
         : _data(nullptr), _size(0), _capacity(allocator_ext<Allocator<T>>::true_capacity(list.size()))
     {
         _SP_CHECK_SAFETY_LEVEL_(1) SP_IF_NOT_EXPECT(_capacity == 0) return;
@@ -280,7 +280,7 @@ public:
      * @param list initializer list to copy from
      * @param extra_capacity additional capacity to allocate
      */
-    constexpr array(std::initializer_list<T> list, ull extra_capacity)
+    SP_CONSTEXPR20 array(std::initializer_list<T> list, ull extra_capacity)
         : _data(nullptr), _size(0), _capacity(allocator_ext<Allocator<T>>::true_capacity(list.size()+extra_capacity))
     {
         _SP_CHECK_SAFETY_LEVEL_(1) if (_capacity == 0)_SP_UNLIKELY_ return;
@@ -323,10 +323,7 @@ public:
     /**
      * @brief destructor
      */
-    #if ___SP_CPP_VER___ >= 20
-    constexpr 
-    #endif 
-    ~array() noexcept {
+    SP_CONSTEXPR20 ~array() noexcept {
         destroy_elements();
         sp::allocator_traits<Allocator<T>>::deallocate(_alloc, _data, _capacity);//sp::allocator_traits<Allocator<T>>::deallocate(_alloc, _data, _capacity);
     }
@@ -1158,7 +1155,7 @@ public:
      * @return array of indices where the element is found
      */
     _SP_SAFETY_TEMPLATE_
-    SP_FORCEINLINE constexpr array<ull> indices_of(type_param value) const{
+    SP_FORCEINLINE SP_CONSTEXPR20 array<ull> indices_of(type_param value) const{
         array<ull> result;
         _SP_APPLY_UNROLLED_(_size, if(_data[i]==value) result.push_back(i));
         return result;
