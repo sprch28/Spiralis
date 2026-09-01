@@ -53,15 +53,16 @@ private:
         static constexpr ull true_capacity(ull n) noexcept { return Alloc::capacity_for(n); }
     };
     struct __small_mode{
-        char _data[23];
-        unsigned char _flag = 0;   // Overlaps with the last byte of big mode _capacity
-        void push_back(char element) {
+        char _data[23]{};
+        unsigned char _flag{0};   // Overlaps with the last byte of big mode _capacity
+        constexpr __small_mode(){}
+        constexpr void push_back(char element) {
             _flag &= 0x7F; // remove MSB
             _data[_flag] = element; // replace null terminator with element
             _data[++_flag] = '\0'; // increment size and add null terminator
             _flag |= 0x80; // re-apply MSB
         }
-        void append(const char* element, size_type len, size_type combined_len){
+        constexpr void append(const char* element, size_type len, size_type combined_len){
             _flag &= 0x7F;
             memcpy(_data+_flag, element, len);
             _flag = combined_len;
