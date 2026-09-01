@@ -11,6 +11,9 @@
 #include <tuple>
 #include <queue>
 #include <functional>
+
+// Better implementation soon to come
+
 namespace sp{
 
 template <bool autoJoin = true>
@@ -23,7 +26,7 @@ private:
     struct ThreadData {
         F func;
         std::tuple<Args...> args;
-        ThreadData(F&& f, Args&&... a) : func(std::forward<F>(f)), args(std::forward<Args>(a)...) {}
+        ThreadData(F&& f, Args&&... a) : func(sp::forward<F>(f)), args(sp::forward<Args>(a)...) {}
     };
 public:
     thread(const thread&) = delete;
@@ -31,7 +34,7 @@ public:
     template <typename Func, typename... Args>
     SP_FORCEINLINE thread(Func f, Args&&... args){
         // Package the function arguments
-        auto data = new ThreadData<Func, Args...>(std::forward<Func>(f), std::forward<Args>(args)...);
+        auto data = new ThreadData<Func, Args...>(sp::forward<Func>(f), sp::forward<Args>(args)...);
         int result = pthread_create(&_thread, NULL, [](void* raw_data) -> void*{
             // Convert raw data back into its correct types
             auto* typed_data = static_cast<ThreadData<Func, Args...>*>(raw_data);
@@ -53,7 +56,7 @@ public:
 
     template <typename Func, typename... Args>
     SP_FORCEINLINE void run(Func f, Args&&... args){
-        auto data = new ThreadData<Func, Args...>(std::forward<Func>(f), std::forward<Args>(args)...);
+        auto data = new ThreadData<Func, Args...>(sp::forward<Func>(f), sp::forward<Args>(args)...);
         int result = pthread_create(&_thread, NULL, [](void* raw_data) -> void*{
             auto* typed_data = static_cast<ThreadData<Func, Args...>*>(raw_data);
             std::apply(typed_data->func, typed_data->args);
@@ -115,7 +118,7 @@ public:
         pthread_mutex_lock(&_lock);
         // Use a while loop to handle spurious wakeups 
         // and ensure we don't wait if work is already done.
-        while (_active_tasks > 0) {
+        while(_active_tasks > 0){
             pthread_cond_wait(&_wait_cond, &_lock);
         }
         pthread_mutex_unlock(&_lock);
@@ -131,25 +134,20 @@ public:
                 auto* self = static_cast<thread_pool*>(arg);
                 while(true) {
                     pthread_mutex_lock(&self->_lock);
-                    // Wait for work or shutdown
-                    while(self->_queue.empty() && !self->_end) {
+                    while(self->_queue.empty() && !self->_end){
                         pthread_cond_wait(&self->_cond, &self->_lock);
                     }
-                    // Shutdown condition
                     if(self->_end && self->_queue.empty()) {
                         pthread_mutex_unlock(&self->_lock);
                         break;
                     }
-                    // Grab task
                     auto task = sp::move(self->_queue.front());
                     self->_queue.pop();
                     pthread_mutex_unlock(&self->_lock);
-                    // Run task
                     task();
-                    // Update completion status
                     pthread_mutex_lock(&self->_lock);
                     self->_active_tasks--;
-                    if (self->_active_tasks == 0) {
+                    if(self->_active_tasks == 0){
                         pthread_cond_broadcast(&self->_wait_cond);
                     }
                     pthread_mutex_unlock(&self->_lock);
@@ -162,7 +160,7 @@ public:
 
     template <typename F, typename... Args>
     SP_FORCEINLINE void enqueue(F&& f, Args&&... args) {
-        auto task = [f = std::forward<F>(f), args_tuple = std::make_tuple(std::forward<Args>(args)...)]() mutable {
+        auto task = [f = sp::forward<F>(f), args_tuple = std::make_tuple(sp::forward<Args>(args)...)]() mutable {
             std::apply(sp::move(f), sp::move(args_tuple));
         };
         pthread_mutex_lock(&_lock);
@@ -176,10 +174,9 @@ public:
     _SP_FUNC_NI_ size_type size() { return _threads.size(); }
     _SP_FUNC_NI_ size_type queue_empty() { return _queue.empty(); }
     _SP_FUNC_NI_ size_type num_tasks_left() { return _queue.size(); }
-
-
 };
 
+static thread_pool sp_global_pool;
 
 
 

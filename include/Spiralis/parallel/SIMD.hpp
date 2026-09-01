@@ -257,7 +257,7 @@ static SP_FORCEINLINE void name##suffix(_SP_STRIP params, long long n) { \
     long long i = 0; \
     _SP_IF_FOUND( \
         using Tr = TypeTraits<T>; \
-        SP_IF_CONSTEXPR((constexpr_check)) simd_loop; \
+        SP_IF_CONSTEXPR((constexpr_check)) { simd_loop; } \
     ) \
     for(; i < n; i++) { scalar_op; } \
 }
@@ -271,7 +271,7 @@ static SP_FORCEINLINE void name##suffix(_SP_STRIP params, long long n) { \
     result[i] = arr1[i] op arr2[i], constexpr_check)
 
 #define _SP_DEF_BACKEND_GENERIC_3_(name, constexpr_check, ...) \
-    _SP_BACKEND_TEMPLATE(name, _generic, (T* SP_RESTRICT arr1, T* SP_RESTRICT arr2, T* SP_RESTRICT arr3, T* SP_RESTRICT result), \
+    _SP_BACKEND_TEMPLATE(name, _generic, (const T* SP_RESTRICT arr1, const T* SP_RESTRICT arr2, const T* SP_RESTRICT arr3, T* SP_RESTRICT result), \
     _SP_LOOP_SIMD_3_(name), \
     __VA_ARGS__, constexpr_check)
 

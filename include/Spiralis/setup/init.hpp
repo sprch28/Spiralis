@@ -308,6 +308,12 @@
     #define SP_IF_CONSTEXPR(expr) if((expr))
 #endif
 
+#if ___SP_CPP_VER___ >= 20
+    #define SP_CONSTEXPR20 constexpr
+#else
+    #define SP_CONSTEXPR20
+#endif
+
 #if defined(__clang__)
     #define SP_PRAGMA_UNROLL _Pragma("clang loop unroll(enable)")
 #elif defined(__GNUC__)

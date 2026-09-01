@@ -7,9 +7,11 @@
 
 namespace sp{ 
     class basic_hash{
+        constexpr basic_hash(){}
+        SP_CONSTEXPR20 ~basic_hash(){}
         public:
         template <typename T> 
-        SP_FORCEINLINE SP_PURE size_type operator()(T val, size_type bucket_size=0){ 
+        SP_FORCEINLINE SP_PURE constexpr size_type operator()(T val, size_type bucket_size=0){ 
             size_type value = 0; 
             SP_IF_CONSTEXPR((spt::is_same<T,int>::value||spt::is_same<T, unsigned int>::value)) value = static_cast<size_type>(val*2654435769U);
             else SP_IF_CONSTEXPR((spt::is_same<T,long long>::value||spt::is_same<T, ull>::value)) value = static_cast<size_type>(val*11400714819323198485ULL);
@@ -21,7 +23,7 @@ namespace sp{
         }
 
         private:
-        size_type ____private_string_hash(const char* data, size_type len, size_type bucket_size=0){
+        constexpr size_type ____private_string_hash(const char* data, size_type len, size_type bucket_size=0){
             ull h = 14695981039346656037ULL;
             const ull fnv_prime = 1099511628211ULL;
             for(int ch = 0; ch < len; ch++){

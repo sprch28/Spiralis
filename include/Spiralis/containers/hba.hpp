@@ -123,16 +123,6 @@ SP_NODISCARD SP_FORCEINLINE SP_HOT const size_type get_idx(size_type target_idx)
         cur = popcount(_meta[++probe_idx]);
     }
     ull meta_val = _meta[probe_idx];
-// Priority Path: Hardware PDEP + LZCNT (x86 BMI2)
-// Unfortunately, the bitmask layout will need to be reversed which makes more logical sense to the computer,
-// But is a pain in the ass for people to visualize.
-// #if defined(__BMI2__) && !defined(__aarch64__)
-//     // Deposit a set bit at the location of the 'remaining'-th set bit
-//     // (Note: Uses 1ULL << remaining, which is 0-indexed)
-//     ull selected_bit = _pdep_u64(1ULL << remaining, meta_val);
-//     size_type bit_pos = leading_zeros(selected_bit);
-//     hole_offset += bit_pos;
-// #else
     // Initial binary split chosen empirically.
     // 32 consistently provides the best overall performance across
     // lookup-heavy and erase-heavy benchmarks. Smaller splits (e.g. 16)
@@ -141,21 +131,20 @@ SP_NODISCARD SP_FORCEINLINE SP_HOT const size_type get_idx(size_type target_idx)
     // search or a pure while-loop is still unknown.
     // It's suspected that 32-bit is quickest because it provides a single predictable branch
     // instead of branch mispredictions with deeper binary searches.
-    int cnt_hi = popcount(meta_val >> 32);
-    if(remaining>=cnt_hi){
-        remaining -= cnt_hi;
-        hole_offset += (32 - cnt_hi);
+    int cnt_lo = popcount(meta_val >> 32);
+    if(remaining>=cnt_lo){
+        remaining -= cnt_lo;
+        hole_offset += (32 - cnt_lo);
         meta_val <<= 32;
     }
     ull next_set_bit = leading_zeros(meta_val);
     while(remaining > 0){
         hole_offset += next_set_bit;
         meta_val = (meta_val << next_set_bit) << 1;
-        remaining--;
         next_set_bit = leading_zeros(meta_val);
+        --remaining;
     }
     if(meta_val) hole_offset += next_set_bit;
-//#endif
     return target_idx + hole_offset;
 }
 
@@ -169,16 +158,11 @@ SP_FORCEINLINE void build_meta(){
     }if(remaining) _meta[idx] = ~0ULL << (64 - remaining);
 
     SP_IF_CONSTEXPR(_num_layers>1){
-        ull child_start = _layer_offset(1, _capacity);
-        ull child_count = _layer_size(1, _capacity);
-
-        ull parent_start = _layer_offset(2, _capacity);
-        ull parent_count = _layer_size(2, _capacity);
-
-        for(ull p = 0; p < parent_count; p++){
-            ull sum = 0;
-            ull child_base = p << 6;
-            for(ull c = 0; c < 64; c++){
+        ull child_start = _layer_offset(1, _capacity); ull parent_start = _layer_offset(2, _capacity);
+        ull child_count = _layer_size(1, _capacity); ull parent_count = _layer_size(2, _capacity);
+        for(ull p = 0; p < parent_count; ++p){
+            ull sum = 0; ull child_base = p << 6;
+            for(ull c = 0; c < 64; ++c){
                 ull child_idx = child_base + c;
                 SP_IF_NOT_EXPECT(child_idx>=child_count) break;
                 sum += popcount(_meta[child_start + child_idx]);
@@ -187,7 +171,7 @@ SP_FORCEINLINE void build_meta(){
         }
     }
 
-    for(ull layer = 2; layer < _num_layers; layer++){
+    for(ull layer = 2; layer < _num_layers; ++layer){
         ull child_start = _layer_offset(layer, _capacity);
         ull child_count = _layer_size(layer, _capacity);
         
@@ -271,15 +255,11 @@ _alloc(sp::move(other._alloc)),_meta_alloc(sp::move(other._meta_alloc)){
 ~hba(){ // TEMPORARY: inefficient
     if(_data){
         for(size_type i = 0; i < _capacity; ++i){
-            if(_is_slot_active(i)){
-                sp::allocator_traits<Alloc<T>>::destroy(_alloc, _data + i);
-            }
+            if(_is_slot_active(i)) sp::allocator_traits<Alloc<T>>::destroy(_alloc, _data + i);
         }
         sp::allocator_traits<Alloc<T>>::deallocate(_alloc, _data, _capacity);
     }
-    if(_meta){
-        sp::allocator_traits<Alloc<ull>>::deallocate(_meta_alloc, _meta, _calculate_meta_size(_capacity));
-    }
+    if(_meta) sp::allocator_traits<Alloc<ull>>::deallocate(_meta_alloc, _meta, _calculate_meta_size(_capacity));
 }
 
 //============================//============================//============================//============================

@@ -6,7 +6,9 @@
 #include "../containers/pair.hpp"
 namespace sp{
 
-template <typename T, bool track_size = true, template <typename> class Allocator = sp::allocator>
+
+
+/*template <typename T, bool track_size = true, template <typename> class Allocator = sp::allocator>
 class ptr_list{
 private:
     T* data = nullptr;
@@ -90,7 +92,7 @@ public:
 
     SP_FORCEINLINE constexpr T* get() { return data; }
     SP_FORCEINLINE constexpr const T* cget() const { return data; }
-};
+};*/
 
 };
 #endif

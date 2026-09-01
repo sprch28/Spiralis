@@ -279,12 +279,11 @@ bool _boolalpha=false;
     SP_FLATTEN SP_FORCEINLINE void writeUL(unsigned long n){ writeULL(n); }
     SP_FLATTEN SP_FORCEINLINE void writeL(long n) { writeLL(n); }
 
-    void writeDouble(double d){
+    void writeDouble(double d) {
         char local_buf[32];
-        int len = std::snprintf(local_buf, 32, "%lf", d); // placeholder until i implement a better function
-        for(int i = 0; i < len; ++i){
-            writeChar(local_buf[i]);
-        }
+        int len = std::snprintf(local_buf, sizeof(local_buf), "%g", d);
+        int actual_len = (len < (int)sizeof(local_buf)) ? len : (int)sizeof(local_buf) - 1;
+        for(int i = 0; i < actual_len; ++i) writeChar(local_buf[i]);
     }
 
     SP_FORCEINLINE SP_FLATTEN void writeString(const char* s){

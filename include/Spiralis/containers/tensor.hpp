@@ -9,12 +9,13 @@
 #include "../math/math.hpp" 
 #include "../containers/array.hpp"
 #include "../parallel/SIMD.hpp"
+#include <cmath>
 class spml;
 namespace sp{
 template <typename T, template <typename> class Allocator = sp::aligned_allocator>
 class alignas(spt::get_allocator_alignment<Allocator<T>>()
 ? sp_cache_line_size 
-: max(alignof(Allocator<T>),max(alignof(T*),alignof(size_type)))) tensor{
+: max(alignof(Allocator<T>),max(alignof(Allocator<size_type>),max(alignof(T*),alignof(size_type))))) tensor{
 private:
     friend class ::spml;
     alignas(spt::get_allocator_alignment<Allocator<T>>() ? sp_cache_line_size 
@@ -306,10 +307,6 @@ public:
     template <typename Other> SP_FORCEINLINE constexpr tensor& operator/=(const Other& other) { return div(other); }
     SP_FORCEINLINE constexpr tensor& operator/=(type_param other) { return div(other); }
 
-    // Will be used for matmul
-    //SP_FORCEINLINE constexpr tensor& operator^=(const tensor& other) { matmul(other); }
-    //template <typename Other> SP_FORCEINLINE constexpr tensor& operator^=(const Other& other) { matmul(other); }
-
     SP_FORCEINLINE constexpr tensor operator+(const tensor& other) { tensor result(*this); return result.add(other); }
     template <typename Other> SP_FORCEINLINE constexpr tensor operator+(const Other& other) { tensor result(*this); return result.add(other); }
     SP_FORCEINLINE constexpr tensor operator+(type_param other) { tensor result(*this); return result.add(other); }
@@ -328,9 +325,11 @@ public:
 
     SP_FORCEINLINE constexpr tensor operator>(type_param other) { tensor result(*this); _SP_APPLY_UNROLLED_(_size, result._data[i] = (T)(_data[i] > other)); return result; }
 
-    // SP_FORCEINLINE constexpr tensor operator^(const tensor& other) { tensor result(*this); return result.matmul(other); }
-    // template <typename Other> SP_FORCEINLINE constexpr tensor operator^(const Other& other) { tensor result(*this); return result.matmul(other); }
 
+    // SPECIAL OPERATORS
+
+    SP_FORCEINLINE constexpr tensor operator~() { return c_t(); }
+    SP_FORCEINLINE constexpr tensor operator%(const tensor& other) { return matmul(other); }
 
     //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -372,7 +371,7 @@ public:
     //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // Tensor data manipulation
         SP_FORCEINLINE tensor& t(){
-            for(size_type i = 0, j = _stride_size-1; i < j; ++i, --j) sp::swap(_strides[i],_strides[j]);
+            for(size_type i = 0, j = _stride_size-1; i < j; ++i, --j) { sp::swap(_strides[i],_strides[j]); sp::swap(_shapes[i],_shapes[j]); }
             return *this;
         }
         SP_FORCEINLINE tensor c_t(){
@@ -547,8 +546,6 @@ public:
     _SP_DEF_TENSOR_MATH_OP_0_(acosh, _data[i] = std::acosh(_data[i]));
     _SP_DEF_TENSOR_MATH_OP_0_(atanh, _data[i] = std::atanh(_data[i]));
 
-    // Common ML Activation Functions
-
     // Special Mathematical functions
     _SP_DEF_TENSOR_MATH_OP_0_(erf, _data[i] = std::erf(_data[i]));
     _SP_DEF_TENSOR_MATH_OP_0_(erfc, _data[i] = std::erfc(_data[i]));
@@ -570,23 +567,35 @@ public:
 
     // When multiplying matrix A (M × K) by matrix B (K × N), result will be of (M × N)
     // offset(i, j) = (i * _strides[0]) + (j * _strides[1])
-    // Original commit was an LLM-generated naive implementation as a placeholder
-    // Future commits of matmul will be human-written code, such as the one seen below.
     // Use of template <typename Other> on this function is disabled for now
-    SP_FORCEINLINE tensor matmul(const tensor& B) const{
+    template <bool check_dims=true>
+    SP_NODISCARD SP_FORCEINLINE SP_HOT tensor matmul(const tensor& B) const{
         const tensor& A = *this;
-        if(A._shape_size != B._shape_size) throw sp::exceptions::spiral_exception("Error: matmul() expects 2D tensors");
 
-        if(A._shapes[1]!=B._shapes[0]) throw sp::exceptions::spiral_exception("Dimension mismatch for matmul");
+        const size_type AShapes0 = A._shapes[0];
+        const size_type AShapes1 = A._shapes[1];
+        const size_type BShapes1 = B._shapes[1];
 
-        tensor C(A._shapes[0], B._shapes[1]);
+        SP_IF_CONSTEXPR(check_dims) SP_IF_NOT_EXPECT(A._shape_size != B._shape_size) throw sp::exceptions::spiral_exception("Error: matmul() expects 2D tensors");
+        SP_IF_CONSTEXPR(check_dims) SP_IF_NOT_EXPECT(A._shapes[1]!=B._shapes[0]) throw sp::exceptions::spiral_exception("Dimension mismatch for matmul");
+
+        tensor C(AShapes0, BShapes1); // result tensor
+
+        const size_type AStrides0 = A._strides[0];
+        const size_type AStrides1 = A._strides[1];
+
+        const size_type BStrides0 = B._strides[0];
+        const size_type BStrides1 = B._strides[1];
+
+        const size_type CStrides0 = C._strides[0];
+        const size_type CStrides1 = C._strides[1];
 
         // i-k-j (contiguous access)
-        for(size_type i = 0; i < A._shapes[0]; ++i){
-            for(size_type k = 0; k < A._shapes[1]; ++k){
-                T valA = A._data[i * A._strides[0] + k * A._strides[1]];
-                for(size_type j = 0; j < B._shapes[1]; ++j){
-                    C._data[i * C._strides[0] + j * C._strides[1]] += valA * B._data[k * B._strides[0] + j * B._strides[1]];
+        for(size_type i = 0; i < AShapes0; ++i){
+            for(size_type k = 0; k < AShapes1; ++k){
+                T valA = A._data[i * AStrides0 + k * AStrides1];
+                for(size_type j = 0; j < BShapes1; ++j){
+                    C._data[i * CStrides0 + j * CStrides1] += valA * B._data[k * BStrides0 + j * BStrides1];
                 }
             }
         }
