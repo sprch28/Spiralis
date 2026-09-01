@@ -308,9 +308,14 @@
     #define SP_IF_CONSTEXPR(expr) if((expr))
 #endif
 
-#if ___SP_CPP_VER___ >= 20
+#if ___SP_CPP_VER___ >= 23
+    #define SP_CONSTEXPR23 constexpr
+    #define SP_CONSTEXPR20 constexpr
+#elif ___SP_CPP_VER___ >= 20
+    #define SP_CONSTEXPR23
     #define SP_CONSTEXPR20 constexpr
 #else
+    #define SP_CONSTEXPR23
     #define SP_CONSTEXPR20
 #endif
 

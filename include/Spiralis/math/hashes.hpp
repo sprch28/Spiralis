@@ -7,9 +7,9 @@
 
 namespace sp{ 
     class basic_hash{
+        public:
         constexpr basic_hash(){}
         SP_CONSTEXPR20 ~basic_hash(){}
-        public:
         template <typename T> 
         SP_FORCEINLINE SP_PURE constexpr size_type operator()(T val, size_type bucket_size=0){ 
             size_type value = 0; 
