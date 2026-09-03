@@ -97,7 +97,7 @@ public:
 
     constexpr tensor() {}
     template <typename U>
-    /*constexpr*/ tensor(std::initializer_list<std::initializer_list<U>> list){
+    SP_CONSTEXPR23 tensor(std::initializer_list<std::initializer_list<U>> list){
         sp::vector<size_type> shape; // sp::vector has no constexpr support yet
         size_type total = 0;
         _build_from_list(list, 0, shape, total);
@@ -199,7 +199,7 @@ public:
     #if ___SP_CPP_VER___ >= 20 
     constexpr 
     #endif 
-    ~tensor(){
+    SP_CONSTEXPR20 ~tensor(){
         if(_data){
             destroy_data();
             sp::allocator_traits<Allocator<size_type>>::deallocate(_meta_alloc, _shapes, _shape_size);
@@ -357,30 +357,30 @@ public:
         return print_flat();
     }
 
-    flat_iterator begin() { return flat_iterator(_data); }
-    const flat_iterator begin() const { return const_flat_iterator(_data); }
-    const flat_iterator cbegin() const { return const_flat_iterator(_data); }
+    constexpr flat_iterator begin() { return flat_iterator(_data); }
+    constexpr const flat_iterator begin() const { return const_flat_iterator(_data); }
+    constexpr const flat_iterator cbegin() const { return const_flat_iterator(_data); }
 
-    flat_iterator end() { return flat_iterator(_data+_size); }
-    const flat_iterator end() const { return const_flat_iterator(_data+_size); }
-    const flat_iterator cend() const { return const_flat_iterator(_data+_size); }
+    constexpr flat_iterator end() { return flat_iterator(_data+_size); }
+    constexpr const flat_iterator end() const { return const_flat_iterator(_data+_size); }
+    constexpr const flat_iterator cend() const { return const_flat_iterator(_data+_size); }
 
     //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // Tensor data manipulation
-        SP_FORCEINLINE tensor& t(){
+        SP_FORCEINLINE constexpr tensor& t(){
             for(size_type i = 0, j = _stride_size-1; i < j; ++i, --j) { sp::swap(_strides[i],_strides[j]); sp::swap(_shapes[i],_shapes[j]); }
             return *this;
         }
-        SP_FORCEINLINE tensor c_t(){
+        SP_FORCEINLINE constexpr tensor c_t(){
             tensor result(*this);
             return result.t();
         }
 
         template <typename... Args>
-        SP_FORCEINLINE tensor& reshape(Args&&... args){
+        SP_FORCEINLINE constexpr tensor& reshape(Args&&... args){
             size_type new_size = sizeof...(args);
             SP_IF_NOT_EXPECT(new_size==0) throw sp::exceptions::spiral_exception("Reshape() requires arguments, zero were given.");
             size_type new_shape[] = { static_cast<size_type>(args)... };
@@ -398,7 +398,7 @@ public:
             return *this;
         }
         template <typename... Args>
-        SP_FORCEINLINE tensor c_reshape(Args&&... args) { tensor result(*this); return result.reshape(args...); }
+        SP_FORCEINLINE constexpr tensor c_reshape(Args&&... args) { tensor result(*this); return result.reshape(args...); }
 
     //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -406,7 +406,7 @@ public:
     //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // Macro Helper
 #define _SP_DEF_TENSOR_MATH_OP_1_(name, other_path, scalar_path, has_simd, simd_name) \
-    SP_FORCEINLINE tensor& name(const tensor& other){ \
+    SP_FORCEINLINE constexpr tensor& name(const tensor& other){ \
         SP_IF_CONSTEXPR(sp::simd::supports<T>()&&has_simd&&(spt::get_allocator_alignment<Allocator<T>>()&(sp_cache_line_size-1))==0){ \
             sp::simd::simd_name(_data, other._data, _data, _size); \
         } \
@@ -415,7 +415,7 @@ public:
             _SP_NP_APPLY_UNROLLED_(_size, other_path); \
         return *this; \
     } \
-    template <typename Other> SP_FORCEINLINE spt::enable_if_t<SP_HAS_METHOD(Other,data), tensor&> name(const Other& other){ \
+    template <typename Other> SP_FORCEINLINE constexpr spt::enable_if_t<SP_HAS_METHOD(Other,data), tensor&> name(const Other& other){ \
         SP_IF_CONSTEXPR ((sp::simd::supports<T>() && \
      spt::is_same_v<T, spt::remove_cvref_t<decltype(*(other.data()))>> && \
      (spt::get_allocator_alignment<Allocator<T>>()&(sp_cache_line_size-1))==0&& \
@@ -434,20 +434,20 @@ public:
         return *this; \
     } \
     \
-    SP_FORCEINLINE tensor c_##name(const tensor& other) const { tensor result(*this); return result.name(other); } \
-    template <typename Other> SP_FORCEINLINE spt::enable_if_t<SP_HAS_METHOD(Other,data), tensor> c_##name(const Other& other) const { tensor result(*this); return result.name(other); } \
-    SP_FORCEINLINE tensor c_##name(type_param other) const { tensor result(*this); return result.name(other); }
+    SP_FORCEINLINE constexpr tensor c_##name(const tensor& other) const { tensor result(*this); return result.name(other); } \
+    template <typename Other> SP_FORCEINLINE constexpr spt::enable_if_t<SP_HAS_METHOD(Other,data), tensor> c_##name(const Other& other) const { tensor result(*this); return result.name(other); } \
+    SP_FORCEINLINE constexpr tensor c_##name(type_param other) const { tensor result(*this); return result.name(other); }
 
 #define _SP_DEF_TENSOR_MATH_OP_0_(name, path) \
-    SP_FORCEINLINE tensor& name(){ \
+    SP_FORCEINLINE constexpr tensor& name(){ \
         SP_PRAGMA_UNROLL \
         _SP_NP_APPLY_UNROLLED_(_size, path); \
         return *this; \
     } \
-    SP_FORCEINLINE tensor c_##name() const { tensor result(*this); return result.name(); }
+    SP_FORCEINLINE constexpr tensor c_##name() const { tensor result(*this); return result.name(); }
 
 #define _SP_DEF_SCALAR_REDUCTION_(name, start_val, path, ret) \
-    SP_FORCEINLINE T name(){ \
+    SP_FORCEINLINE constexpr T name(){ \
         T result = start_val; \
         _SP_APPLY_UNROLLED_(_size, path); \
         ret; \
@@ -472,7 +472,7 @@ public:
     _SP_DEF_TENSOR_MATH_OP_0_(log2, _data[i] = std::log2(_data[i]));
     _SP_DEF_TENSOR_MATH_OP_0_(log10, _data[i] = std::log10(_data[i]));
     // Limiting functions
-    _SP_DEF_TENSOR_MATH_OP_0_(abs, _data[i] = sp::abs(_data[i]));
+    _SP_DEF_TENSOR_MATH_OP_0_(abs, _data[i] = std::abs(_data[i]));
     _SP_DEF_TENSOR_MATH_OP_0_(neg, _data[i] *= -1);
     _SP_DEF_TENSOR_MATH_OP_0_(sign, _data[i] = (_data[i] > 0) - (_data[i] < 0));
     _SP_DEF_TENSOR_MATH_OP_0_(floor, _data[i] = std::floor(_data[i]));
@@ -496,13 +496,13 @@ public:
     _SP_DEF_TENSOR_MATH_OP_0_(hard_sigmoid, _data[i] = sp::min(sp::max(_data[i] + static_cast<T>(3), static_cast<T>(0)), static_cast<T>(6)) / static_cast<T>(6));
     _SP_DEF_TENSOR_MATH_OP_0_(hard_swish, _data[i] = _data[i] * sp::min(sp::max(_data[i] + static_cast<T>(3), static_cast<T>(0)), static_cast<T>(6)) / static_cast<T>(6));
     _SP_DEF_TENSOR_MATH_OP_0_(relu6, _data[i] = sp::min(sp::max(_data[i], static_cast<T>(0)), static_cast<T>(6)));
-    SP_FORCEINLINE tensor& leaky_relu(type_param alpha = static_cast<T>(0.01)) { _SP_APPLY_UNROLLED_(_size, _data[i] = _data[i] > 0 ? _data[i] : _data[i] * alpha); return *this; }
-    SP_FORCEINLINE tensor c_leaky_relu(type_param alpha = static_cast<T>(0.01)) const { tensor result(*this); return result.leaky_relu(alpha);  }
+    SP_FORCEINLINE constexpr tensor& leaky_relu(type_param alpha = static_cast<T>(0.01)) { _SP_APPLY_UNROLLED_(_size, _data[i] = _data[i] > 0 ? _data[i] : _data[i] * alpha); return *this; }
+    SP_FORCEINLINE constexpr tensor c_leaky_relu(type_param alpha = static_cast<T>(0.01)) const { tensor result(*this); return result.leaky_relu(alpha);  }
 
-    SP_FORCEINLINE tensor& clamp(type_param min_val, type_param max_val) { _SP_APPLY_UNROLLED_(_size, _data[i] = sp::min(sp::max(_data[i], min_val), max_val)); return *this; }
-    SP_FORCEINLINE tensor c_clamp(type_param min_val, type_param max_val) const { tensor result(*this); return result.clamp(min_val, max_val); }
+    SP_FORCEINLINE constexpr tensor& clamp(type_param min_val, type_param max_val) { _SP_APPLY_UNROLLED_(_size, _data[i] = sp::min(sp::max(_data[i], min_val), max_val)); return *this; }
+    SP_FORCEINLINE constexpr tensor c_clamp(type_param min_val, type_param max_val) const { tensor result(*this); return result.clamp(min_val, max_val); }
 
-    SP_FORCEINLINE tensor& softmax(){
+    SP_FORCEINLINE constexpr tensor& softmax(){
         SP_IF_NOT_EXPECT(_size == 0) return *this;
         T max_elem = _data[0];
         for(size_type i = 1; i < _size; ++i) if(_data[i] > max_elem) max_elem = _data[i];
@@ -515,9 +515,9 @@ public:
         for(size_type i = 0; i < _size; ++i) _data[i] /= sum;
         return *this;
     }
-    SP_FORCEINLINE tensor c_softmax() const { tensor result(*this); return result.softmax(); }
+    SP_FORCEINLINE constexpr tensor c_softmax() const { tensor result(*this); return result.softmax(); }
 
-    SP_FORCEINLINE tensor& log_softmax(){
+    SP_FORCEINLINE constexpr tensor& log_softmax(){
         SP_IF_NOT_EXPECT(_size == 0) return *this;
         T max_elem = _data[0];
         for (size_type i = 1; i < _size; ++i) if (_data[i] > max_elem) max_elem = _data[i];
@@ -529,7 +529,7 @@ public:
         for (size_type i = 0; i < _size; ++i) _data[i] = (_data[i] - max_elem) - log_sum;
         return *this;
     }
-    SP_FORCEINLINE tensor c_log_softmax() const { tensor result(*this); return result.log_softmax(); }
+    SP_FORCEINLINE constexpr tensor c_log_softmax() const { tensor result(*this); return result.log_softmax(); }
 
     // Trigonometric functions
     _SP_DEF_TENSOR_MATH_OP_0_(sin, _data[i] = std::sin(_data[i]));
@@ -559,17 +559,17 @@ public:
     // Scalar reductionss
     _SP_DEF_SCALAR_REDUCTION_(sum, 0, result += _data[i], return result);
     _SP_DEF_SCALAR_REDUCTION_(mean, 0, result += _data[i], return result / _size);
-    SP_FORCEINLINE T prod() { SP_IF_NOT_EXPECT(_size==0) return T(); T result = _data[0]; _SP_EXPLICIT_UNROLLED_(i, 1, _size, result *= _data[i]); return result; }
-    SP_FORCEINLINE T min() { SP_IF_NOT_EXPECT(_size==0) return T(); T result = _data[0]; _SP_EXPLICIT_UNROLLED_(i, 1, _size, if(_data[i]<result) result = _data[i]); return result; }
-    SP_FORCEINLINE T max() { SP_IF_NOT_EXPECT(_size==0) return T(); T result = _data[0]; _SP_EXPLICIT_UNROLLED_(i, 1, _size, if(_data[i]>result) result = _data[i]); return result; }
-    SP_FORCEINLINE T argmin() { SP_IF_NOT_EXPECT(_size==0) return T(); T tracker = _data[0]; T result = 0; _SP_EXPLICIT_UNROLLED_(i, 1, _size, if(_data[i]<tracker) { tracker = _data[i]; result = i; }); return result; }
-    SP_FORCEINLINE T argmax() { SP_IF_NOT_EXPECT(_size==0) return T(); T tracker = _data[0]; T result = 0; _SP_EXPLICIT_UNROLLED_(i, 1, _size, if(_data[i]>tracker) { tracker = _data[i]; result = i; }); return result; }
+    SP_FORCEINLINE constexpr T prod() { SP_IF_NOT_EXPECT(_size==0) return T(); T result = _data[0]; _SP_EXPLICIT_UNROLLED_(i, 1, _size, result *= _data[i]); return result; }
+    SP_FORCEINLINE constexpr T min() { SP_IF_NOT_EXPECT(_size==0) return T(); T result = _data[0]; _SP_EXPLICIT_UNROLLED_(i, 1, _size, if(_data[i]<result) result = _data[i]); return result; }
+    SP_FORCEINLINE constexpr T max() { SP_IF_NOT_EXPECT(_size==0) return T(); T result = _data[0]; _SP_EXPLICIT_UNROLLED_(i, 1, _size, if(_data[i]>result) result = _data[i]); return result; }
+    SP_FORCEINLINE constexpr T argmin() { SP_IF_NOT_EXPECT(_size==0) return T(); T tracker = _data[0]; T result = 0; _SP_EXPLICIT_UNROLLED_(i, 1, _size, if(_data[i]<tracker) { tracker = _data[i]; result = i; }); return result; }
+    SP_FORCEINLINE constexpr T argmax() { SP_IF_NOT_EXPECT(_size==0) return T(); T tracker = _data[0]; T result = 0; _SP_EXPLICIT_UNROLLED_(i, 1, _size, if(_data[i]>tracker) { tracker = _data[i]; result = i; }); return result; }
 
     // When multiplying matrix A (M × K) by matrix B (K × N), result will be of (M × N)
     // offset(i, j) = (i * _strides[0]) + (j * _strides[1])
     // Use of template <typename Other> on this function is disabled for now
     template <bool check_dims=true>
-    SP_NODISCARD SP_FORCEINLINE SP_HOT tensor matmul(const tensor& B) const{
+    SP_NODISCARD SP_FORCEINLINE SP_HOT constexpr tensor matmul(const tensor& B) const{
         const tensor& A = *this;
 
         const size_type AShapes0 = A._shapes[0];
