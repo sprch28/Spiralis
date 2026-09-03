@@ -10,12 +10,12 @@ class pair{
 public:
     First first;
     Second second;
-    pair() : first(), second(){}
-    pair(First one, Second two) : first(one), second(two){}
+    constexpr pair() : first(), second(){}
+    constexpr pair(First one, Second two) : first(one), second(two){}
 };
 
 template <typename First, typename Second>
-std::ostream& operator<<(std::ostream& os, const sp::pair<First, Second>& p) {
+constexpr std::ostream& operator<<(std::ostream& os, const sp::pair<First, Second>& p) {
     os << "(" << p.first << ", " << p.second << ")";
     return os;
 }
