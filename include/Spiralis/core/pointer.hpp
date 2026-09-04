@@ -6,93 +6,107 @@
 #include "../containers/pair.hpp"
 namespace sp{
 
-
-
-/*template <typename T, bool track_size = true, template <typename> class Allocator = sp::allocator>
-class ptr_list{
+template <typename T, template <typename> typename Allocator = sp::allocator>
+class ptr {
 private:
-    T* data = nullptr;
-    size_type size = 0;
+    T* data;
     SP_NO_UNIQUE_ADDRESS Allocator<T> alloc;
-    SP_FORCEINLINE constexpr void destroy(){
-        if(data!=nullptr){
-            for(ull idx = 0; idx < size; ++idx) sp::allocator_traits<Allocator<T>>::destroy(alloc, &data+idx);
-            sp::allocator_traits<Allocator<T>>::deallocate(alloc, data, size);
+    constexpr void cleanup(){
+        if(data){
+            SP_IF_CONSTEXPR(!spt::is_trivially_copyable_v<T>) sp::allocator_traits<Allocator<T>>::destroy(alloc, data);
+            sp::allocator_traits<Allocator<T>>::deallocate(alloc, data, 1);
+            data = nullptr;
         }
     }
+
 public:
-    SP_FORCEINLINE constexpr ptr_list(T val){
+    constexpr ptr() noexcept : data(nullptr), alloc() {}
+    constexpr ptr(std::nullptr_t) noexcept : data(nullptr), alloc() {}
+
+    constexpr explicit ptr(T* val) noexcept : data(val), alloc() {}
+
+    template <typename... Args>
+    constexpr ptr(Args&&... args) : alloc() {
         data = sp::allocator_traits<Allocator<T>>::allocate(alloc, 1);
-        sp::allocator_traits<Allocator<T>>::construct(alloc, data, val);
-        SP_IF_CONSTEXPR(track_size) size = 1;
+        sp::allocator_traits<Allocator<T>>::construct(alloc, data, sp::forward<Args>(args)...);
     }
-    SP_FORCEINLINE constexpr ptr_list(std::initializer_list<T> vals){
-        size = vals.size();
-        size_type idx = 0;
-        sp::allocator_traits<Allocator<T>>::allocate(alloc, size);
-        for(auto& i : vals) sp::allocator_traits<Allocator<T>>::construct(alloc, &data+idx, i);
+
+    SP_CONSTEXPR20 ~ptr() { cleanup(); }
+
+    ptr(const ptr&) = delete;
+    ptr& operator=(const ptr&) = delete;
+
+    constexpr ptr(ptr&& other) noexcept : data(other.data), alloc(sp::move(other.alloc)) { other.data = nullptr; }
+
+    constexpr ptr& operator=(ptr&& other) noexcept {
+        if(this != &other){
+            cleanup();
+            data = other.data;
+            alloc = sp::move(other.alloc);
+            other.data = nullptr;
+        }
+        return *this;
     }
-    SP_FORCEINLINE constexpr ptr_list(size_type sz, T default_val){ 
-        size = sz;
-        sp::allocator_traits<Allocator<T>>::allocate(alloc, size);
-        for(size_type idx = 0; idx < sz; ++idx) sp::allocator_traits<Allocator<T>>::construct(alloc, &data+idx, default_val);
+
+    constexpr ptr& operator=(sp::nullptr_t) noexcept{
+        reset();
+        return *this;
     }
-    SP_FORCEINLINE constexpr ptr_list(const ptr_list& other) = delete;
-    SP_FORCEINLINE constexpr ptr_list(ptr_list&& other){
-        if(data) destroy();
-        data = other.data;
-        size = other.size;
-        alloc = sp::move(other.alloc);
-        other.data = nullptr;
-        other.size = 0;
+
+    constexpr T* get() const noexcept { return data; }
+    constexpr T& operator*() const noexcept { return *data; }
+    constexpr T* operator->() const noexcept { return data; }
+    constexpr explicit operator bool() const noexcept { return data != nullptr; }
+
+    constexpr T* release() noexcept{
+        T* temp = data;
+        data = nullptr;
+        return temp;
     }
-    SP_FORCEINLINE constexpr T* get() { return data; }
-    SP_FORCEINLINE constexpr const T* cget() const { return data; }
-    SP_FORCEINLINE constexpr sp::pair<T*, size_type> get_pair() { return {data, size}; }
-    SP_FORCEINLINE constexpr const sp::pair<T*, size_type> cget_pair() const { return {data, size}; }
-    SP_FORCEINLINE 
-    #if ___SP_CPP_VER___ >= 20 
-    constexpr 
-    #endif
-    ~ptr_list(){ 
-        destroy();
+
+    constexpr void reset(T* p = nullptr) noexcept{
+        if(data != p){
+            cleanup();
+            data = p;
+        }
+    }
+
+    constexpr void swap(ptr& other) noexcept{
+        using sp::swap;
+        swap(data, other.data);
+        swap(alloc, other.alloc);
     }
 };
 
-template <typename T, template <typename> class Allocator = sp::allocator>
-class ptr{
-private:
-    T* data = nullptr;
-    SP_NO_UNIQUE_ADDRESS Allocator<T> alloc;
-    SP_FORCEINLINE constexpr void destroy(){ 
-        if(data!=nullptr){
-            sp::allocator_traits<Allocator<T>>::destroy(alloc, &data);
-            sp::allocator_traits<Allocator<T>>::deallocate(alloc, data, 1);
-        }
-    }
-public:
-    SP_FORCEINLINE constexpr ptr(T val){
-        data = sp::allocator_traits<Allocator<T>>::allocate(alloc, 1);
-        sp::allocator_traits<Allocator<T>>::construct(alloc, data, val);
-    }
-    SP_FORCEINLINE 
-    #if ___SP_CPP_VER___ >= 20 
-    constexpr 
-    #endif
-    ~ptr(){
-        destroy();
-    }
-    SP_FORCEINLINE constexpr ptr(const ptr& other) = delete;
-    SP_FORCEINLINE constexpr ptr(ptr&& other){
-        data = other.data;
-        alloc = sp::move(other.alloc);
-        other.data = nullptr;
-    }
+template <typename T, template <typename> typename Allocator>
+constexpr void swap(ptr<T, Allocator>& lhs, ptr<T, Allocator>& rhs) noexcept {
+    lhs.swap(rhs);
+}
 
+template <typename T, template <typename> typename Allocator>
+constexpr bool operator==(const ptr<T, Allocator>& p, std::nullptr_t) noexcept {
+    return p.get() == nullptr;
+}
 
-    SP_FORCEINLINE constexpr T* get() { return data; }
-    SP_FORCEINLINE constexpr const T* cget() const { return data; }
-};*/
+template <typename T, template <typename> typename Allocator>
+constexpr bool operator==(std::nullptr_t, const ptr<T, Allocator>& p) noexcept {
+    return p.get() == nullptr;
+}
+
+template <typename T, template <typename> typename Allocator>
+constexpr bool operator!=(const ptr<T, Allocator>& p, std::nullptr_t) noexcept {
+    return p.get() != nullptr;
+}
+
+template <typename T, template <typename> typename Allocator>
+constexpr bool operator!=(std::nullptr_t, const ptr<T, Allocator>& p) noexcept {
+    return p.get() != nullptr;
+}
+
+template <typename T, template <typename> typename Allocator = sp::allocator, typename... Args>
+constexpr ptr<T, Allocator> make_ptr(Args&&... args) {
+    return ptr<T, Allocator>(sp::forward<Args>(args)...);
+}
 
 };
 #endif
