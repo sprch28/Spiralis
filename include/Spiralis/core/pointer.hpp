@@ -21,7 +21,7 @@ private:
 
 public:
     constexpr ptr() noexcept : data(nullptr), alloc() {}
-    constexpr ptr(std::nullptr_t) noexcept : data(nullptr), alloc() {}
+    constexpr ptr(sp::nullptr_t) noexcept : data(nullptr), alloc() {}
 
     constexpr explicit ptr(T* val) noexcept : data(val), alloc() {}
 
@@ -84,22 +84,22 @@ constexpr void swap(ptr<T, Allocator>& lhs, ptr<T, Allocator>& rhs) noexcept {
 }
 
 template <typename T, template <typename> typename Allocator>
-constexpr bool operator==(const ptr<T, Allocator>& p, std::nullptr_t) noexcept {
+constexpr bool operator==(const ptr<T, Allocator>& p, sp::nullptr_t) noexcept {
     return p.get() == nullptr;
 }
 
 template <typename T, template <typename> typename Allocator>
-constexpr bool operator==(std::nullptr_t, const ptr<T, Allocator>& p) noexcept {
+constexpr bool operator==(sp::nullptr_t, const ptr<T, Allocator>& p) noexcept {
     return p.get() == nullptr;
 }
 
 template <typename T, template <typename> typename Allocator>
-constexpr bool operator!=(const ptr<T, Allocator>& p, std::nullptr_t) noexcept {
+constexpr bool operator!=(const ptr<T, Allocator>& p, sp::nullptr_t) noexcept {
     return p.get() != nullptr;
 }
 
 template <typename T, template <typename> typename Allocator>
-constexpr bool operator!=(std::nullptr_t, const ptr<T, Allocator>& p) noexcept {
+constexpr bool operator!=(sp::nullptr_t, const ptr<T, Allocator>& p) noexcept {
     return p.get() != nullptr;
 }
 
