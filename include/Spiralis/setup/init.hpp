@@ -343,6 +343,7 @@ namespace sp {
 
     using size_type = __SP_SIZE_TYPE__;
     using ptrdiff_t = decltype(static_cast<int*>(nullptr) - static_cast<int*>(nullptr));
+    using nullptr_t = decltype(nullptr);
 
     // Page size
     SP_FORCEINLINE ull get_system_page_size() {

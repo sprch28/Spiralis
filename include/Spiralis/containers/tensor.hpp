@@ -196,9 +196,6 @@ public:
     constexpr tensor(tensor&& other){
         *this = sp::move(other);
     }
-    #if ___SP_CPP_VER___ >= 20 
-    constexpr 
-    #endif 
     SP_CONSTEXPR20 ~tensor(){
         if(_data){
             destroy_data();
