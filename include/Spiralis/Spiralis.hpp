@@ -33,8 +33,8 @@
 
 // SPECIALIZED LIBRARIES: Optionally included
 
-#if defined(__SP_ML__)
+#if defined(__SP_ML__) && \
+defined(_POSIX_THREADS) && (_POSIX_THREADS > 0) // Temporary until expanded compatibility
     #include "containers/tensor.hpp"
     #include "ml/tokenizer.hpp"
-    //#include "ml/nn.hpp"
 #endif
