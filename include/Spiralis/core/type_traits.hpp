@@ -311,7 +311,7 @@ template<typename T> struct is_unbounded_array      : bool_constant<is_array_v<T
 #if __has_builtin(__is_scoped_enum)
     template<typename T> struct is_scoped_enum : bool_constant<__is_scoped_enum(T)> {};
 #else
-    template<typename T> struct is_scoped_enum : false_type {};   // or a proper C++23-style implementation if you need it
+    template<typename T> struct is_scoped_enum : false_type {};
 #endif
 // --- Variable Templates Helper Shortcuts (Stripped 'typename') ---
 template<typename T> inline constexpr bool is_const_v              = is_const<T>::value;
@@ -351,9 +351,7 @@ template<typename T, typename U> struct is_nothrow_assignable : bool_constant<__
 #if __has_builtin(__is_trivially_destructible)
     template<typename T> struct is_trivially_destructible : bool_constant<__is_trivially_destructible(T)> {};
 #else
-    // Fallback: use the standard trait if available, otherwise approximate
     template<typename T> struct is_trivially_destructible : bool_constant<__has_trivial_destructor(T)> {};
-    // Note: __has_trivial_destructor is the older GCC/Clang name; most compilers still accept it
 #endif
 
 #if __has_builtin(__is_nothrow_destructible)
