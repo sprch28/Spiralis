@@ -210,7 +210,7 @@ constexpr hba(size_type size, type_param val){
     _SP_INIT_CDM_TS_
     _SP_APPLY_UNROLLED_(size, {
         sp::allocator_traits<Alloc<T>>::construct(_alloc, _data+_size,val);
-        _size++;
+        ++_size;
     });
     build_meta();
 }
@@ -219,7 +219,7 @@ constexpr hba(std::initializer_list<T> list){
     _SP_INIT_CDM_TS_
     for(type_param i : list){
         sp::allocator_traits<Alloc<T>>::construct(_alloc, _data+_size,i);
-        _size++;
+        ++_size;
     }
     build_meta();
 }
@@ -299,7 +299,7 @@ SP_FORCEINLINE constexpr hba& erase(size_type target_idx){
     _disable_slot(idx);
     _propagate_up(idx, -1);
     _is_contiguous = false;
-    _size--;
+    --_size;
     return *this;
 }
 
@@ -314,18 +314,19 @@ SP_FORCEINLINE constexpr hba& insert(size_type target_idx, const T& val) {
     sp::allocator_traits<Alloc<T>>::construct(_alloc, _data + hole_idx, sp::move(item_to_place));
     _enable_slot(hole_idx);
     _propagate_up(hole_idx, 1);
-    _size++;
+    ++_size;
 
     return *this;
 }
 
 SP_FORCEINLINE void print(){
-    std::cout << "[";
-    for(size_type i = 0; i < _size; i++){
+    sp::print("[");
+    for(size_type i = 0; i < _size; ++i){
+        sp::print((*this)[i]);
         std::cout << (*this)[i];
-        if(i != _size - 1) std::cout << ", ";
+        SP_IF_EXPECT(i != _size - 1) sp::print(", ");
     }
-    std::cout << "]" << std::endl;
+    sp::println("]");
 }
 };
 } // namespace sp
