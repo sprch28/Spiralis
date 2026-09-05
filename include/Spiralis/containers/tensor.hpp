@@ -15,11 +15,11 @@ namespace sp{
 template <typename T, template <typename> class Allocator = sp::aligned_allocator>
 class alignas(spt::get_allocator_alignment<Allocator<T>>()
 ? sp_cache_line_size 
-: max(alignof(Allocator<T>),max(alignof(Allocator<size_type>),max(alignof(T*),alignof(size_type))))) tensor{
+: sp::max(alignof(Allocator<T>),sp::max(alignof(Allocator<size_type>),sp::max(alignof(T*),alignof(size_type))))) tensor{
 private:
     friend class ::spml;
     alignas(spt::get_allocator_alignment<Allocator<T>>() ? sp_cache_line_size 
-    : max(alignof(Allocator<T>),max(alignof(T*),alignof(size_type)))) 
+    : sp::max(alignof(Allocator<T>),sp::max(alignof(T*),alignof(size_type)))) 
     T* _data = nullptr;
     size_type* _shapes = nullptr;
     size_type* _strides = nullptr;
@@ -553,7 +553,7 @@ public:
     _SP_DEF_TENSOR_MATH_OP_0_(trunc, _data[i] = std::trunc(_data[i]));
     _SP_DEF_TENSOR_MATH_OP_0_(frac, _data[i] = _data[i] - std::trunc(_data[i]));
 
-    // Scalar reductionss
+    // Scalar reductions
     _SP_DEF_SCALAR_REDUCTION_(sum, 0, result += _data[i], return result);
     _SP_DEF_SCALAR_REDUCTION_(mean, 0, result += _data[i], return result / _size);
     SP_FORCEINLINE constexpr T prod() { SP_IF_NOT_EXPECT(_size==0) return T(); T result = _data[0]; _SP_EXPLICIT_UNROLLED_(i, 1, _size, result *= _data[i]); return result; }
