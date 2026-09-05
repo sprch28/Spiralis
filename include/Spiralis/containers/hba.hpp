@@ -127,7 +127,7 @@ SP_NODISCARD SP_FORCEINLINE SP_HOT constexpr const size_type get_idx(size_type t
     // 32 consistently provides the best overall performance across
     // lookup-heavy and erase-heavy benchmarks. Smaller splits (e.g. 16)
     // significantly regress erase throughput despite similar lookup cost.
-    // why the 32-bit split proves to be significantly faster than a deeper binary
+    // Why the 32-bit split proves to be significantly faster than a deeper binary
     // search or a pure while-loop is still unknown.
     // It's suspected that 32-bit is quickest because it provides a single predictable branch
     // instead of branch mispredictions with deeper binary searches.
