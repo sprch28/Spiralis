@@ -1,0 +1,9 @@
+# macOS junk
+.DS_Store
+
+# Build artifacts & executables
+*.dSYM/
+*.o
+*.out
+bin/
+build/
