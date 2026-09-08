@@ -4,6 +4,7 @@
 #include "../setup/init.hpp"
 #include "../core/type_traits.hpp"
 #include "../containers/pair.hpp"
+#include <utility>
 namespace sp{
 
 template <typename T, template <typename> typename Allocator = sp::allocator>
@@ -22,13 +23,18 @@ private:
 public:
     constexpr ptr() noexcept : data(nullptr), alloc() {}
     constexpr ptr(sp::nullptr_t) noexcept : data(nullptr), alloc() {}
+    constexpr explicit ptr(std::in_place_t){
+        data = sp::allocator_traits<Allocator<T>>::allocate(alloc, 1);
+        sp::allocator_traits<Allocator<T>>::construct(alloc, data);
+    }
 
     constexpr explicit ptr(T* val) noexcept : data(val), alloc() {}
 
-    template <typename... Args>
-    constexpr ptr(Args&&... args) : alloc() {
+    template <typename U, typename... Args,
+            typename = spt::enable_if_t<!spt::is_same_v<spt::decay_t<U>, ptr>>>
+    constexpr explicit ptr(U&& first, Args&&... args) {
         data = sp::allocator_traits<Allocator<T>>::allocate(alloc, 1);
-        sp::allocator_traits<Allocator<T>>::construct(alloc, data, sp::forward<Args>(args)...);
+        sp::allocator_traits<Allocator<T>>::construct(alloc, data, sp::forward<U>(first), sp::forward<Args>(args)...);
     }
 
     SP_CONSTEXPR20 ~ptr() { cleanup(); }
@@ -105,7 +111,11 @@ constexpr bool operator!=(sp::nullptr_t, const ptr<T, Allocator>& p) noexcept {
 
 template <typename T, template <typename> typename Allocator = sp::allocator, typename... Args>
 constexpr ptr<T, Allocator> make_ptr(Args&&... args) {
-    return ptr<T, Allocator>(sp::forward<Args>(args)...);
+    SP_IF_CONSTEXPR(sizeof...(Args) == 0){
+        return ptr<T, Allocator>(std::in_place);
+    }else{
+        return ptr<T, Allocator>(sp::forward<Args>(args)...);
+    }
 }
 
 };

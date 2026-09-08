@@ -177,7 +177,11 @@ template<typename T> struct add_pointer { using type = T*; };
 template<typename T> using remove_pointer_t = typename remove_pointer<T>::type;
 template<typename T> using add_pointer_t    = typename add_pointer<T>::type;
 
-template<typename T> struct remove_extent;
+// Replace the forward declaration with this:
+template<class T> struct remove_extent { using type = T; };
+template<class T> struct remove_extent<T[]> { using type = T; };
+template<class T, std::size_t N> struct remove_extent<T[N]> { using type = T; };
+
 template<typename T> struct remove_all_extents;
 template<typename T> using remove_extent_t      = typename remove_extent<T>::type;
 template<typename T> using remove_all_extents_t = typename remove_all_extents<T>::type;
