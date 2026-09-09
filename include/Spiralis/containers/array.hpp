@@ -83,8 +83,12 @@ private:
     }
     SP_FORCEINLINE const char* __getSpiralMessage() const;
 
-    SP_FORCEINLINE void destroy_elements(){ 
-        SP_IF_CONSTEXPR(!spt::is_trivially_destructible_v<T>) _SP_APPLY_UNROLLED_(_size, sp::allocator_traits<Allocator<T>>::destroy(_alloc, _data+i)); 
+    SP_FORCEINLINE void destroy_elements() { 
+        SP_IF_CONSTEXPR(!spt::is_trivially_destructible_v<T>){
+            for(size_type i = 0; i < _size; ++i){
+                sp::allocator_traits<Allocator<T>>::destroy(_alloc, _data + i);
+            }
+        }
     }
 
     template <bool is_new = false>
@@ -325,7 +329,7 @@ public:
      */
     SP_CONSTEXPR20 ~array() noexcept {
         destroy_elements();
-        sp::allocator_traits<Allocator<T>>::deallocate(_alloc, _data, _capacity);//sp::allocator_traits<Allocator<T>>::deallocate(_alloc, _data, _capacity);
+        if(_data) sp::allocator_traits<Allocator<T>>::deallocate(_alloc, _data, _capacity);
     }
 
 
