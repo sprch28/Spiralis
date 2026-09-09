@@ -1,29 +1,40 @@
 #ifndef ____SP_POINTER____
 #define ____SP_POINTER____
 #pragma once
+
 #include "../setup/init.hpp"
 #include "../core/type_traits.hpp"
 #include "../containers/pair.hpp"
 #include <utility>
-namespace sp{
+
+namespace sp {
 
 template <typename T, template <typename> typename Allocator = sp::allocator>
 class ptr {
+    template <typename U, template <typename> typename OtherAllocator>
+    friend class ptr;
+
 private:
-    T* data;
+    T* data = nullptr;
     SP_NO_UNIQUE_ADDRESS Allocator<T> alloc;
-    constexpr void cleanup(){
-        if(data){
-            SP_IF_CONSTEXPR(!spt::is_trivially_copyable_v<T>) sp::allocator_traits<Allocator<T>>::destroy(alloc, data);
+
+    constexpr void cleanup() {
+        if (data) {
+            SP_IF_CONSTEXPR (!spt::is_trivially_destructible_v<T>) {
+                sp::allocator_traits<Allocator<T>>::destroy(alloc, data);
+            }
             sp::allocator_traits<Allocator<T>>::deallocate(alloc, data, 1);
             data = nullptr;
         }
     }
 
 public:
+    using element_type = T;
+
     constexpr ptr() noexcept : data(nullptr), alloc() {}
     constexpr ptr(sp::nullptr_t) noexcept : data(nullptr), alloc() {}
-    constexpr explicit ptr(std::in_place_t){
+
+    constexpr explicit ptr(std::in_place_t) {
         data = sp::allocator_traits<Allocator<T>>::allocate(alloc, 1);
         sp::allocator_traits<Allocator<T>>::construct(alloc, data);
     }
@@ -31,7 +42,7 @@ public:
     constexpr explicit ptr(T* val) noexcept : data(val), alloc() {}
 
     template <typename U, typename... Args,
-            typename = spt::enable_if_t<!spt::is_same_v<spt::decay_t<U>, ptr>>>
+              typename = spt::enable_if_t<!spt::is_same_v<spt::decay_t<U>, ptr>>>
     constexpr explicit ptr(U&& first, Args&&... args) {
         data = sp::allocator_traits<Allocator<T>>::allocate(alloc, 1);
         sp::allocator_traits<Allocator<T>>::construct(alloc, data, sp::forward<U>(first), sp::forward<Args>(args)...);
@@ -42,10 +53,13 @@ public:
     ptr(const ptr&) = delete;
     ptr& operator=(const ptr&) = delete;
 
-    constexpr ptr(ptr&& other) noexcept : data(other.data), alloc(sp::move(other.alloc)) { other.data = nullptr; }
+    constexpr ptr(ptr&& other) noexcept 
+        : data(other.data), alloc(sp::move(other.alloc)) { 
+        other.data = nullptr; 
+    }
 
     constexpr ptr& operator=(ptr&& other) noexcept {
-        if(this != &other){
+        if (this != &other) {
             cleanup();
             data = other.data;
             alloc = sp::move(other.alloc);
@@ -54,7 +68,26 @@ public:
         return *this;
     }
 
-    constexpr ptr& operator=(sp::nullptr_t) noexcept{
+    // --- Conversion Move Constructor ---
+    template <typename U, typename = spt::enable_if_t<spt::is_convertible_v<U*, T*>>>
+    constexpr ptr(ptr<U, Allocator>&& other) noexcept 
+        : data(other.data), alloc(sp::move(other.alloc)) {
+        other.data = nullptr;
+    }
+
+    // --- Conversion Move Assignment Operator ---
+    template <typename U, typename = spt::enable_if_t<spt::is_convertible_v<U*, T*>>>
+    constexpr ptr& operator=(ptr<U, Allocator>&& other) noexcept {
+        if (static_cast<const void*>(this) != static_cast<const void*>(&other)) {
+            cleanup();
+            data = other.data;
+            alloc = sp::move(other.alloc);
+            other.data = nullptr;
+        }
+        return *this;
+    }
+
+    constexpr ptr& operator=(sp::nullptr_t) noexcept {
         reset();
         return *this;
     }
@@ -64,20 +97,20 @@ public:
     constexpr T* operator->() const noexcept { return data; }
     constexpr explicit operator bool() const noexcept { return data != nullptr; }
 
-    constexpr T* release() noexcept{
+    constexpr T* release() noexcept {
         T* temp = data;
         data = nullptr;
         return temp;
     }
 
-    constexpr void reset(T* p = nullptr) noexcept{
-        if(data != p){
+    constexpr void reset(T* p = nullptr) noexcept {
+        if (data != p) {
             cleanup();
             data = p;
         }
     }
 
-    constexpr void swap(ptr& other) noexcept{
+    constexpr void swap(ptr& other) noexcept {
         using sp::swap;
         swap(data, other.data);
         swap(alloc, other.alloc);
@@ -111,12 +144,13 @@ constexpr bool operator!=(sp::nullptr_t, const ptr<T, Allocator>& p) noexcept {
 
 template <typename T, template <typename> typename Allocator = sp::allocator, typename... Args>
 constexpr ptr<T, Allocator> make_ptr(Args&&... args) {
-    SP_IF_CONSTEXPR(sizeof...(Args) == 0){
+    SP_IF_CONSTEXPR (sizeof...(Args) == 0) {
         return ptr<T, Allocator>(std::in_place);
-    }else{
+    } else {
         return ptr<T, Allocator>(sp::forward<Args>(args)...);
     }
 }
 
-};
-#endif
+} // namespace sp
+
+#endif // ____SP_POINTER____
