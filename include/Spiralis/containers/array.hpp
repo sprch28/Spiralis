@@ -95,7 +95,7 @@ private:
     _SP_FUNC_NI_ SP_COLD constexpr ull grow_capacity(ull min) const{
         ull new_cap = 0;
         SP_IF_CONSTEXPR(is_new) new_cap = 8;
-        else new_cap = _capacity + (_capacity >> 1);
+        else new_cap = _capacity;// + (_capacity >> 1);
         SP_IF_NOT_EXPECT(new_cap<min) new_cap = min;
     #if defined(__GNUC__) || defined(__clang__)
         return 1ULL << (64 - __builtin_clzll(new_cap - 1));
