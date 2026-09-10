@@ -3,6 +3,7 @@
 #pragma once
 #include "../setup/init.hpp"
 #include "../core/type_traits.hpp"
+#include "../core/malloc.hpp"
 
 #include <iostream>
 #include <new>
@@ -85,13 +86,15 @@ public:
     constexpr allocator(const allocator<U>&) noexcept {}
 
     constexpr T* allocate(size_type n){
-        void* p = std::malloc(n * sizeof(T));
+        //void* p = std::malloc(n * sizeof(T));
+        void* p = sp::malloc(n * sizeof(T));
         SP_IF_NOT_EXPECT(!p && n != 0) { std::cout << "ERROR: Could not allocate in sp::allocator\nRequested bytes: " << n << std::endl; throw std::bad_alloc(); }
         return static_cast<T*>(p);
     }
 
     constexpr void deallocate(T* p, size_type n)noexcept{
-        std::free(p);
+        //std::free(p);
+        sp::free(p);
     }
     static constexpr size_type get_alignment() { return 0; }
     SP_CONSTEXPR20 ~allocator() noexcept = default;
