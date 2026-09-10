@@ -1,11 +1,11 @@
-#ifndef ____SP_MALLOC____
+#if !defined(____SP_MALLOC____) && __has_include(<sys/mman.h>)
 #define ____SP_MALLOC____
 #include "../setup/init.hpp"
 #include "../math/bit_manip.hpp"
 #include "../math/math.hpp"
 #include "../core/exceptions.hpp"
 
-#include <unistd.h>
+
 #include <sys/mman.h>
 #include <cstddef>
 #include <cstdint>
