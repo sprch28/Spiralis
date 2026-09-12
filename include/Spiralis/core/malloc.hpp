@@ -5,7 +5,7 @@
 #include "../math/math.hpp"
 #include "../core/exceptions.hpp"
 
-
+#include <unistd.h>
 #include <sys/mman.h>
 #include <cstddef>
 #include <cstdint>
@@ -17,7 +17,7 @@ namespace sp {
 #define SP_ALIGN_UP(val) (((val) + (_SP_MIN_BYTE_ALIGNMENT_ - 1)) & ~(_SP_MIN_BYTE_ALIGNMENT_ - 1))
 
 constexpr size_type ARENA_SIZE = 4 * 1024 * 1024; // 4 MB chunk size
-constexpr size_type NUM_BUCKETS = 12;             // Sizes up to ~16 KB (8, 16, 32... 16384)
+constexpr size_type NUM_BUCKETS = 14; // Sizes up to ~64 KB
 
 struct FreeNode {
     FreeNode* next;
