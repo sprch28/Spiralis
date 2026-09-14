@@ -114,13 +114,10 @@ SP_FORCEINLINE T reverseBits(T n){
 }
 template <typename T>
 SP_NODISCARD SP_FORCEINLINE SP_PURE T next_pow2(T min) {
-    if (min <= 1) return 1;
-    
+    SP_IF_NOT_EXPECT(min <= 1) return 1;
     constexpr T max_pow2 = (T)1 << ((sizeof(T) * 8) - 1);
-    if (min > max_pow2) return max_pow2; // or throw/assert
-
+    SP_IF_NOT_EXPECT(min > max_pow2) return max_pow2;
     T val = min - 1; // Correctly handle exact powers of 2
-
 #if defined(__GNUC__) || defined(__clang__)
     constexpr int total_bits = sizeof(T) * 8;
 
