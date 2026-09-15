@@ -1194,20 +1194,6 @@ struct has_function<
     Args...
 > : spt::true_type {};
 
-// Primary template for detection
-/*template <typename, template <typename...> class Op, typename... Args>
-struct is_detected_impl {
-    using value_type = bool;
-    static constexpr bool value = false;
-};
-
-// Specialization that matches if Op<Args...> is a valid expression
-template <template <typename...> class Op, typename... Args>
-struct is_detected_impl<void_t<Op<Args...>>, Op, Args...> {
-    using value_type = bool;
-    static constexpr bool value = true;
-};*/
-
 template <typename T>
 inline constexpr bool has_getSpiralMessage_v = has_getSpiralMessage<T>::value;
 
