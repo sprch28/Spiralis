@@ -14,7 +14,7 @@ class spml;
 namespace sp{
 template <typename T, template <typename> class Allocator = sp::aligned_allocator>
 class alignas(spt::get_allocator_alignment<Allocator<T>>()
-? sp_cache_line_size 
+? spt::get_allocator_alignment<Allocator<T>>()
 : sp::max(alignof(Allocator<T>),sp::max(alignof(Allocator<size_type>),sp::max(alignof(T*),alignof(size_type))))) tensor{
 private:
     friend class ::spml;
