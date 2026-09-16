@@ -216,20 +216,63 @@
 #endif
 
 #if defined(__GNUC__) || defined(__clang__)
+    // Forces function inlining
     #define SP_FORCEINLINE      __attribute__((always_inline)) inline
+    // Ensures functions will not be inlined.
     #define SP_NOINLINE         __attribute__((noinline))
+    // Signal the function is expected frequently: optimize aggressively and take up more I-cache space
     #define SP_HOT              __attribute__((hot))
+    // Function is rarely called: Don't optimize heaviliy and leave more room in the I-cache
     #define SP_COLD             __attribute__((cold))
+    // Return value can be affected by global variables and parameters
     #define SP_PURE             __attribute__((pure))
+    // Return value can only be affected by parameters
     #define SP_CONST            __attribute__((const))
+    // Pull instructions of all called functions into the flattened function (essentially reverse-inlining)
     #define SP_FLATTEN          __attribute__((flatten))
+    // Disable compiler optimizations for the function
     #define SP_OPTNONE          __attribute__((optnone))
+    // Returns a pointer that will never be nullptr
     #define SP_RETURNS_NONNULL  __attribute__((returns_nonnull))
+    // Returns a pointer to data that isn't pointed to by anything else
     #define SP_MALLOC           __attribute__((malloc))
+    // Informs compiler that returned pointer is aligned to n bytes
     #define SP_ALLOC_ALIGN(n)   __attribute__((alloc_align(n)))
+    // No pointer side effects: Can unroll more aggressively
     #define SP_RESTRICT         __restrict__
+    // (Hardly practical) can affect global variables of other files, but not this one
+    // Will not call back into current translation unit
     #define SP_LEAF             __attribute__((leaf))
-    #define SP_PACK             __attribute__((pack))
+    // Eliminates structure padding
+    #define SP_PACKED             __attribute__((packed))
+
+    // Guarantees zero-overhead tail-call recursion/dispatching by recycling the stack frame. Hard error if impossible
+    #if defined(__clang__) && defined(__has_cpp_attribute) && __has_cpp_attribute(musttail)
+        #define SP_MUSTTAIL     [[clang::musttail]]
+    #else
+        #define SP_MUSTTAIL
+    #endif
+
+    // Disables background sanitizers (ASan/TSan) inside this scope to run custom raw memory arithmetic safely
+    #define SP_NOSANITIZE(checker) __attribute__((no_sanitize(checker)))
+
+    #if defined(__clang__)
+        #define SP_DIAGNOSE_ERROR(cond, msg) __attribute__((diagnose_if(cond, msg, "error")))
+        #define SP_DIAGNOSE_WARN(cond, msg) __attribute__((diagnose_if(cond, msg, "warning")))
+    #else
+        #define SP_DIAGNOSE_ERROR(cond, msg)
+        #define SP_DIAGNOSE_WARN(cond, msg)
+    #endif
+
+    // Tells the compiler that execution can branch back into existence here out of order
+    #define SP_RETURNS_TWICE __attribute__((returns_twice))
+
+    // Bypasses regular C++ ABI pointer rules to pass custom wrapper objects directly inside physical CPU registers
+    #if defined(__clang__)
+        #define SP_TRIVIAL_ABI __attribute__((trivial_abi))
+    #else
+        #define SP_TRIVIAL_ABI
+    #endif
 
     #if __SP_LIKELY__ == 1
         #define SP_EXPECT(expr, cond)   __builtin_expect((expr), (cond))
@@ -257,7 +300,14 @@
     #define SP_RETURNS_NONNULL  _Ret_notnull_
     #define SP_RESTRICT         __restrict
     #define SP_EXPECT(expr, cond)   (expr)
-    #define SP_PACK
+    #define SP_PACKED
+
+    #define SP_MUSTTAIL 
+    #define SP_NOSANITIZE(checker)
+    #define SP_DIAGNOSE_ERROR(cond, msg)
+    #define SP_DIAGNOSE_WARN(cond, msg)
+    #define SP_RETURNS_TWICE
+    #define SP_TRIVIAL_ABI
 
     #if __SP_LIKELY__ == 1
         #define SP_IF_EXPECT(expr)      if ((expr)) [[likely]]
@@ -281,11 +331,19 @@
     #define SP_ALLOC_ALIGN(n)
     #define SP_RESTRICT
     #define SP_LEAF
-    #define SP_PACK
+    #define SP_PACKED
     #define SP_EXPECT(expr, cond)   (expr)
     #define SP_IF_EXPECT(expr)      if (expr)
     #define SP_IF_NOT_EXPECT(expr)  if (expr)
+
+    #define SP_MUSTTAIL
+    #define SP_NOSANITIZE(checker)
+    #define SP_DIAGNOSE_ERROR(cond, msg)
+    #define SP_DIAGNOSE_WARN(cond, msg)
+    #define SP_RETURNS_TWICE
+    #define SP_TRIVIAL_ABI
 #endif
+
 
 // Function signature helpers
 #define _SP_FUNC_NI_   SP_NODISCARD SP_FORCEINLINE
