@@ -14,7 +14,7 @@ private:
 
     T* ptr_;
     SP_NO_UNIQUE_ADDRESS Alloc<T> alloc_;
-    constexpr ptr(T* data, Alloc<T>&& alloc) noexcept : ptr_(data), alloc_(sp::move(alloc)){}
+    constexpr ptr(T* data, Alloc<T> alloc) noexcept : ptr_(data), alloc_(sp::move(alloc)){}
     constexpr ptr(T* data) noexcept : ptr_(data), alloc_(){}
 
     template <typename U, template <typename> typename A, typename... Args>
