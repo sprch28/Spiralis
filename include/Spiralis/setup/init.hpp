@@ -247,11 +247,7 @@
     #define SP_PACKED             __attribute__((packed))
 
     // Guarantees zero-overhead tail-call recursion/dispatching by recycling the stack frame. Hard error if impossible
-    #if defined(__clang__) && defined(__has_cpp_attribute) && __has_cpp_attribute(musttail)
-        #define SP_MUSTTAIL     [[clang::musttail]]
-    #else
-        #define SP_MUSTTAIL
-    #endif
+    #define SP_MUSTTAIL __attribute__((musttail))
 
     // Disables background sanitizers (ASan/TSan) inside this scope to run custom raw memory arithmetic safely
     #define SP_NOSANITIZE(checker) __attribute__((no_sanitize(checker)))
