@@ -120,6 +120,13 @@
     #define IF_NO_UNROLL(...) __VA_ARGS__
 #endif
 
+// define ull and ll in global namespace
+#ifndef __SP_GLOBAL_NAMESPACE_ULL__
+    #define __SP_GLOBAL_NAMESPACE_ULL__ 1
+#else
+    #define __SP_GLOBAL_NAMESPACE_ULL__ 0
+#endif
+
 
 
 // ===========================// ===========================// ===========================// ===========================
@@ -386,11 +393,16 @@
 // ===========================// ===========================// ===========================// ===========================
 // VARIABLES AND UTILITY FUNCTIONS
 // ---------------------------------------------------------------------------------------------------------------------
-
-typedef unsigned long long ull;
-typedef long long ll;
+#if __SP_GLOBAL_NAMESPACE_ULL__ == 1
+    typedef unsigned long long ull;
+    typedef long long ll;
+#endif
 
 namespace sp {
+    #if __SP_GLOBAL_NAMESPACE_ULL__ != 1
+        typedef unsigned long long ull;
+        typedef long long ll;
+    #endif
     // Forward declarations
     enum Device { CPU, GPU };
     class IO;
