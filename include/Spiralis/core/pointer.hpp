@@ -17,11 +17,11 @@ private:
     constexpr ptr(T* data, Alloc<T> alloc) noexcept : ptr_(data), alloc_(sp::move(alloc)){}
     constexpr ptr(T* data) noexcept : ptr_(data), alloc_(){}
 
-    template <typename U, template <typename> typename A, typename... Args>
-    friend constexpr ptr<U, A> make_ptr(A<U>, Args&&...);
+    template <typename T, template<typename> typename Alloc, typename... Args>
+    friend constexpr ptr<T, Alloc> make_ptr(Alloc<T>, Args&&...);
 
-    template<typename U, template<typename> typename A, typename... Args>
-    friend constexpr ptr<U, A> make_ptr(Args&&... args);
+    template<typename T, template<typename> typename Alloc, typename... Args>
+    friend constexpr ptr<T, Alloc> make_ptr(Args&&... args);
 
 public:
 
