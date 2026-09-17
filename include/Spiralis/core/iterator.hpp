@@ -67,8 +67,10 @@ using string_iterator = iterator<T>;
 template <typename T>
 using array_iterator = iterator<T>;
 
-template <typename T>
-using flat_tensor_iterator = iterator<T>;
+#if defined(__SP_ML__)
+    template <typename T>
+    using flat_tensor_iterator = iterator<T>;
+#endif
 
 }; // namespace sp
 
