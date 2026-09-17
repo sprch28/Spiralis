@@ -15,7 +15,7 @@ public:
     using pointer = T*;
     using reference = T&;
     using difference_type = ptrdiff_t;
-    // size_type is defined in init.hpp global namespace
+    // size_type is defined in init.hpp
 
     SP_FORCEINLINE constexpr iterator(pointer p = nullptr) : _data(p){}
     SP_FORCEINLINE constexpr iterator(const iterator& other) : _data(other._data) {}

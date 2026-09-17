@@ -6,7 +6,9 @@
 #include "../core/type_traits.hpp"
 #include "../core/allocators.hpp"
 
-namespace sp {
+namespace sp{
+template <typename T, template <typename> typename Alloc>
+class shared_ptr;
 
 template <typename T, template <typename> typename Alloc = sp::allocator>
 class ptr{
@@ -109,7 +111,7 @@ public:
 
         template <typename U, typename... Args>
         SP_FORCEINLINE static constexpr U* construct_at(U* location, Args&&... args) {
-            return ::new(static_cast<void*>(location)) U(sp::forward<Args>(args)...);
+            return ::new(sp::placement_tag{}, static_cast<void*>(location)) U(sp::forward<Args>(args)...);
         }
 
         alignas(T) unsigned char storage[sizeof(T)];

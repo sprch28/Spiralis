@@ -6,7 +6,6 @@
 #include "../core/malloc.hpp"
 
 #include <iostream>
-#include <new>
 #include <cstdlib>
 
 #if defined(_WIN32)
@@ -18,6 +17,16 @@
 #if defined(__APPLE__)
     #include <mach/arm/vm_param.h>
 #endif
+
+namespace sp {
+    struct placement_tag {};
+}
+
+inline void* operator new(decltype(sizeof(0)), sp::placement_tag, void* ptr) noexcept {
+    return ptr;
+}
+
+inline void operator delete(void*, sp::placement_tag, void*) noexcept {}
 
 
 namespace sp{
