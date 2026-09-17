@@ -1,6 +1,6 @@
 # Spiralis
 
-**A custom HPC utility library**
+**A custom High-Performance utility library**
 
 Spiralis is a C++ utility library built around a simple philosophy:
 
