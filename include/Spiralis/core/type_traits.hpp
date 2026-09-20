@@ -1215,7 +1215,6 @@ inline constexpr bool has_function_v = has_function<Class, FuncPtr, void, Args..
 /*template <template <typename...> class Op, typename... Args>
 inline constexpr bool is_detected_v = is_detected_impl<void, Op, Args...>::value;*/
 
-// Put this in your type_traits.hpp once:
 #define SP_DEFINE_METHOD_CHECKER(Method) \
     namespace detail { \
         template <typename T, typename = void> \
