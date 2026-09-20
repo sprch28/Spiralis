@@ -6,81 +6,81 @@
 namespace sp{
 
 template <typename T>
-SP_FORCEINLINE SP_CONST T rotl(const T x, int k){ return (x << k) | (x >> ((sizeof(T)*8) - k));}
+SP_FORCEINLINE SP_CONST constexpr T rotl(const T x, int k){ return (x << k) | (x >> ((sizeof(T)*8) - k));}
 
 template <typename T>
-SP_FORCEINLINE SP_CONST bool isSet(T n, int k) { return (n & (1ULL << k)) != 0; }
+SP_FORCEINLINE SP_CONST constexpr bool isSet(T n, int k) { return (n & (1ULL << k)) != 0; }
 
 template <typename T>
-SP_FORCEINLINE SP_CONST T setBit(T n, int k) { return n | (1ULL << k); }
+SP_FORCEINLINE SP_CONST constexpr T setBit(T n, int k) { return n | (1ULL << k); }
 
 template <typename T>
-SP_FORCEINLINE SP_CONST T clearBit(T n, int k) { return n & ~(1ULL << k); }
+SP_FORCEINLINE SP_CONST constexpr T clearBit(T n, int k) { return n & ~(1ULL << k); }
 
 template <typename T>
-SP_FORCEINLINE SP_CONST T toggleBit(T n, int k) { return n ^ (1ULL << k); }
+SP_FORCEINLINE SP_CONST constexpr T toggleBit(T n, int k) { return n ^ (1ULL << k); }
 
 template <typename T>
-SP_FORCEINLINE SP_CONST bool isOdd(T n) { return n & 1; }
+SP_FORCEINLINE SP_CONST constexpr bool isOdd(T n) { return n & 1; }
 
 template <typename T>
-SP_FORCEINLINE SP_CONST T clearFirstSet(T n) { return n & (n-1); }
+SP_FORCEINLINE SP_CONST constexpr T clearFirstSet(T n) { return n & (n-1); }
 
 template <typename T>
-SP_FORCEINLINE T isolateFirstSet(T n) { return n & -n; }
+SP_FORCEINLINE constexpr T isolateFirstSet(T n) { return n & -n; }
 
 template <typename T>
-SP_FORCEINLINE SP_CONST T setFirstUnset(T n) { return n | (n+1); }
+SP_FORCEINLINE SP_CONST constexpr T setFirstUnset(T n) { return n | (n+1); }
 
 template <typename T>
-SP_FORCEINLINE SP_CONST T isolateFirstUnset(T n) { return ~n & (n+1); }
+SP_FORCEINLINE SP_CONST constexpr T isolateFirstUnset(T n) { return ~n & (n+1); }
 
 template <typename T>
-SP_FORCEINLINE SP_CONST T propagateRightmostSetBit(T n) { return n | (n - 1); }
+SP_FORCEINLINE SP_CONST constexpr T propagateRightmostSetBit(T n) { return n | (n - 1); }
 
 template <typename T>
-SP_FORCEINLINE T getParity(T n) { return popcount(n)&1; }
+SP_FORCEINLINE constexpr T getParity(T n) { return popcount(n)&1; }
 
 template <typename T>
-SP_FORCEINLINE bool isPow2(T n) { return popcount(n)==1; }
+SP_FORCEINLINE constexpr bool isPow2(T n) { return popcount(n)==1; }
 
 template <typename T>
-SP_FORCEINLINE SP_CONST T modPowerOfTwo(T n, int k) { return n & ((1ULL << k) - 1); }
+SP_FORCEINLINE SP_CONST constexpr T modPowerOfTwo(T n, int k) { return n & ((1ULL << k) - 1); }
 
 template <typename T>
-SP_FORCEINLINE SP_CONST T createMask(T k) { return (1ULL << k) - 1; }
+SP_FORCEINLINE SP_CONST constexpr T createMask(T k) { return (1ULL << k) - 1; }
 
 template <typename T>
-SP_FORCEINLINE SP_CONST T clearLowKBits(T n, int k) { return n & ~((1ULL << k) - 1); }
+SP_FORCEINLINE SP_CONST constexpr T clearLowKBits(T n, int k) { return n & ~((1ULL << k) - 1); }
 
 template <typename T, typename U>
-SP_FORCEINLINE void xor_swap(T& a, U& b) {
+SP_FORCEINLINE constexpr void xor_swap(T& a, U& b) {
     a ^= b;
     b ^= a;
     a ^= b;
 }
 
 template <typename T>
-SP_FORCEINLINE SP_CONST int bitwiseAbs(T n) {
+SP_FORCEINLINE SP_CONST constexpr int bitwiseAbs(T n) {
     const T mask = n >> ((sizeof(T)*8) - 1);
     return (n + mask) ^ mask;
 }
 
 template <typename T, typename U>
-SP_FORCEINLINE SP_CONST T bitwiseMin(T x, U y) { return y ^ ((x ^ y) & -(x < y)); }
+SP_FORCEINLINE SP_CONST constexpr T bitwiseMin(T x, U y) { return y ^ ((x ^ y) & -(x < y)); }
 template <typename T, typename U>
-SP_FORCEINLINE SP_CONST T bitwiseMax(T x, U y) { return x ^ ((x ^ y) & -(x < y)); }
+SP_FORCEINLINE SP_CONST constexpr T bitwiseMax(T x, U y) { return x ^ ((x ^ y) & -(x < y)); }
 
 template <typename T, typename U>
-SP_FORCEINLINE SP_CONST bool haveOppositeSigns(T x, U y) { return (x ^ y) < 0; }
+SP_FORCEINLINE SP_CONST constexpr bool haveOppositeSigns(T x, U y) { return (x ^ y) < 0; }
 
-SP_FORCEINLINE SP_CONST char toLower(char c) { return c | ' '; }
-SP_FORCEINLINE SP_CONST char toUpper(char c) { return c & '_'; }
-SP_FORCEINLINE SP_CONST char toggleCase(char c) { return c ^ ' '; }
+SP_FORCEINLINE SP_CONST constexpr char toLower(char c) { return c | ' '; }
+SP_FORCEINLINE SP_CONST constexpr char toUpper(char c) { return c & '_'; }
+SP_FORCEINLINE SP_CONST constexpr char toggleCase(char c) { return c ^ ' '; }
 
 
 template <typename T>
-SP_FORCEINLINE T reverseBits(T n){
+SP_FORCEINLINE constexpr T reverseBits(T n){
     using U = spt::make_unsigned_t<T>;
     U val = (U)(n);
     SP_IF_CONSTEXPR(sizeof(T) == 8){
@@ -113,7 +113,7 @@ SP_FORCEINLINE T reverseBits(T n){
     return (T)(val);
 }
 template <typename T>
-SP_NODISCARD SP_FORCEINLINE SP_PURE T next_pow2(T min) {
+SP_NODISCARD SP_FORCEINLINE SP_PURE constexpr T next_pow2(T min) {
     SP_IF_NOT_EXPECT(min <= 1) return 1;
     constexpr T max_pow2 = (T)1 << ((sizeof(T) * 8) - 1);
     SP_IF_NOT_EXPECT(min > max_pow2) return max_pow2;
@@ -149,7 +149,7 @@ SP_NODISCARD SP_FORCEINLINE SP_PURE T next_pow2(T min) {
 #endif
 }
     template <typename T>
-    SP_FORCEINLINE SP_PURE ull popcount(T val){
+    SP_FORCEINLINE SP_PURE constexpr ull popcount(T val){
     #if ___SP_DETECTED_COMPILER___ == clang || ___SP_DETECTED_COMPILER___ == gcc
         SP_IF_CONSTEXPR((spt::is_same_v<T, ull>||spt::is_same_v<T, ll>)) return __builtin_popcountll(val);
         SP_IF_CONSTEXPR((spt::is_same_v<T, unsigned long>||spt::is_same_v<T, long>)) return __builtin_popcountl(val);
@@ -166,7 +166,7 @@ SP_NODISCARD SP_FORCEINLINE SP_PURE T next_pow2(T min) {
     }
 
     template <typename T>
-    SP_FORCEINLINE SP_PURE T reverse_bits(T val){
+    SP_FORCEINLINE SP_PURE constexpr T reverse_bits(T val){
     #if ___SP_DETECTED_COMPILER___ == clang || ___SP_DETECTED_COMPILER___ == gcc
         SP_IF_CONSTEXPR((spt::is_same_v<T, ull>||spt::is_same_v<T, ll>)) return __builtin_bswap64(val);
         return __builtin_bswap32(val);
@@ -179,7 +179,7 @@ SP_NODISCARD SP_FORCEINLINE SP_PURE T next_pow2(T min) {
     }
 
     template <typename T>
-    SP_FORCEINLINE SP_PURE ull leading_zeros(T val){
+    SP_FORCEINLINE SP_PURE constexpr ull leading_zeros(T val){
         SP_IF_NOT_EXPECT(val == 0) return sizeof(T) * 8;
     #if ___SP_DETECTED_COMPILER___ == clang || ___SP_DETECTED_COMPILER___ == gcc
         SP_IF_CONSTEXPR((spt::is_same_v<T,ull>||spt::is_same_v<T,ll>)) return __builtin_clzll(val);
@@ -198,7 +198,7 @@ SP_NODISCARD SP_FORCEINLINE SP_PURE T next_pow2(T min) {
     }
 
     template <typename T>
-    SP_FORCEINLINE SP_PURE ull trailing_zeros(T val){
+    SP_FORCEINLINE SP_PURE constexpr ull trailing_zeros(T val){
         SP_IF_NOT_EXPECT(val == 0) return sizeof(T) * 8;
     #if ___SP_DETECTED_COMPILER___ == clang || ___SP_DETECTED_COMPILER___ == gcc
         SP_IF_CONSTEXPR((spt::is_same_v<T, ull>||spt::is_same_v<T,ll>)) return __builtin_ctzll(val);
@@ -217,7 +217,7 @@ SP_NODISCARD SP_FORCEINLINE SP_PURE T next_pow2(T min) {
     }
 
     template <typename T>
-    SP_FORCEINLINE SP_PURE ull find_first_set(T val){
+    SP_FORCEINLINE SP_PURE constexpr ull find_first_set(T val){
         SP_IF_NOT_EXPECT(val == 0) return 0;
     #if ___SP_DETECTED_COMPILER___ == clang || ___SP_DETECTED_COMPILER___ == gcc
         SP_IF_CONSTEXPR((spt::is_same_v<T, ull>||spt::is_same_v<T, ll>)) return __builtin_ffsll(val);

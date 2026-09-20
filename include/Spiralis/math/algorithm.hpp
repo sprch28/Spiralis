@@ -9,13 +9,13 @@
 namespace sp {
 
 template <typename T>
-sp::string to_string(T&& value) {
+sp::string to_string(T&& value){
     // temporary until implemented
     return sp::string(std::to_string(value).c_str());
 }
 
 template <typename T, bool one_indexed = true>
-SP_FORCEINLINE sp::vector<T> prefix_vector(const sp::vector<T>& arr) {
+SP_FORCEINLINE constexpr sp::vector<T> prefix_vector(const sp::vector<T>& arr) {
     SP_IF_NOT_EXPECT(arr.is_empty()) return {};
     SP_IF_CONSTEXPR (one_indexed) {
         sp::vector<T> result(arr.size() + 1, T());
@@ -31,7 +31,7 @@ SP_FORCEINLINE sp::vector<T> prefix_vector(const sp::vector<T>& arr) {
 
 // Expects input to be valid shape
 template <typename T, bool one_indexed = true>
-SP_FORCEINLINE sp::vector<sp::vector<T>> prefix_vector(const sp::vector<sp::vector<T>>& arr) {
+SP_FORCEINLINE constexpr sp::vector<sp::vector<T>> prefix_vector(const sp::vector<sp::vector<T>>& arr) {
     SP_IF_NOT_EXPECT(arr.is_empty() || arr[0].is_empty()) return {};
     ull rows = arr.size();
     ull cols = arr[0].size();

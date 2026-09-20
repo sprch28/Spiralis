@@ -140,7 +140,7 @@ public:
 
 inline uint128::uint128(const int128& other) : _val((unsigned __int128)other._val) {}
 
-inline uint128 make128(const char* str) {
+constexpr inline uint128 make128(const char* str) {
     uint128 result(0);
     bool negative = false;
     if(*str == '-'){
