@@ -38,3 +38,7 @@ defined(_POSIX_THREADS) && (_POSIX_THREADS > 0) // Temporary until expanded comp
     #include "containers/tensor.hpp"
     #include "ml/tokenizer.hpp"
 #endif
+
+#if defined(__SP_BENCHMARK__)
+    #include "bench/test.hpp"
+#endif

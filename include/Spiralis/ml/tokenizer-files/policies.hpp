@@ -204,7 +204,7 @@ public:
     SP_FORCEINLINE void build_mapping_debug(const sp::string& text, ull vocab_size) override { return priv_build_mapping<true>(text, vocab_size); }
     SP_FORCEINLINE const sp::hash_map<sp::string, T>& mapping() { return stoi_mapping; }
     sp::vector<T> tokenize(const sp::string& text) const override {
-        SP_IF_NOT_EXPECT(!mapping_built) throw sp::exceptions::spiral_exception("Error on tokenize()...");
+        SP_IF_NOT_EXPECT(!mapping_built) throw sp::exceptions::spiralis_exception("Error on tokenize()...");
 
         const ull n = text.size();
         SP_IF_NOT_EXPECT(n == 0) { sp::println("Empty input."); return {}; }

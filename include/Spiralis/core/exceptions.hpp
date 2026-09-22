@@ -10,16 +10,16 @@
 namespace sp{
 namespace exceptions{
 
-class spiral_exception : public std::exception{
+class spiralis_exception : public std::exception{
 protected:
     std::string message;
     int errorCode;
 
 public:
-    spiral_exception(const char* msg, int code = 0) 
+    spiralis_exception(const char* msg, int code = 0) 
         : message(msg ? msg : "Unknown Spiral Error"), errorCode(code) {}
 
-    explicit spiral_exception(int code) 
+    explicit spiralis_exception(int code) 
         : message("Spiral Error"), errorCode(code) {}
 
     const char* what() const noexcept override {
@@ -36,13 +36,21 @@ public:
     }
 };
 
+#if defined(__SP_BENCHMARK__)
+    class TestAssertionException : public spiralis_exception{
+        using spiralis_exception::spiralis_exception;
+    };
+    class TestFailException : public spiralis_exception{
+        using spiralis_exception::spiralis_exception;
+    };
+#endif
 
-class FileException : public spiral_exception {
-    using spiral_exception::spiral_exception;
+class FileException : public spiralis_exception {
+    using spiralis_exception::spiralis_exception;
 };
 
-class StringException : public spiral_exception {
-    using spiral_exception::spiral_exception;
+class StringException : public spiralis_exception {
+    using spiralis_exception::spiralis_exception;
 };
 
 class StringAccessException : public StringException {
@@ -53,20 +61,20 @@ class StringViewException : public StringException {
     using StringException::StringException;
 };
 
-class MapException : public spiral_exception {
-    using spiral_exception::spiral_exception;
+class MapException : public spiralis_exception {
+    using spiralis_exception::spiralis_exception;
 };
 
 class MapConstructException : public MapException {
     using MapException::MapException;
 };
 
-class ArrayException : public spiral_exception {
-    using spiral_exception::spiral_exception;
+class ArrayException : public spiralis_exception {
+    using spiralis_exception::spiralis_exception;
 };
 
-class TensorException : public spiral_exception {
-    using spiral_exception::spiral_exception;
+class TensorException : public spiralis_exception {
+    using spiralis_exception::spiralis_exception;
 };
 
 class TensorSizeError : public TensorException {

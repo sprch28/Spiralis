@@ -379,11 +379,11 @@ public:
         template <typename... Args>
         SP_FORCEINLINE constexpr tensor& reshape(Args&&... args){
             size_type new_size = sizeof...(args);
-            SP_IF_NOT_EXPECT(new_size==0) throw sp::exceptions::spiral_exception("Reshape() requires arguments, zero were given.");
+            SP_IF_NOT_EXPECT(new_size==0) throw sp::exceptions::spiralis_exception("Reshape() requires arguments, zero were given.");
             size_type new_shape[] = { static_cast<size_type>(args)... };
             ull prod = new_shape[0];
             for(ull i = 1; i < new_size; ++i) prod *= new_shape[i];
-            if(prod!=_size) throw sp::exceptions::spiral_exception("Error: reshape() provided mismatching dimensions.");
+            if(prod!=_size) throw sp::exceptions::spiralis_exception("Error: reshape() provided mismatching dimensions.");
             if(_shapes) sp::allocator_traits<Allocator<size_type>>::deallocate(_meta_alloc, _shapes, _shape_size);
             if(_strides) sp::allocator_traits<Allocator<size_type>>::deallocate(_meta_alloc, _strides, _stride_size);
             _shapes = sp::allocator_traits<Allocator<size_type>>::allocate(_meta_alloc, new_size);
@@ -573,8 +573,8 @@ public:
         const size_type AShapes1 = A._shapes[1];
         const size_type BShapes1 = B._shapes[1];
 
-        SP_IF_CONSTEXPR(check_dims) SP_IF_NOT_EXPECT(A._shape_size != B._shape_size) throw sp::exceptions::spiral_exception("Error: matmul() expects 2D tensors");
-        SP_IF_CONSTEXPR(check_dims) SP_IF_NOT_EXPECT(A._shapes[1]!=B._shapes[0]) throw sp::exceptions::spiral_exception("Dimension mismatch for matmul");
+        SP_IF_CONSTEXPR(check_dims) SP_IF_NOT_EXPECT(A._shape_size != B._shape_size) throw sp::exceptions::spiralis_exception("Error: matmul() expects 2D tensors");
+        SP_IF_CONSTEXPR(check_dims) SP_IF_NOT_EXPECT(A._shapes[1]!=B._shapes[0]) throw sp::exceptions::spiralis_exception("Dimension mismatch for matmul");
 
         tensor C(AShapes0, BShapes1); // result tensor
 
