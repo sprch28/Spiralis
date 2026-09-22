@@ -2,10 +2,10 @@
 #define ____SP_BENCH_TEST_REGISTRY____
 #pragma once
 
-#include "../setup/init.hpp"
-#include "../containers/string.hpp"
-#include "../io/IO.hpp"
-#include "../core/exceptions.hpp"
+#include "../../setup/init.hpp"
+#include "../../containers/string.hpp"
+#include "../../io/IO.hpp"
+#include "../../core/exceptions.hpp"
 
 namespace sp {
 namespace test {

@@ -2,7 +2,7 @@
 #define ____SP_BENCH_TEST____
 #pragma once
 
-#include "macros.hpp"
-#include "test_registry.hpp"
+#include "testing/macros.hpp"
+#include "testing/test_registry.hpp"
 
 #endif // ____SP_BENCH_TEST____

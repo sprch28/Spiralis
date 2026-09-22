@@ -1,10 +1,10 @@
 #ifndef ____SP_BENCH_ARG_PACK____
 #define ____SP_BENCH_ARG_PACK____
 #pragma once
-#include "../setup/init.hpp"
-#include "../containers/string.hpp"
-#include "../io/IO.hpp"
-#include "../core/exceptions.hpp"
+#include "../../setup/init.hpp"
+#include "../../containers/string.hpp"
+#include "../../io/IO.hpp"
+#include "../../core/exceptions.hpp"
 
 namespace sp {
 namespace test {
