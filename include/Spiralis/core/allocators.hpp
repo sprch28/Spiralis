@@ -58,12 +58,12 @@ struct allocator_traits : public _spiral_alloc_traits{
     template <typename A, typename T>
     using destroy_expr = decltype(spt::declval<A>().destroy(spt::declval<T*>()));
 
-    template <typename T, typename... Args>
-    static SP_FORCEINLINE void construct(Alloc& a, T* p, Args&&... args) {
-        SP_IF_CONSTEXPR((spt::is_detected_v<construct_expr, Alloc, T, Args...>)) {
+    template <typename U, typename... Args>
+    static SP_FORCEINLINE void construct(Alloc& a, U* p, Args&&... args) {
+        SP_IF_CONSTEXPR((spt::is_detected_v<construct_expr, Alloc, U, Args...>)) {
             a.construct(p, sp::forward<Args>(args)...);
         }else{
-            ::new (static_cast<void*>(p)) T(sp::forward<Args>(args)...);
+            ::new (static_cast<void*>(p)) U(sp::forward<Args>(args)...);
         }
     }
 
