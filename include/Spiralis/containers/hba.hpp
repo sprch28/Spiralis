@@ -204,9 +204,9 @@ _meta = sp::allocator_traits<Alloc<ull>>::allocate(_meta_alloc, _calculate_meta_
 
 constexpr size_type idx(size_type t) { return get_idx(t); }
 SP_FORCEINLINE constexpr hba() : _data(nullptr), _meta(nullptr), _size(0), _capacity(allocator_ext<Alloc<T>>::true_capacity(0)), _is_contiguous(true){}
-SP_FLATTEN constexpr hba(size_type size) : hba(size, T(0)){}
+SP_FLATTEN constexpr hba(size_type size) : hba(size, T()){}
 constexpr hba(size_type size, type_param val){
-    size_type target_size = next_pow2(grow_capacity(size));
+    size_type target_size = next_pow2(size);
     _SP_INIT_CDM_TS_
     _SP_APPLY_UNROLLED_(size, {
         sp::allocator_traits<Alloc<T>>::construct(_alloc, _data+_size,val);
@@ -215,7 +215,7 @@ constexpr hba(size_type size, type_param val){
     build_meta();
 }
 constexpr hba(std::initializer_list<T> list){
-    size_type target_size = next_pow2(grow_capacity(list.size()));
+    size_type target_size = next_pow2(list.size());
     _SP_INIT_CDM_TS_
     for(type_param i : list){
         sp::allocator_traits<Alloc<T>>::construct(_alloc, _data+_size,i);
@@ -307,7 +307,7 @@ SP_FORCEINLINE constexpr hba& insert(size_type target_idx, const T& val) {
     const size_type idx = get_idx(target_idx);
     T item_to_place = val; 
     size_type hole_idx = idx;
-    while (hole_idx < _capacity - 1 && _is_slot_active(hole_idx)) {
+    while (hole_idx < _capacity && _is_slot_active(hole_idx)) {
         sp::swap(_data[hole_idx], item_to_place);
         hole_idx++;
     }

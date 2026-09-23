@@ -32,6 +32,9 @@
 #define SP_TEST_EXPECT_FALSE(cond, ...) \
     SP_TEST_EXPECT(false, cond, __VA_ARGS__)
 
+#define SP_DEBUG(...) \
+sp::print(sp::console::FG_YELLOW, "[DEBUG] "); __VA_ARGS__; sp::println(sp::console::RESET_EFFECTS);
+
 
 // ============================================================
 // ============================================================
