@@ -1,6 +1,35 @@
 #ifndef ____SP_HBA____
 #define ____SP_HBA____
-// hirearchial bitmask array
+
+/*  -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+                  Hierarchical  bitmask array
+
+When treated like a black box, the hba appears to behave identically to a dynamic array (such as std::vector).
+However, the difference is present in the implementation.
+Unlike a traditional array, calling erase(idx) doesn't shift all the data down to fill the hole.
+erase() punctures holes that are tracked by a hierarchical layout:
+    - Layer 1: 64-bit bitmasks: 0 represents a hole, 1 represents an occupied slot.
+    MSB-order for prototyping convenience: bit 63(leftmost bit) represents index 0.
+    Example: [1, 2, 3, 4, 5] would be represented at layer 1 by: 11111000000000.....
+
+    - Above layer 1: Instead of bitmasks, these represent prefix sums of their 64 child blocks in the previous layer.
+    Each 64-bit integer represents the sum of occupied slots of 64 blocks in the layer directly beneath it.
+    This scales largely: Layer 1 can hold data for 64 elements. Layer 2 can hold 4096, and so on.
+    Layer 10 is the highest layer needed on a 64-bit system, as it can address ~1.1 quintillion elements per 64-bit integer.
+    This scaling also allows for O(log_64 N) index-grabbing time complexity when data isn't contiguous.
+
+compress() can be called to repair the data and make it contiguous again.
+operator[] when the data is contiguous takes the fast path of directly grabbing the requested index.
+This essentially makes it a lazy-erase array. You can erase any amount of elements, 
+then call an O(N) compress() rather than repeated data shifting when calling erase() in traditional vectors.
+
+Drawbacks:
+- Index grabbing on punctured data is still fairly quick, but slower than when data is contiguous
+- When even one element is erased, we must take the slow index grabbing path
+- While metadata overhead is low, this data structure will take up a little more space than a traditional vector.
+
+*///-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
 #pragma once
 #include "../setup/init.hpp"
 #include "../io/IO.hpp"
