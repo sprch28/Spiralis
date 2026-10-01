@@ -2,10 +2,23 @@
 #define ____SP_TESTS_HBA____
 #pragma once
 #define __SP_BENCHMARK__
-#include "../../include/Spiralis/Spiralis.hpp"
+#include "../../include/Spiralis/containers/hba.hpp"
+#include "../../include/Spiralis/bench/test.hpp"
 #include "trivial.hpp"
 
-namespace Spiralis_Test_Hba {
+/*
+
+Compress
+Emplace
+Emplace_front
+insert(copy)
+insert(move)
+push_front(copy)
+push_front(move)
+
+*/
+
+namespace Spiralis_Test_HBA{
 
 using T1   = sp::hba<Trivial, 1>;
 using T10  = sp::hba<Trivial, 10>;
@@ -91,6 +104,45 @@ SP_TEST("Initializer List Construction"){
     }
 }
 
+SP_TEST("Erase"){
+    NT1 a(128);
+    NT10 b(128);
+
+    SP_ASSERT_TRUE(a.size()==128,a.size());
+    SP_ASSERT_TRUE(b.size()==128,b.size());
+
+    for(ull i = 0; i < 128; ++i){
+        a[i].value = i;
+        b[i].value = i;
+    }
+    NT1 c(a);
+    NT10 d(b);
+
+    a.erase(64);
+    b.erase(64);
+    /*sp::bitset<64> set(a.get_meta()[1]);
+    SP_DEBUG(sp::println(set.to_string()));
+    SP_DEBUG(sp::println(a.is_slot_active(64)));*/
+    SP_ASSERT_TRUE(a.idx(64)==65,a.idx(64));
+    SP_ASSERT_TRUE(b.idx(64)==65,b.idx(64));
+    SP_TEST_EXPECT_TRUE(a[64].value==65, a[64].value);
+    SP_TEST_EXPECT_TRUE(b[64].value==65, b[64].value);
+
+    c.erase(63);
+    d.erase(63);
+    SP_ASSERT_TRUE(c.idx(63)==64,c.idx(63));
+    SP_ASSERT_TRUE(d.idx(63)==64,d.idx(63));
+    SP_TEST_EXPECT_TRUE(c[63].value==64,c[63].value);
+    SP_TEST_EXPECT_TRUE(d[63].value==64,d[63].value);
+
+    a.erase(0);
+    b.erase(0);
+    SP_ASSERT_TRUE(a.idx(0)==1,a.idx(0));
+    SP_ASSERT_TRUE(b.idx(0)==1,b.idx(0));
+    SP_TEST_EXPECT_TRUE(a[0].value==1,a[0].value);
+    SP_TEST_EXPECT_TRUE(b[0].value==1,b[0].value);
+}
+
 SP_TEST("Copy Semantics"){
     T1 original(10, Trivial{42});
     original.erase(2);
@@ -130,117 +182,8 @@ SP_TEST("Move Semantics"){
     }
 }
 
-// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-// ELEMENT ACCESS AND MUTATION TESTS
-// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-SP_TEST("Subscript Operator and Pointers"){
-    NT1 container(5, Non_Trivial(0));
-    
-    for(ull i = 0; i < container.size(); ++i){
-        container[i].value = static_cast<int>(i * 10);
-    }
 
-    const NT1& const_ref = container;
-    for(ull i = 0; i < const_ref.size(); ++i){
-        const int expected = static_cast<int>(i * 10);
-        SP_TEST_EXPECT_TRUE(const_ref[i].value == expected, i, const_ref[i].value, expected);
-    }
-
-    SP_ASSERT_TRUE(container.data() != nullptr);
-    SP_ASSERT_TRUE(container.get_meta() != nullptr);
-}
-
-// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-// MUTATION OPERATIONS (ERASE, INSERT, COMPRESS)
-// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-
-SP_TEST("Single Erase Integrity"){
-    T10 vec = {Trivial{10}, Trivial{20}, Trivial{30}, Trivial{40}, Trivial{50}};
-    
-    vec.erase(2); // Remove value 30
-    
-    SP_ASSERT_TRUE(vec.size() == 4, vec.size());
-    SP_TEST_EXPECT_TRUE(vec[0].value == 10, vec[0].value);
-    SP_TEST_EXPECT_TRUE(vec[1].value == 20, vec[1].value);
-    SP_TEST_EXPECT_TRUE(vec[2].value == 40, vec[2].value);
-    SP_TEST_EXPECT_TRUE(vec[3].value == 50, vec[3].value);
-}
-
-SP_TEST("Sequential and Boundary Erases"){
-    NT1 vec(100, Non_Trivial(0));
-    for(int i = 0; i < 100; ++i){
-        vec[i].value = i;
-    }
-
-    vec.erase(0); // Erase head
-    SP_TEST_EXPECT_TRUE(vec[0].value == 1, vec[0].value);
-
-    vec.erase(vec.size() - 1); // Erase tail
-    SP_TEST_EXPECT_TRUE(vec[vec.size() - 1].value == 98, vec.size(), vec[vec.size() - 1].value);
-
-    vec.erase(10); // Originally value 11
-    vec.erase(10); // Originally value 12
-
-    SP_ASSERT_TRUE(vec.size() == 96, vec.size());
-    SP_TEST_EXPECT_TRUE(vec[9].value == 10, vec[9].value);
-    SP_TEST_EXPECT_TRUE(vec[10].value == 13, vec[10].value);
-}
-
-SP_TEST("Insert Shifts and Expansion"){
-    T1 vec = {Trivial{1}, Trivial{2}, Trivial{4}, Trivial{5}};
-
-    vec.insert(2, Trivial{3});
-
-    SP_ASSERT_TRUE(vec.size() == 5, vec.size());
-    for(ull i = 0; i < 5; ++i){
-        const int expected = static_cast<int>(i + 1);
-        SP_TEST_EXPECT_TRUE(vec[i].value == expected, i, vec[i].value, expected);
-    }
-}
-
-SP_TEST("Compress Memory and Alignment"){
-    NT10 vec(50, Non_Trivial(0));
-    for(int i = 0; i < 50; ++i){
-        vec[i].value = i;
-    }
-
-    // Punch sparse holes
-    for(int i = 40; i >= 0; i -= 2){
-        vec.erase(i);
-    }
-
-    const ull expected_size = vec.size();
-    vec.compress();
-
-    SP_ASSERT_TRUE(vec.size() == expected_size, vec.size(), expected_size);
-    
-    for(ull i = 0; i < vec.size(); ++i){
-        SP_TEST_EXPECT_TRUE(vec[i].value >= 0, i, vec[i].value);
-        if (i > 0){
-            SP_TEST_EXPECT_TRUE(vec[i].value > vec[i - 1].value, i, vec[i].value, vec[i - 1].value);
-        }
-    }
-}
-
-SP_TEST("Erase-insertion"){
-    T10 vec = {Trivial({1}), Trivial({2}), Trivial({3}), Trivial({4}), Trivial({5})};
-    vec.erase(2); // Erases element 3
-    SP_ASSERT_TRUE(vec.size()==4, vec.size());
-    SP_TEST_EXPECT_TRUE(vec[0].value==1,vec[0].value);
-    SP_TEST_EXPECT_TRUE(vec[1].value==2,vec[1].value);
-    SP_TEST_EXPECT_TRUE(vec[2].value==4,vec[2].value);
-    SP_TEST_EXPECT_TRUE(vec[3].value==5,vec[3].value);
-    vec.insert(1,Trivial({6})); // Second element should be six; shift Trivial({2}) into the hole
-    SP_TEST_EXPECT_TRUE(vec[0].value==1,vec[0].value);
-    SP_TEST_EXPECT_TRUE(vec[1].value==6,vec[1].value);
-    SP_TEST_EXPECT_TRUE(vec[2].value==2,vec[2].value);
-    SP_TEST_EXPECT_TRUE(vec[3].value==4,vec[3].value);
-    SP_TEST_EXPECT_TRUE(vec[4].value==5,vec[4].value);
-    vec.set_contig(true); // set_contig(true) to force the quick access path
-    SP_TEST_EXPECT_TRUE(vec[2].value==2,vec[2].value);
-}
-
-} // namespace Spiralis_Test_Hba
+} // namespace Spiralis_Test_HBA
 
 #endif

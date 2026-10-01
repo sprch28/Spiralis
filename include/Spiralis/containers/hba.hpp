@@ -25,7 +25,7 @@ static constexpr ull __max_layers = 10;
 static constexpr ull __min_layers = 1;
 static constexpr ull _num_layers = (__num_layers<__min_layers ? __min_layers : (__num_layers>__max_layers ? __max_layers : __num_layers));
 ull* _meta = nullptr;
-T* _data = nullptr;
+T* _data = nullptr; 
 size_type _size = 0;
 size_type _capacity = 0;
 bool _is_contiguous = true;
@@ -78,10 +78,10 @@ SP_FORCEINLINE constexpr void _enable_slot(size_type idx){
 
 SP_FORCEINLINE constexpr void _propagate_up(size_type idx, int _change_val) {
     size_type block_idx = idx >> 12; // Start at layer 2 parent block (64 * 64 = 4096)
-    for (ull layer = 2; layer <= _num_layers; ++layer){
+    for(ull layer = 2; layer <= _num_layers; ++layer){
         size_type meta_idx = _layer_offset(layer, _capacity) + block_idx;
         _meta[meta_idx] += _change_val;
-        block_idx >>= 6;
+        block_idx >>= 6; // jump up to next layer (divide idx by 64)
     }
 }
 
@@ -101,7 +101,7 @@ SP_FORCEINLINE SP_HOT constexpr void _descend_layers(size_type& remaining, size_
         while(_meta[probe_idx] < remaining){
             remaining -= _meta[probe_idx];
             hole_offset += (1ULL << multiplied) - _meta[probe_idx++];
-            block_offset++;
+            ++block_offset;
         }
         block_offset <<= 6;
         _descend_layers<CurrentLayer - 1>(remaining, hole_offset, block_offset);
@@ -110,19 +110,20 @@ SP_FORCEINLINE SP_HOT constexpr void _descend_layers(size_type& remaining, size_
 
 
 // O(L*log_(64^L) N) -> O(log_64 N)
-SP_NODISCARD SP_FORCEINLINE SP_HOT constexpr const size_type get_idx(size_type target_idx) const {
-    size_type block_offset = 0;
-    size_type hole_offset = 0;
-    size_type remaining = target_idx;
-    _descend_layers<_num_layers>(remaining, hole_offset, block_offset);
-    size_type probe_idx = _layer_offset(1, _capacity) + block_offset;
-    size_type cur = popcount(_meta[probe_idx]);
-    while (cur < remaining) {
-        remaining -= cur;
-        hole_offset += (64 - cur);
-        cur = popcount(_meta[++probe_idx]);
+SP_NODISCARD SP_FORCEINLINE SP_HOT constexpr const size_type get_idx(size_type target_idx) const{
+    size_type block_offset = 0; // Used for descending layers: Quick calculation when jumping down
+    size_type hole_offset = 0; // How many holes to jump over at the end
+    size_type remaining = target_idx; // How many elements still need to be seen
+    _descend_layers<_num_layers>(remaining, hole_offset, block_offset); // Jump down to layer 1 for final logic; Target idx will be within 64 bitmasks
+    size_type probe_idx = _layer_offset(1, _capacity) + block_offset; // block_offset is scaled each time
+    size_type cur = popcount(_meta[probe_idx]); // number of elements here
+    // Jump over entire blocks at once
+    while(cur && cur <= remaining){
+        remaining -= cur; // Subtract number of elements from remaining
+        hole_offset += (64 - cur); // add however many holes are in this block to the offset
+        cur = popcount(_meta[++probe_idx]); // grab the data of the next block
     }
-    ull meta_val = _meta[probe_idx];
+    ull meta_val = _meta[probe_idx]; // This is our target bitmask
     // Initial binary split chosen empirically.
     // 32 consistently provides the best overall performance across
     // lookup-heavy and erase-heavy benchmarks. Smaller splits (e.g. 16)
@@ -131,21 +132,21 @@ SP_NODISCARD SP_FORCEINLINE SP_HOT constexpr const size_type get_idx(size_type t
     // search or a pure while-loop is still unknown.
     // It's suspected that 32-bit is quickest because it provides a single predictable branch
     // instead of branch mispredictions with deeper binary searches.
-    int cnt_lo = popcount(meta_val >> 32);
-    if(remaining>=cnt_lo){
-        remaining -= cnt_lo;
-        hole_offset += (32 - cnt_lo);
-        meta_val <<= 32;
+    int cnt_lo = popcount(meta_val >> 32); // Inspect the first 32 elements
+    if(remaining>=cnt_lo){ // If true, the target index resides within the final 32 elements
+        remaining -= cnt_lo; // Subtract number of elements from remaining
+        hole_offset += (32 - cnt_lo); // Instantly add every hole in the lower half to our offset
+        meta_val <<= 32; // move the higher half over
     }
-    ull next_set_bit = leading_zeros(meta_val);
-    while(remaining > 0){
-        hole_offset += next_set_bit;
-        meta_val = (meta_val << next_set_bit) << 1;
-        next_set_bit = leading_zeros(meta_val);
-        --remaining;
+    ull next_set_bit = leading_zeros(meta_val); // How many holes until we hit an element?
+    while(remaining > 0){ // While there are still elements to count:
+        hole_offset += next_set_bit; // Add our leading zeros to the total
+        meta_val = (meta_val << next_set_bit) << 1; // Mask out all the zeros we counted
+        next_set_bit = leading_zeros(meta_val); // Update the info for our modified bitmask
+        --remaining; // We get rid of one existing element per iteration
     }
-    if(meta_val) hole_offset += next_set_bit;
-    return target_idx + hole_offset;
+    if(meta_val) hole_offset += next_set_bit; // Account for holes immediately before the target element
+    return target_idx + hole_offset; // Our real index + how many indices we must skip over
 }
 
 SP_FORCEINLINE constexpr void build_meta(){
@@ -276,6 +277,7 @@ SP_FORCEINLINE constexpr size_type capacity() const { return _capacity; }
 SP_FORCEINLINE constexpr void set_contig(bool condition) { _is_contiguous = condition; }
 SP_FORCEINLINE constexpr bool empty() { return _size==0; }
 SP_FORCEINLINE constexpr bool is_empty() { return _size==0; }
+SP_FORCEINLINE constexpr bool is_slot_active(size_type slot) { return _is_slot_active(slot); }
 
 // Compress: Two-pointer (read pointer and write pointer), O(N) Time, O(1) Space
 SP_FORCEINLINE constexpr hba& compress(){
@@ -294,7 +296,7 @@ SP_FORCEINLINE constexpr hba& compress(){
 }
 
 SP_FORCEINLINE constexpr hba& erase(size_type target_idx){
-    const size_type idx = get_idx(target_idx);
+    const size_type idx = (_is_contiguous) ? target_idx : get_idx(target_idx);
     sp::allocator_traits<Alloc<T>>::destroy(_alloc, _data+idx);
     _disable_slot(idx);
     _propagate_up(idx, -1);
@@ -303,14 +305,18 @@ SP_FORCEINLINE constexpr hba& erase(size_type target_idx){
     return *this;
 }
 
-SP_FORCEINLINE constexpr hba& insert(size_type target_idx, const T& val) {
-    const size_type idx = get_idx(target_idx);
-    T item_to_place = val; 
+template <typename... Args>
+SP_FORCEINLINE constexpr hba& emplace(size_type target_idx, Args&&... args){
+    //SP_IF_NOT_EXPECT(_size>=_capacity) reallocate(next_pow2(_size));
+    const size_type idx = (_is_contiguous) ? target_idx : get_idx(target_idx);
+    T item_to_place(sp::forward<Args>(args)...);
     size_type hole_idx = idx;
-    while (hole_idx < _capacity && _is_slot_active(hole_idx)) {
+    
+    while(hole_idx < _capacity && _is_slot_active(hole_idx)){
         sp::swap(_data[hole_idx], item_to_place);
-        hole_idx++;
+        ++hole_idx;
     }
+    
     sp::allocator_traits<Alloc<T>>::construct(_alloc, _data + hole_idx, sp::move(item_to_place));
     _enable_slot(hole_idx);
     _propagate_up(hole_idx, 1);
@@ -319,11 +325,18 @@ SP_FORCEINLINE constexpr hba& insert(size_type target_idx, const T& val) {
     return *this;
 }
 
+template <typename... Args>
+SP_FORCEINLINE constexpr hba& emplace_front(Args&&... args) { return emplace(0, sp::forward<Args>(args)...); }
+
+SP_FORCEINLINE constexpr hba& insert(size_type target_idx, const T& val) { return emplace(target_idx, val); }
+SP_FORCEINLINE constexpr hba& insert(size_type target_idx, T&& val) { return emplace(target_idx, sp::move(val)); }
+SP_FORCEINLINE constexpr hba& push_front(const T& val) { return emplace_front(val); }
+SP_FORCEINLINE constexpr hba& push_front(T&& val) { return emplace_front(sp::move(val)); }
+
 SP_FORCEINLINE void print(){
     sp::print("[");
     for(size_type i = 0; i < _size; ++i){
         sp::print((*this)[i]);
-        std::cout << (*this)[i];
         SP_IF_EXPECT(i != _size - 1) sp::print(", ");
     }
     sp::println("]");

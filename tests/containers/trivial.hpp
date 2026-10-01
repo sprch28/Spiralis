@@ -5,11 +5,28 @@ struct Trivial{
     int value;
 };
 
-struct Non_Trivial{
+struct Non_Trivial {
     int value;
+
     Non_Trivial() : value(0) {}
-    Non_Trivial(int val) : value(val){}
+    Non_Trivial(int val) : value(val) {}
     Non_Trivial(const Non_Trivial& other) : value(other.value) {}
+
+    Non_Trivial& operator=(const Non_Trivial& other) {
+        if (this != &other) {
+            value = other.value;
+        }
+        return *this;
+    }
+
+    Non_Trivial(Non_Trivial&& other) noexcept : value(other.value) {}
+    Non_Trivial& operator=(Non_Trivial&& other) noexcept {
+        if (this != &other) {
+            value = other.value;
+        }
+        return *this;
+    }
+
     ~Non_Trivial() {}
 };
 
