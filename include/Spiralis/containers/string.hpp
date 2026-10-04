@@ -46,12 +46,6 @@ private:
     SP_FORCEINLINE const char* __getSpiralMessage() const { return c_str(); }
     SP_FORCEINLINE sp::pair<const char*, size_type> __getSpiralBinary() const { return {c_str(), size()*sizeof(char)}; }
     static constexpr short _other_safety_level = (short)(!((bool)_safety_level));
-    template <typename Alloc, typename = void> struct allocator_ext {
-        static constexpr ull true_capacity(ull n) noexcept { return n; }
-    };
-    template <typename Alloc> struct allocator_ext<Alloc, spt::void_t<decltype(Alloc::capacity_for(spt::declval<ull>()))>> {
-        static constexpr ull true_capacity(ull n) noexcept { return Alloc::capacity_for(n); }
-    };
     struct __small_mode{
         char _data[23]{};
         unsigned char _flag{0};   // Overlaps with the last byte of big mode _capacity
