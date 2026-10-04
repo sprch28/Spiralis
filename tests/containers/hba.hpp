@@ -104,45 +104,6 @@ SP_TEST("Initializer List Construction"){
     }
 }
 
-SP_TEST("Erase"){
-    NT1 a(128);
-    NT10 b(128);
-
-    SP_ASSERT_TRUE(a.size()==128,a.size());
-    SP_ASSERT_TRUE(b.size()==128,b.size());
-
-    for(ull i = 0; i < 128; ++i){
-        a[i].value = i;
-        b[i].value = i;
-    }
-    NT1 c(a);
-    NT10 d(b);
-
-    a.erase(64);
-    b.erase(64);
-    /*sp::bitset<64> set(a.get_meta()[1]);
-    SP_DEBUG(sp::println(set.to_string()));
-    SP_DEBUG(sp::println(a.is_slot_active(64)));*/
-    SP_ASSERT_TRUE(a.idx(64)==65,a.idx(64));
-    SP_ASSERT_TRUE(b.idx(64)==65,b.idx(64));
-    SP_TEST_EXPECT_TRUE(a[64].value==65, a[64].value);
-    SP_TEST_EXPECT_TRUE(b[64].value==65, b[64].value);
-
-    c.erase(63);
-    d.erase(63);
-    SP_ASSERT_TRUE(c.idx(63)==64,c.idx(63));
-    SP_ASSERT_TRUE(d.idx(63)==64,d.idx(63));
-    SP_TEST_EXPECT_TRUE(c[63].value==64,c[63].value);
-    SP_TEST_EXPECT_TRUE(d[63].value==64,d[63].value);
-
-    a.erase(0);
-    b.erase(0);
-    SP_ASSERT_TRUE(a.idx(0)==1,a.idx(0));
-    SP_ASSERT_TRUE(b.idx(0)==1,b.idx(0));
-    SP_TEST_EXPECT_TRUE(a[0].value==1,a[0].value);
-    SP_TEST_EXPECT_TRUE(b[0].value==1,b[0].value);
-}
-
 SP_TEST("Copy Semantics"){
     T1 original(10, Trivial{42});
     original.erase(2);
@@ -180,6 +141,45 @@ SP_TEST("Move Semantics"){
     for(ull i = 0; i < moved.size(); ++i){
         SP_TEST_EXPECT_TRUE(moved[i].value == 77, i, moved[i].value);
     }
+}
+
+SP_TEST("Erase"){
+    NT1 a(128);
+    NT10 b(128);
+
+    SP_ASSERT_TRUE(a.size()==128,a.size());
+    SP_ASSERT_TRUE(b.size()==128,b.size());
+
+    for(ull i = 0; i < 128; ++i){
+        a[i].value = i;
+        b[i].value = i;
+    }
+    NT1 c(a);
+    NT10 d(b);
+
+    a.erase(64);
+    b.erase(64);
+    /*sp::bitset<64> set(a.get_meta()[1]);
+    SP_DEBUG(sp::println(set.to_string()));
+    SP_DEBUG(sp::println(a.is_slot_active(64)));*/
+    SP_ASSERT_TRUE(a.idx(64)==65,a.idx(64));
+    SP_ASSERT_TRUE(b.idx(64)==65,b.idx(64));
+    SP_TEST_EXPECT_TRUE(a[64].value==65, a[64].value);
+    SP_TEST_EXPECT_TRUE(b[64].value==65, b[64].value);
+
+    c.erase(63);
+    d.erase(63);
+    SP_ASSERT_TRUE(c.idx(63)==64,c.idx(63));
+    SP_ASSERT_TRUE(d.idx(63)==64,d.idx(63));
+    SP_TEST_EXPECT_TRUE(c[63].value==64,c[63].value);
+    SP_TEST_EXPECT_TRUE(d[63].value==64,d[63].value);
+
+    a.erase(0);
+    b.erase(0);
+    SP_ASSERT_TRUE(a.idx(0)==1,a.idx(0));
+    SP_ASSERT_TRUE(b.idx(0)==1,b.idx(0));
+    SP_TEST_EXPECT_TRUE(a[0].value==1,a[0].value);
+    SP_TEST_EXPECT_TRUE(b[0].value==1,b[0].value);
 }
 
 

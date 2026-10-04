@@ -428,6 +428,8 @@ SP_CONSTEXPR20 ~hba(){
 
 SP_FORCEINLINE constexpr const T& operator[](size_type target_idx) const { return (_is_contiguous ? _data[target_idx] : _data[get_idx(target_idx)]); }
 SP_FORCEINLINE constexpr T& operator[](size_type target_idx) { return (_is_contiguous ? _data[target_idx] : _data[get_idx(target_idx)]); }
+SP_FORCEINLINE constexpr const T& at_physical(size_type idx) const { return _data[idx]; }
+SP_FORCEINLINE constexpr T& at_physical(size_type idx) { return _data[idx]; }
 SP_FORCEINLINE constexpr const T& at(size_type target_idx) const { return (_is_contiguous ? _data[target_idx] : _data[get_idx(target_idx)]); }
 SP_FORCEINLINE constexpr T& at(size_type target_idx) { return (_is_contiguous ? _data[target_idx] : _data[get_idx(target_idx)]); }
 SP_FORCEINLINE constexpr size_type max_size() { return npos; }
