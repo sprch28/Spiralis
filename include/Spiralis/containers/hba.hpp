@@ -52,15 +52,15 @@ Drawbacks:
 // shrink_to_fit()
 
 // Insertion
-// emplace_back(Args&&... args)
-// push_back(const T& item)
-// push_back(T&& item)
+/// emplace_back(Args&&... args)
+/// push_back(const T& item)
+/// push_back(T&& item)
 
 // Removal
-// pop(size_type logical_idx): returns the popped element
-// pop_back()
-// pop_front()
-// clear()
+/// pop(size_type logical_idx): returns the popped element
+/// pop_back()
+/// pop_front()
+/// clear()
 
 // Erase strategies
 // erase_unordered(size_type logical_idx)
@@ -205,12 +205,13 @@ SP_FORCEINLINE constexpr void _propagate_up(size_type idx, int _change_val) noex
 }
 
 SP_NODISCARD SP_FORCEINLINE constexpr bool _is_slot_active(size_type physical_idx) const noexcept{
+    SP_IF_NOT_EXPECT(!_meta || physical_idx >= _capacity) return false;
     size_type mask_idx = physical_idx >> 6; 
     size_type bit_idx = physical_idx & 63;   
     return (_meta[_layer_offset<1>(_capacity) + mask_idx] & (1ULL << (63 - bit_idx))) != 0;
 }
 
-SP_NODISCARD SP_FORCEINLINE constexpr ull grow_capacity(ull size){ return sp::max((size_type)64, next_pow2(size)); }
+SP_NODISCARD SP_FORCEINLINE constexpr ull grow_capacity(ull size){ return sp::max((size_type)64, next_pow2(size+1)); }
  
 template <ull CurrentLayer>
 SP_FORCEINLINE SP_HOT constexpr void _descend_layers(size_type& remaining, size_type& hole_offset, size_type& block_offset) const noexcept {
@@ -312,19 +313,22 @@ SP_FORCEINLINE constexpr void build_meta(){
 }
 
 void destroy_elements(){
+    if(!_data||!_meta) return;
     for(size_type i = 0; i < _capacity; ++i){
         if(_is_slot_active(i)) sp::allocator_traits<Alloc<T>>::destroy(_alloc, _data + i);
     }
-    sp::allocator_traits<Alloc<T>>::deallocate(_alloc, _data, _capacity);
 }
 
 void deallocate(){
-    sp::allocator_traits<Alloc<ull>>::deallocate(_meta_alloc, _meta, _calculate_meta_size(_capacity));
+    if(_meta) sp::allocator_traits<Alloc<ull>>::deallocate(_meta_alloc, _meta, _calculate_meta_size(_capacity));
+    if(_data) sp::allocator_traits<Alloc<T>>::deallocate(_alloc, _data, _capacity);
 }
 
+// For now, compressed reallocation is forced.
+// It will be difficult to perform non-compressed reallocation when the meta offsets need to grow.
 template <bool compress=_default_compress>
 SP_FORCEINLINE hba& reallocate(size_type n){
-    SP_IF_CONSTEXPR(compress){
+    //SP_IF_CONSTEXPR(compress){
         T* temp = sp::allocator_traits<Alloc<T>>::allocate(_alloc, n);
         size_type read_ptr = 0;
         size_type write_ptr = 0;
@@ -339,13 +343,16 @@ SP_FORCEINLINE hba& reallocate(size_type n){
 
         _data = temp;
         temp = nullptr;
-            
+
+        _capacity = allocator_ext<Alloc<T>>::true_capacity(n);
+
+        _meta = sp::allocator_traits<Alloc<ull>>::allocate(_meta_alloc, _calculate_meta_size(_capacity));
+
         build_meta();
         _is_contiguous = true;
-        _capacity = allocator_ext<Alloc<T>>::true_capacity(n);
-    }else{
+    /*}else{
 
-    }
+    }*/
     return *this;
 }
 //============================//============================//============================//============================
@@ -445,9 +452,6 @@ SP_FORCEINLINE constexpr hba& reserve(size_type n){
     SP_IF_NOT_EXPECT(target_size<=n) return *this;
     SP_MUSTTAIL return reallocate<compress>(n);
 }
-// reserve(n)
-// resize(n)
-// shrink_to_fit()
 
 // Compress: Two-pointer (read pointer and write pointer), O(N) Time, O(1) Space
 SP_FORCEINLINE constexpr hba& compress(){
@@ -475,9 +479,34 @@ SP_FORCEINLINE constexpr hba& erase(size_type target_idx){
     return *this;
 }
 
+SP_FORCEINLINE constexpr hba& erase_unordered(size_type target_idx){
+    const size_type idx = (_is_contiguous) ? target_idx : get_idx(target_idx);
+    if(idx!=_size-1){
+        const size_type end_idx = (_is_contiguous) ? _size-1 : get_idx(_size-1);
+        sp::swap(_data[idx],_data[end_idx]);
+        sp::allocator_traits<Alloc<T>>::destroy(_alloc, _data+end_idx);
+        _disable_slot(end_idx);
+        _propagate_up(end_idx,-1);
+        --_size;
+    }else{
+        sp::allocator_traits<Alloc<T>>::destroy(_alloc, _data+idx);
+        _disable_slot(idx);
+        _propagate_up(idx,-1);
+        --_size;
+    }
+    return *this;
+}
+
+/// erase_unordered(size_type logical_idx)
+// erase_compress(size_type logical_idx)
+// erase_shift(size_type logical_idx)
+// erase_range(size_type logical_first, size_type logical_last)
+// erase_if(Func predicate)
+// erase_range_if(size_type logical_first, size_type logical_last, Func predicate)
+
 template <bool compress = _default_compress, typename... Args>
 SP_FORCEINLINE constexpr hba& emplace(size_type target_idx, Args&&... args){
-    SP_IF_NOT_EXPECT(_size>=_capacity) reallocate<compress>(grow_capacity(_size));
+    SP_IF_NOT_EXPECT(_size>=_capacity) reallocate<compress>(grow_capacity(_capacity));
     const size_type idx = (_is_contiguous) ? target_idx : get_idx(target_idx);
     T item_to_place(sp::forward<Args>(args)...);
     size_type hole_idx = idx;
@@ -496,6 +525,21 @@ SP_FORCEINLINE constexpr hba& emplace(size_type target_idx, Args&&... args){
 }
 
 template <bool compress = _default_compress, typename... Args>
+SP_FORCEINLINE constexpr hba& emplace_back(Args&&... args){
+    // There are two possible options for the semantics of emplace_back
+    // Option 1 is to only reallocate if size >= capacity, and simply shift elements backwards to a hole if the end is occupied.
+    // Option 2 is what I decided to go with:
+    // If _size>=_capacity OR the final slot is occupied, reallocation occurs.
+    SP_IF_NOT_EXPECT(_size>=_capacity||_is_slot_active(_capacity-1)) reallocate<compress>(grow_capacity(_capacity));
+    const size_type idx = (_is_contiguous) ? _size : get_idx(_size); // Index to the right of the furthest element
+    sp::allocator_traits<Alloc<T>>::construct(_alloc, _data + idx, sp::forward<Args>(args)...);
+    _enable_slot(idx);
+    _propagate_up(idx, 1);
+    ++_size;
+    return *this;
+}
+
+template <bool compress = _default_compress, typename... Args>
 SP_FORCEINLINE constexpr hba& emplace_front(Args&&... args) { return emplace<compress>(0, sp::forward<Args>(args)...); }
 
 template <bool compress = _default_compress>
@@ -506,6 +550,37 @@ template <bool compress = _default_compress>
 SP_FORCEINLINE constexpr hba& push_front(const T& val) { return emplace_front<compress>(val); }
 template <bool compress = _default_compress>
 SP_FORCEINLINE constexpr hba& push_front(T&& val) { return emplace_front<compress>(sp::move(val)); }
+template <bool compress = _default_compress>
+SP_FORCEINLINE constexpr hba& push_back(const T& val) { return emplace_back<compress>(val); }
+template <bool compress = _default_compress>
+SP_FORCEINLINE constexpr hba& push_back(T&& val) { return emplace_back<compress>(sp::move(val)); }
+
+SP_FORCEINLINE constexpr T pop(size_type logical_idx){
+    const size_type idx = (_is_contiguous) ? logical_idx : get_idx(logical_idx);
+    T popped = sp::move(_data[idx]);
+    _disable_slot(idx);
+    _propagate_up(idx, -1);
+    --_size;
+    return popped;
+}
+
+SP_FORCEINLINE constexpr T pop_back() { return pop(_size-1); }
+SP_FORCEINLINE constexpr T pop_front() { return pop(0); }
+SP_FORCEINLINE constexpr hba& clear(){
+    SP_IF_CONSTEXPR(!spt::is_trivially_destructible_v<T>){
+        ull idx = 0;
+        while(_size>0){
+            if(_is_slot_active(idx)) {
+                sp::allocator_traits<Alloc<T>>::destroy(_alloc, _data+idx);
+                --_size;
+            }
+            ++idx;
+        }
+    }
+    std::memset(_meta,0,_calculate_meta_size(_capacity)*sizeof(ull));
+    _size = 0;
+    _is_contiguous = true;
+}
 
 SP_FORCEINLINE void print(){
     sp::print("[");
