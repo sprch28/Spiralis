@@ -214,17 +214,17 @@ SP_NODISCARD SP_FORCEINLINE constexpr bool _is_slot_active(size_type physical_id
 SP_NODISCARD SP_FORCEINLINE constexpr ull grow_capacity(ull size){ return sp::max((size_type)64, next_pow2(size+1)); }
  
 template <ull CurrentLayer>
-SP_FORCEINLINE SP_HOT constexpr void _descend_layers(size_type& remaining, size_type& hole_offset, size_type& block_offset) const noexcept {
-    SP_IF_CONSTEXPR(CurrentLayer >= 2){
-        size_type probe_idx = _layer_offset<CurrentLayer>(_capacity) + block_offset;
-        constexpr ull multiplied = 6 * CurrentLayer;
-        while(_meta[probe_idx] < remaining){
-            remaining -= _meta[probe_idx];
-            hole_offset += (1ULL << multiplied) - _meta[probe_idx++];
-            ++block_offset;
+SP_FORCEINLINE SP_HOT constexpr void _descend_layers(size_type& remaining, size_type& hole_offset, size_type& block_offset) const noexcept{
+    SP_IF_CONSTEXPR(CurrentLayer >= 2){ // We are only jumping down to layer 1 for the next part of the get_idx() logic
+        size_type probe_idx = _layer_offset<CurrentLayer>(_capacity) + block_offset; // Grab first of 64 potential indices to jump down
+        constexpr ull multiplied = 6 * CurrentLayer; // Scales with each layer
+        while(_meta[probe_idx] < remaining){ // Probe until target child is found
+            remaining -= _meta[probe_idx]; // Subtract the current prefix sum
+            hole_offset += (1ULL << multiplied) - _meta[probe_idx++]; // Max elements addressible in current layer - actual numer of elements
+            ++block_offset; // Move right by 1 at current layer
         }
-        block_offset <<= 6;
-        _descend_layers<CurrentLayer - 1>(remaining, hole_offset, block_offset);
+        block_offset <<= 6; // Multiply by 64 to scale before jumping down again
+        _descend_layers<CurrentLayer - 1>(remaining, hole_offset, block_offset); // Compile-time recursion
     }
 }
 
