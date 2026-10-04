@@ -102,6 +102,12 @@
 #ifndef __SP_IO_BUFFER_SIZE__
     #define __SP_IO_BUFFER_SIZE__ 32768 // 1 << 15
 #endif
+#ifndef __SP_HBA_DEFAULT_COMPRESS__
+    #define __SP_HBA_DEFAULT_COMPRESS__ true
+#endif
+#ifndef __SP_HBA_NUM_LAYERS__
+    #define __SP_HBA_NUM_LAYERS__ 3
+#endif
 
 // Application of configurations
 #if __SP_LIKELY__ == 1
