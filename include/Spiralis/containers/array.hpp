@@ -71,13 +71,6 @@ private:
     ull _capacity;
     SP_NO_UNIQUE_ADDRESS Allocator<T> _alloc;
 
-    template <typename Alloc, typename = void> struct allocator_ext {
-        static constexpr ull true_capacity(ull n) noexcept { return n; }
-    };
-    template <typename Alloc> struct allocator_ext<Alloc, spt::void_t<decltype(Alloc::capacity_for(spt::declval<ull>()))>> {
-        static constexpr ull true_capacity(ull n) noexcept { return Alloc::capacity_for(n); }
-    };
-
     SP_FORCEINLINE sp::pair<T*, size_type> __getSpiralBinary() const{
         return {_data, _size*sizeof(T)};
     }

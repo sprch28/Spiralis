@@ -30,6 +30,75 @@ Drawbacks:
 
 *///-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
+// To do:
+// Three slashes indicate completion
+
+// implement reallocate with a template param <compress>
+/// change class definition to have template param <compresss_on_realloc>
+/// On size/capacity modifying functions, add template param <compress>
+
+/// Basic access / state
+/// at(size_type logical_idx)
+/// max_size()
+/// is_contiguous() 
+
+/// Element access
+/// front()
+/// back()
+
+// Capacity / allocation
+/// reserve(n)
+// resize(n)
+// shrink_to_fit()
+
+// Insertion
+// emplace_back(Args&&... args)
+// push_back(const T& item)
+// push_back(T&& item)
+
+// Removal
+// pop(size_type logical_idx): returns the popped element
+// pop_back()
+// pop_front()
+// clear()
+
+// Erase strategies
+// erase_unordered(size_type logical_idx)
+// erase_compress(size_type logical_idx)
+// erase_shift(size_type logical_idx)
+// erase_range(size_type logical_first, size_type logical_last)
+// erase_if(Func predicate)
+// erase_range_if(size_type logical_first, size_type logical_last, Func predicate)
+
+// HBA state / metadata
+// hole_count()
+// occupied()
+// utilization()
+// compress(float threshold)
+
+// Iteration
+// begin()
+// end()
+// cbegin()
+// cend()
+// rbegin()
+// rend()
+
+// Mapping
+// physical_idx(logical_idx)
+// logical_idx(physical_idx)
+
+// Higher-order traversal
+// for_each(Func f)
+// for_each_physical(Func f)
+
+// Copy / move / comparison
+// operator=(const hba&)
+// operator=(hba&&)
+// operator==(const hba&)
+// operator<=>
+// friend void swap(hba&, hba&) noexcept
+
 #pragma once
 #include "../setup/init.hpp"
 #include "../io/IO.hpp"
@@ -43,11 +112,7 @@ Drawbacks:
     #include <immintrin.h>
 #endif
 namespace sp{
-#ifdef __SP_HBA_NUM_LAYERS__
-    template <typename T, ull __num_layers=__SP_HBA_NUM_LAYERS__, template <typename> typename Alloc = sp::allocator>
-#else
-    template <typename T, ull __num_layers=1, template <typename> typename Alloc = sp::allocator>
-#endif
+template <typename T, ull __num_layers=__SP_HBA_NUM_LAYERS__, bool _default_compress = __SP_HBA_DEFAULT_COMPRESS__, template <typename> typename Alloc = sp::allocator>
 class hba{
 private:
 static constexpr ull __max_layers = 10;
@@ -66,13 +131,6 @@ using is_always_equal = spt::true_type;
 using type_param = spt::conditional_t<spt::is_trivially_copyable_v<T> && sizeof(T) <= 16, T, const T&>;
 static constexpr bool _trivially_copyable = spt::is_trivially_copyable_v<T>;
 
-template <typename _Alloc, typename = void> struct allocator_ext {
-    static constexpr ull true_capacity(ull n) noexcept { return n; }
-};
-template <typename _Alloc> struct allocator_ext<_Alloc, spt::void_t<decltype(_Alloc::capacity_for(spt::declval<ull>()))>> {
-    static constexpr ull true_capacity(ull n) noexcept { return _Alloc::capacity_for(n); }
-};
-
 static constexpr SP_FORCEINLINE SP_PURE ull _calculate_meta_size(size_type cap){
     ull total_words = 0;
     ull current_layer_blocks = cap;
@@ -89,35 +147,67 @@ static constexpr ull _layer_size(ull layer, ull cap) {
     return blocks;
 }
 
-static constexpr ull _layer_offset(ull target_layer, ull cap) {
+template <ull TargetLayer, ull CurrentLayer = 0>
+SP_FORCEINLINE static constexpr ull _layer_offset_impl(size_type cap) noexcept{
+    SP_IF_CONSTEXPR(CurrentLayer >= _num_layers){
+        return 0;
+    }else{
+        const ull next = (cap + 63) >> 6;
+        SP_IF_CONSTEXPR(CurrentLayer + 1 > TargetLayer){
+            return next + _layer_offset_impl<TargetLayer, CurrentLayer + 1>(next);
+        }else{
+            return _layer_offset_impl<TargetLayer, CurrentLayer + 1>(next);
+        }
+    }
+}
+
+template <ull TargetLayer>
+SP_FORCEINLINE static constexpr ull _layer_offset(size_type cap) noexcept{
+    return _layer_offset_impl<TargetLayer>(cap);
+}
+
+SP_FORCEINLINE static constexpr ull _layer_offset(ull target_layer, size_type cap) noexcept{
     ull offset = 0;
-    for(ull i = _num_layers; i > target_layer; --i) offset += _layer_size(i, cap);
+    for(ull layer = _num_layers; layer > target_layer; --layer) offset += _layer_size(layer, cap);
     return offset;
 }
 
 SP_FORCEINLINE constexpr void _disable_slot(size_type idx){
-    size_type layer1_block = _layer_offset(1, _capacity) + (idx >> 6);
+    size_type layer1_block = _layer_offset<1>(_capacity) + (idx >> 6);
     _meta[layer1_block] &= ~(1ULL << (63 - (idx & 63)));
 }
 
 SP_FORCEINLINE constexpr void _enable_slot(size_type idx){
-    size_type layer1_block = _layer_offset(1, _capacity) + (idx >> 6);
+    size_type layer1_block = _layer_offset<1>(_capacity) + (idx >> 6);
     _meta[layer1_block] |= (1ULL << (63 - (idx & 63)));
 }
 
-SP_FORCEINLINE constexpr void _propagate_up(size_type idx, int _change_val) {
-    size_type block_idx = idx >> 12; // Start at layer 2 parent block (64 * 64 = 4096)
-    for(ull layer = 2; layer <= _num_layers; ++layer){
-        size_type meta_idx = _layer_offset(layer, _capacity) + block_idx;
-        _meta[meta_idx] += _change_val;
-        block_idx >>= 6; // jump up to next layer (divide idx by 64)
+template <ull Layer>
+SP_FORCEINLINE constexpr void
+_propagate_up_recursive(size_type block_idx, int _change_val) noexcept{
+    const size_type meta_idx = _layer_offset<Layer>(_capacity) + block_idx;
+
+    _meta[meta_idx] += _change_val;
+
+    SP_IF_CONSTEXPR(Layer < _num_layers){
+        _propagate_up_recursive<Layer + 1>(
+            block_idx >> 6,
+            _change_val
+        );
+    }
+}
+
+SP_FORCEINLINE constexpr void _propagate_up(size_type idx, int _change_val) noexcept{
+    SP_IF_CONSTEXPR(_num_layers >= 2){
+        const size_type block_idx = idx >> 12;
+        _propagate_up_recursive<2>(block_idx, _change_val);
     }
 }
 
 SP_NODISCARD SP_FORCEINLINE constexpr bool _is_slot_active(size_type physical_idx) const noexcept{
     size_type mask_idx = physical_idx >> 6; 
     size_type bit_idx = physical_idx & 63;   
-    return (_meta[_layer_offset(1, _capacity) + mask_idx] & (1ULL << (63 - bit_idx))) != 0;
+    return (_meta[_layer_offset<1>(_capacity) + mask_idx] & (1ULL << (63 - bit_idx))) != 0;
 }
 
 SP_NODISCARD SP_FORCEINLINE constexpr ull grow_capacity(ull size){ return sp::max((size_type)64, next_pow2(size)); }
@@ -125,7 +215,7 @@ SP_NODISCARD SP_FORCEINLINE constexpr ull grow_capacity(ull size){ return sp::ma
 template <ull CurrentLayer>
 SP_FORCEINLINE SP_HOT constexpr void _descend_layers(size_type& remaining, size_type& hole_offset, size_type& block_offset) const noexcept {
     SP_IF_CONSTEXPR(CurrentLayer >= 2){
-        size_type probe_idx = _layer_offset(CurrentLayer, _capacity) + block_offset;
+        size_type probe_idx = _layer_offset<CurrentLayer>(_capacity) + block_offset;
         constexpr ull multiplied = 6 * CurrentLayer;
         while(_meta[probe_idx] < remaining){
             remaining -= _meta[probe_idx];
@@ -144,7 +234,7 @@ SP_NODISCARD SP_FORCEINLINE SP_HOT constexpr const size_type get_idx(size_type t
     size_type hole_offset = 0; // How many holes to jump over at the end
     size_type remaining = target_idx; // How many elements still need to be seen
     _descend_layers<_num_layers>(remaining, hole_offset, block_offset); // Jump down to layer 1 for final logic; Target idx will be within 64 bitmasks
-    size_type probe_idx = _layer_offset(1, _capacity) + block_offset; // block_offset is scaled each time
+    size_type probe_idx = _layer_offset<1>(_capacity) + block_offset; // block_offset is scaled each time
     size_type cur = popcount(_meta[probe_idx]); // number of elements here
     // Jump over entire blocks at once
     while(cur && cur <= remaining){
@@ -181,14 +271,14 @@ SP_NODISCARD SP_FORCEINLINE SP_HOT constexpr const size_type get_idx(size_type t
 SP_FORCEINLINE constexpr void build_meta(){
     memset(_meta, 0, _calculate_meta_size(_capacity) * sizeof(ull));
     ull remaining = _size;
-    ull idx = _layer_offset(1, _capacity);
+    ull idx = _layer_offset<1>(_capacity);
     while(remaining>=64){
         _meta[idx++] = ~0ULL;
         remaining -= 64;
     }if(remaining) _meta[idx] = ~0ULL << (64 - remaining);
 
     SP_IF_CONSTEXPR(_num_layers>1){
-        ull child_start = _layer_offset(1, _capacity); ull parent_start = _layer_offset(2, _capacity);
+        ull child_start = _layer_offset<1>(_capacity); ull parent_start = _layer_offset(2, _capacity);
         ull child_count = _layer_size(1, _capacity); ull parent_count = _layer_size(2, _capacity);
         for(ull p = 0; p < parent_count; ++p){
             ull sum = 0; ull child_base = p << 6;
@@ -219,6 +309,44 @@ SP_FORCEINLINE constexpr void build_meta(){
             _meta[parent_start + p] = sum;
         }
     }
+}
+
+void destroy_elements(){
+    for(size_type i = 0; i < _capacity; ++i){
+        if(_is_slot_active(i)) sp::allocator_traits<Alloc<T>>::destroy(_alloc, _data + i);
+    }
+    sp::allocator_traits<Alloc<T>>::deallocate(_alloc, _data, _capacity);
+}
+
+void deallocate(){
+    sp::allocator_traits<Alloc<ull>>::deallocate(_meta_alloc, _meta, _calculate_meta_size(_capacity));
+}
+
+template <bool compress=_default_compress>
+SP_FORCEINLINE hba& reallocate(size_type n){
+    SP_IF_CONSTEXPR(compress){
+        T* temp = sp::allocator_traits<Alloc<T>>::allocate(_alloc, n);
+        size_type read_ptr = 0;
+        size_type write_ptr = 0;
+        while(read_ptr<_capacity){
+            if(_is_slot_active(read_ptr)){
+                SP_IF_CONSTEXPR(spt::is_trivially_copyable_v<T>) sp::allocator_traits<Alloc<T>>::construct(_alloc,temp+(write_ptr++),_data[read_ptr]);
+                else sp::allocator_traits<Alloc<T>>::construct(_alloc,temp+(write_ptr++),sp::move(_data[read_ptr]));
+            }
+            ++read_ptr;
+        }
+        destroy_elements(); deallocate();
+
+        _data = temp;
+        temp = nullptr;
+            
+        build_meta();
+        _is_contiguous = true;
+        _capacity = allocator_ext<Alloc<T>>::true_capacity(n);
+    }else{
+
+    }
+    return *this;
 }
 //============================//============================//============================//============================
 //============================//============================//============================//============================
@@ -282,14 +410,9 @@ _alloc(sp::move(other._alloc)),_meta_alloc(sp::move(other._meta_alloc)){
     other._data = nullptr; other._meta = nullptr;
 }
 
-SP_CONSTEXPR20 ~hba(){ // TEMPORARY: inefficient
-    if(_data){
-        for(size_type i = 0; i < _capacity; ++i){
-            if(_is_slot_active(i)) sp::allocator_traits<Alloc<T>>::destroy(_alloc, _data + i);
-        }
-        sp::allocator_traits<Alloc<T>>::deallocate(_alloc, _data, _capacity);
-    }
-    if(_meta) sp::allocator_traits<Alloc<ull>>::deallocate(_meta_alloc, _meta, _calculate_meta_size(_capacity));
+SP_CONSTEXPR20 ~hba(){
+    if(_data) destroy_elements();
+    if(_meta) deallocate();
 }
 
 //============================//============================//============================//============================
@@ -298,6 +421,10 @@ SP_CONSTEXPR20 ~hba(){ // TEMPORARY: inefficient
 
 SP_FORCEINLINE constexpr const T& operator[](size_type target_idx) const { return (_is_contiguous ? _data[target_idx] : _data[get_idx(target_idx)]); }
 SP_FORCEINLINE constexpr T& operator[](size_type target_idx) { return (_is_contiguous ? _data[target_idx] : _data[get_idx(target_idx)]); }
+SP_FORCEINLINE constexpr const T& at(size_type target_idx) const { return (_is_contiguous ? _data[target_idx] : _data[get_idx(target_idx)]); }
+SP_FORCEINLINE constexpr T& at(size_type target_idx) { return (_is_contiguous ? _data[target_idx] : _data[get_idx(target_idx)]); }
+SP_FORCEINLINE constexpr size_type max_size() { return npos; }
+SP_FORCEINLINE constexpr bool is_contiguous() { return _is_contiguous; }
 SP_FORCEINLINE constexpr const T* data() const { return _data; }
 SP_FORCEINLINE constexpr const ull* get_meta() const { return _meta; }
 SP_FORCEINLINE constexpr ull get_meta_size() const { return _calculate_meta_size(_capacity); }
@@ -307,6 +434,20 @@ SP_FORCEINLINE constexpr void set_contig(bool condition) { _is_contiguous = cond
 SP_FORCEINLINE constexpr bool empty() { return _size==0; }
 SP_FORCEINLINE constexpr bool is_empty() { return _size==0; }
 SP_FORCEINLINE constexpr bool is_slot_active(size_type slot) { return _is_slot_active(slot); }
+/*SP_FORCEINLINE constexpr const T& front() const { return (_data != nullptr) ? _data[0] : T(); }
+SP_FORCEINLINE constexpr T& front() { return (_data != nullptr) ? _data[0] : T(); }
+SP_FORCEINLINE constexpr const T& back() const { return _data != nullptr ? _data[_size-1] : T(); }
+SP_FORCEINLINE constexpr T& back() { return (_data != nullptr) ? _data[_size-1] : T(); }*/
+
+template <bool compress = _default_compress>
+SP_FORCEINLINE constexpr hba& reserve(size_type n){
+    size_type target_size = grow_capacity(n);
+    SP_IF_NOT_EXPECT(target_size<=n) return *this;
+    SP_MUSTTAIL return reallocate<compress>(n);
+}
+// reserve(n)
+// resize(n)
+// shrink_to_fit()
 
 // Compress: Two-pointer (read pointer and write pointer), O(N) Time, O(1) Space
 SP_FORCEINLINE constexpr hba& compress(){
@@ -334,9 +475,9 @@ SP_FORCEINLINE constexpr hba& erase(size_type target_idx){
     return *this;
 }
 
-template <typename... Args>
+template <bool compress = _default_compress, typename... Args>
 SP_FORCEINLINE constexpr hba& emplace(size_type target_idx, Args&&... args){
-    //SP_IF_NOT_EXPECT(_size>=_capacity) reallocate(next_pow2(_size));
+    SP_IF_NOT_EXPECT(_size>=_capacity) reallocate<compress>(grow_capacity(_size));
     const size_type idx = (_is_contiguous) ? target_idx : get_idx(target_idx);
     T item_to_place(sp::forward<Args>(args)...);
     size_type hole_idx = idx;
@@ -354,13 +495,17 @@ SP_FORCEINLINE constexpr hba& emplace(size_type target_idx, Args&&... args){
     return *this;
 }
 
-template <typename... Args>
-SP_FORCEINLINE constexpr hba& emplace_front(Args&&... args) { return emplace(0, sp::forward<Args>(args)...); }
+template <bool compress = _default_compress, typename... Args>
+SP_FORCEINLINE constexpr hba& emplace_front(Args&&... args) { return emplace<compress>(0, sp::forward<Args>(args)...); }
 
-SP_FORCEINLINE constexpr hba& insert(size_type target_idx, const T& val) { return emplace(target_idx, val); }
-SP_FORCEINLINE constexpr hba& insert(size_type target_idx, T&& val) { return emplace(target_idx, sp::move(val)); }
-SP_FORCEINLINE constexpr hba& push_front(const T& val) { return emplace_front(val); }
-SP_FORCEINLINE constexpr hba& push_front(T&& val) { return emplace_front(sp::move(val)); }
+template <bool compress = _default_compress>
+SP_FORCEINLINE constexpr hba& insert(size_type target_idx, const T& val) { return emplace<compress>(target_idx, val); }
+template <bool compress = _default_compress>
+SP_FORCEINLINE constexpr hba& insert(size_type target_idx, T&& val) { return emplace<compress>(target_idx, sp::move(val)); }
+template <bool compress = _default_compress>
+SP_FORCEINLINE constexpr hba& push_front(const T& val) { return emplace_front<compress>(val); }
+template <bool compress = _default_compress>
+SP_FORCEINLINE constexpr hba& push_front(T&& val) { return emplace_front<compress>(sp::move(val)); }
 
 SP_FORCEINLINE void print(){
     sp::print("[");

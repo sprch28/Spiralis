@@ -20,6 +20,13 @@
 
 namespace sp {
     struct placement_tag {};
+    
+    template <typename _Alloc, typename = void> struct allocator_ext {
+        static constexpr ull true_capacity(ull n) noexcept { return n; }
+    };
+    template <typename _Alloc> struct allocator_ext<_Alloc, spt::void_t<decltype(_Alloc::capacity_for(spt::declval<ull>()))>> {
+        static constexpr ull true_capacity(ull n) noexcept { return _Alloc::capacity_for(n); }
+    };
 }
 
 inline void* operator new(decltype(sizeof(0)), sp::placement_tag, void* ptr) noexcept {
