@@ -443,16 +443,16 @@ SP_FORCEINLINE constexpr void set_contig(bool condition) { _is_contiguous = cond
 SP_FORCEINLINE constexpr bool empty() { return _size==0; }
 SP_FORCEINLINE constexpr bool is_empty() { return _size==0; }
 SP_FORCEINLINE constexpr bool is_slot_active(size_type slot) { return _is_slot_active(slot); }
-/*SP_FORCEINLINE constexpr const T& front() const { return (_data != nullptr) ? _data[0] : T(); }
-SP_FORCEINLINE constexpr T& front() { return (_data != nullptr) ? _data[0] : T(); }
-SP_FORCEINLINE constexpr const T& back() const { return _data != nullptr ? _data[_size-1] : T(); }
-SP_FORCEINLINE constexpr T& back() { return (_data != nullptr) ? _data[_size-1] : T(); }*/
+SP_FORCEINLINE constexpr const T& front() const { return operator[](0); }
+SP_FORCEINLINE constexpr T& front() { return operator[](0); }
+SP_FORCEINLINE constexpr const T& back() const { return operator[](_size-1); }
+SP_FORCEINLINE constexpr T& back() { return operator[](_size-1); }
 
 template <bool compress = _default_compress>
 SP_FORCEINLINE constexpr hba& reserve(size_type n){
     size_type target_size = grow_capacity(n);
     SP_IF_NOT_EXPECT(target_size<=n) return *this;
-    SP_MUSTTAIL return reallocate<compress>(n);
+    return reallocate<compress>(n);
 }
 
 // Compress: Two-pointer (read pointer and write pointer), O(N) Time, O(1) Space
@@ -563,6 +563,7 @@ SP_FORCEINLINE constexpr T pop(size_type logical_idx){
     _disable_slot(idx);
     _propagate_up(idx, -1);
     --_size;
+    _is_contiguous = false;
     return popped;
 }
 
@@ -582,6 +583,7 @@ SP_FORCEINLINE constexpr hba& clear(){
     std::memset(_meta,0,_calculate_meta_size(_capacity)*sizeof(ull));
     _size = 0;
     _is_contiguous = true;
+    return *this;
 }
 
 SP_FORCEINLINE void print(){
