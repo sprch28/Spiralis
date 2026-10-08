@@ -54,7 +54,7 @@
 namespace sp{
 template <typename T, short _safety_level = __SP_DEFAULT_SAFETY_LEVEL__, template <typename> typename Allocator = sp::allocator>
 class alignas(spt::get_allocator_alignment<Allocator<T>>()
-? sp_cache_line_size 
+? spt::get_allocator_alignment<Allocator<T>>()
 : sp::max(alignof(Allocator<T>),sp::max(alignof(T*),alignof(ull)))) array{
 private:
     _SP_GRANT_IO_ACCESS_
@@ -65,7 +65,7 @@ private:
     static constexpr bool _trivially_copyable = spt::is_trivially_copyable_v<T>;
     static constexpr bool _is_aligned = (spt::get_allocator_alignment<Allocator<T>>() ? 1 : 0);
     
-    alignas((_is_aligned) ? sp_cache_line_size : sp::max(alignof(Allocator<T>),sp::max(alignof(T*),alignof(ull)))) 
+    alignas((_is_aligned) ? spt::get_allocator_alignment<Allocator<T>>() : sp::max(alignof(Allocator<T>),sp::max(alignof(T*),alignof(ull)))) 
     T* _data;
     ull _size;
     ull _capacity;
