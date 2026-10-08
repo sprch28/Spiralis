@@ -14,8 +14,7 @@ struct pair {
     constexpr pair() = default;
 
     template <typename U1, typename U2>
-    constexpr pair(U1&& one, U2&& two) 
-        : first(sp::forward<U1>(one)), second(sp::forward<U2>(two)) {}
+    constexpr pair(U1&& one, U2&& two) : first(sp::forward<U1>(one)), second(sp::forward<U2>(two)) {}
 };
 
 } // namespace sp
