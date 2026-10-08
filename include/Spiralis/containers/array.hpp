@@ -339,6 +339,10 @@ public:
 //==========================================================================================================================================
 //==========================================================================================================================================
 
+    /**
+     * @brief Check whether the allocator uses aligned allocation.
+     * @return true if the allocator provides cache-line alignment, false otherwise
+     */
     SP_FORCEINLINE constexpr bool is_aligned() const{
         return _is_aligned;
     }
@@ -377,8 +381,8 @@ public:
     }
 
     /**
-     * @brief Reserve capacity for the array.
-     * @param new_capacity the new capacity to add
+     * @brief Extend the raw capacity by an exact additional amount (no rounding).
+     * @param new_capacity number of additional elements to reserve space for
      */
     _SP_SAFETY_TEMPLATE_
     SP_FORCEINLINE constexpr void reserve_extra(ull new_capacity){
@@ -387,8 +391,8 @@ public:
     }
 
     /**
-     * @brief Reserve capacity for the array.
-     * @param new_capacity the new capacity to add
+     * @brief Extend the raw capacity by an additional amount, rounded up to the next power of 2.
+     * @param new_capacity number of additional elements to reserve space for
      */
     _SP_SAFETY_TEMPLATE_
     SP_FORCEINLINE constexpr void reserve_extra_rounded(ull new_capacity){
@@ -413,6 +417,12 @@ private:
         return sp_cache_line_size / sizeof(T);//(sizeof(T) + sp_cache_line_size - 1) / sp_cache_line_size;
     }
 public:
+    /**
+     * @brief Access element at index and prefetch the next cache line ahead (aligned allocators only).
+     * @param index index of the element to access
+     * @return reference to the element at the specified index
+     * @note the prefetch is a no-op when the allocator does not provide alignment
+     */
     _SP_FUNC_NI_ constexpr T& access_and_prefetch(ull index) {
         SP_IF_CONSTEXPR(_is_aligned){
             _SP_PREFETCH_(&_data[index+get_lookahead()], 0, 1);
@@ -420,6 +430,12 @@ public:
         return _data[index];
     }
 
+    /**
+     * @brief Access element at index and prefetch the next cache line ahead (aligned allocators only, const version).
+     * @param index index of the element to access
+     * @return const reference to the element at the specified index
+     * @note the prefetch is a no-op when the allocator does not provide alignment
+     */
     _SP_FUNC_NI_ constexpr const T& access_and_prefetch(ull index) const {
         SP_IF_CONSTEXPR(_is_aligned){
             _SP_PREFETCH_(&_data[index+get_lookahead()], 0, 1);
@@ -485,7 +501,8 @@ public:
     _SP_FUNC_NI_ SP_CONST constexpr ull max_size() const noexcept { return npos; }
 
     /**
-     * @brief explicit bool conversion
+     * @brief Explicit conversion to bool.
+     * @return true if the array is non-empty, false otherwise
      */
     explicit constexpr operator bool() const noexcept { return !is_empty(); }
 
@@ -512,9 +529,10 @@ public:
 
 
     /**
-     * @brief Check if the array is equal to another array.
-     * @param other array to check against
-     * @return true if the arrays are equal, false otherwise
+     * @brief Check if the array is element-wise equal to another array.
+     * @param other array to compare against
+     * @return true if both arrays have the same size and all elements compare equal, false otherwise
+     * @note uses memcmp for trivially-copyable types where sizeof(T) == sizeof(int)
      */
     SP_NODISCARD constexpr bool equals(const array<T, _safety_level>& other) const {
         SP_IF_NOT_EXPECT(_size != other._size) return false;
@@ -540,7 +558,15 @@ public:
      */
     _SP_FUNC_NIP_ constexpr const T* data() const noexcept { return _data; }
 
+    /**
+     * @brief Shorthand alias for data().
+     * @return pointer to the underlying data buffer
+     */
     _SP_FUNC_NIFP_ constexpr T* D() noexcept { return data(); }
+    /**
+     * @brief Shorthand alias for data() (const version).
+     * @return const pointer to the underlying data buffer
+     */
     _SP_FUNC_NIFP_ constexpr T* D() const noexcept { return data(); }
 
     /**
@@ -554,8 +580,15 @@ public:
      */
     _SP_FUNC_NI_ constexpr iterator end() noexcept { return iterator(_data + _size); }
 
-    // in array.hpp
+    /**
+     * @brief Get a const iterator to the beginning of the array.
+     * @return const iterator to the first element
+     */
     _SP_FUNC_NI_ constexpr const_iterator begin() const noexcept { return const_iterator(_data); }
+    /**
+     * @brief Get a const iterator to the end of the array.
+     * @return const iterator to one past the last element
+     */
     _SP_FUNC_NI_ constexpr const_iterator end() const noexcept { return const_iterator(_data + _size); }
 
     /**
@@ -705,8 +738,8 @@ public:
     }
 
     /**
-     * @brief Insert a new element at the front of the array.
-     * @param item element to insert
+     * @brief Push a value to the front of the array by copy/move.
+     * @param item element to insert at index 0
      */
     _SP_SAFETY_TEMPLATE_
     SP_HOT SP_FLATTEN constexpr void push_front(type_param item) { 
@@ -735,8 +768,9 @@ public:
     SP_FORCEINLINE SP_HOT SP_FLATTEN constexpr void push_back(type_param item) { emplace_back<safety>(item); }
 
     /**
-     * @brief Clear the array and resize to a new size.
-     * @param new_size new size of the array
+     * @brief Destroy all existing elements, then default-construct new_size elements.
+     * @param new_size number of elements to construct after clearing
+     * @note if new_size exceeds current capacity, the buffer is reallocated to next_pow2(new_size)
      */
     _SP_SAFETY_TEMPLATE_
     constexpr void clear_and_resize(ull new_size) {
@@ -807,8 +841,9 @@ public:
     }
 
     /**
-     * @brief Erase the element at the specified index.
+     * @brief Erase the element at the specified index by overwriting it with the last element (O(1), does not preserve order).
      * @param index index of the element to erase
+     * @throws ArrayException if index is out of bounds and safety level is 1+
      */
     _SP_SAFETY_TEMPLATE_
     constexpr void erase_swap(ull index){
@@ -900,9 +935,10 @@ public:
     }
 
     /**
-     * @brief Swap the elements at the specified indices.
-     * @param a index of the mid element
+     * @brief Swap the elements at two indices.
+     * @param a index of the first element
      * @param b index of the second element
+     * @throws ArrayException if either index is out of bounds and safety level is 1+
      */
     _SP_SAFETY_TEMPLATE_
     constexpr void swap_elements(ull a, ull b){
@@ -911,8 +947,8 @@ public:
     }
 
     /**
-     * @brief Reverse the elements in the array.
-     * @return array<T, _safety_level>
+     * @brief Return a new array with elements in reverse order.
+     * @return new array containing the elements of this array in reverse order
      */
     _SP_SAFETY_TEMPLATE_
     constexpr array<T, _safety_level> reverse() const {
@@ -922,8 +958,8 @@ public:
     }
 
     /**
-     * @brief Reverse the elements in the array.
-     * @return *this: enables chaining
+     * @brief Reverse the elements of the array in-place.
+     * @return reference to this array (enables chaining)
      */
     _SP_SAFETY_TEMPLATE_
     constexpr array<T, _safety_level>& reverse_(){
@@ -1027,10 +1063,10 @@ public:
         return rotate_left_<safety>(_size - num);
     }
 
-    /** 
-     * @brief Find the mid occurrence of the specified value.
-     * @param value element to find
-     * @return index of the element, or _size if not found
+    /**
+     * @brief Find the first occurrence of the specified value.
+     * @param value element to search for
+     * @return index of the first matching element, or size() if not found
      */
     _SP_SAFETY_TEMPLATE_
     SP_NODISCARD SP_PURE SP_FORCEINLINE constexpr ull find(type_param value) const noexcept {
@@ -1079,9 +1115,9 @@ public:
     }
 
     /**
-     * @brief Find the mid element that matches the predicate.
-     * @param predicate function to test each element
-     * @return index of the element, or _size if not found
+     * @brief Find the first element that satisfies the predicate.
+     * @param predicate callable returning true for a match
+     * @return index of the first matching element, or size() if not found
      */
     template <short safety = _safety_level, typename Func>
     SP_NODISCARD SP_PURE SP_FORCEINLINE constexpr ull find_if(Func predicate) const{
@@ -1128,8 +1164,8 @@ public:
 
     /**
      * @brief Apply a function to each element in the array.
-     * @param func function to apply
-     * @warning if lambda takes refrenced T as param, original can be modified
+     * @param func callable to invoke with each element
+     * @warning if the callable takes T by reference, it can modify elements in-place
      */
     template <short safety = _safety_level, typename Func>
     SP_FORCEINLINE constexpr void for_each(Func func) { _SP_APPLY_UNROLLED_(_size, func(_data[i])); }
@@ -1159,10 +1195,10 @@ public:
     }
 
     /**
-     * @brief Remove the mid occurrence of the specified value.
+     * @brief Remove the first occurrence of the specified value.
      * @param value element to remove
      * @return true if the element was found and removed, false otherwise
-     * @warning modifies the original array
+     * @warning modifies the array in-place; order is preserved
      */
     _SP_SAFETY_TEMPLATE_
     SP_FORCEINLINE constexpr bool remove_mid(type_param value){
@@ -1234,9 +1270,11 @@ public:
 
 
     /**
-     * @brief Sort the array using the specified comparator.
-     * @param comp comparator function
-     * @note uses std::sort backend
+     * @brief Return a sorted copy of the array using the specified comparator.
+     * @param comp binary comparator function
+     * @return new sorted array
+     * @note uses std::sort internally
+     * @throws ArrayException if the array is empty and safety level is 1+
      */
     template <typename Comp>
     SP_FORCEINLINE constexpr array<T, _safety_level> sort_by(Comp comp) {
@@ -1362,10 +1400,10 @@ public:
     }
 
     /**
-     * @brief Find the nth occurrence of the specified value.
-     * @param value element to find
-     * @param n occurrence to find (0-based)
-     * @return index of the nth occurrence, or size() if not found
+     * @brief Find the nth occurrence of the specified value (1-based).
+     * @param value element to search for
+     * @param n occurrence number to find (1 = first, 2 = second, etc.)
+     * @return index of the nth occurrence, or size() if fewer than n occurrences exist
      */
     _SP_SAFETY_TEMPLATE_
     SP_NODISCARD SP_PURE SP_FORCEINLINE constexpr ull find_nth(type_param value, ull n) const{
@@ -1381,10 +1419,10 @@ public:
     }
 
     /**
-     * @brief Find the nth element that matches the predicate.
-     * @param predicate function to test each element
-     * @param n occurrence to find (0-based)
-     * @return index of the nth matching element, or size() if not found
+     * @brief Find the nth element satisfying the predicate (1-based).
+     * @param predicate callable returning true for a match
+     * @param n occurrence number to find (1 = first, 2 = second, etc.)
+     * @return index of the nth matching element, or size() if fewer than n matches exist
      */
     template <typename Func>
     SP_NODISCARD SP_PURE SP_FORCEINLINE constexpr ull find_nth_if(Func predicate, ull n) const{
@@ -1781,8 +1819,10 @@ public:
     }
 
     /**
-     * @brief Stable partition the array around a pivolt element.
+     * @brief Stably partition the array around the element at pivot_index.
      * @param pivot_index index of the pivot element
+     * @note elements less than the pivot precede elements greater than or equal to it; relative order within each group is preserved
+     * @throws ArrayException if pivot_index is out of bounds and safety level is 1+
      */
     _SP_SAFETY_TEMPLATE_
     constexpr void stable_partition(ull pivot_index){

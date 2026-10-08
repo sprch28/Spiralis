@@ -4,26 +4,93 @@
 #include "../setup/init.hpp"
 #include "../core/type_traits.hpp"
 #include <cstdint>
+#include <cstring> // memcpy for type-punning
 
-namespace sp{ 
+namespace sp{
+
+    // ─── helpers ────────────────────────────────────────────────────────────────
+    namespace detail {
+        /// Type-puns @p v into an unsigned integer of the same size via @c __builtin_memcpy.
+        /// Avoids UB from @c reinterpret_cast on non-trivially-copyable types.
+        /// @tparam U Target unsigned integer type (must be same size as @p T).
+        /// @tparam T Source type.
+        template <typename U, typename T>
+        SP_FORCEINLINE U bit_cast_hash(T v) noexcept {
+            static_assert(sizeof(U) == sizeof(T), "");
+            U u{};
+            __builtin_memcpy(&u, &v, sizeof(T));
+            return u;
+        }
+    } // namespace detail
+
+    // ─── basic_hash ─────────────────────────────────────────────────────────────
+    /// General-purpose hash functor covering all common key types.
+    /// - Integers (@c bool, @c char, @c short, @c int, @c long, @c long @c long and unsigned variants):
+    ///   Fibonacci/Knuth multiplicative hash.
+    /// - Floats (@c float, @c double): bit-reinterpreted as an integer then multiplied;
+    ///   @c -0.0 is canonicalised to @c 0 so it hashes identically to @c +0.0.
+    /// - Pointers: low alignment bits stripped (>>3) then Fibonacci-multiplied.
+    /// - String-like types (anything with @c c_str() + @c size()): FNV-1a + custom avalanche.
+    /// - Raw @c char* / @c const @c char*: same FNV-1a path via @c sp::strlen.
     class basic_hash{
         public:
         constexpr basic_hash(){}
         SP_CONSTEXPR20 ~basic_hash(){}
-        template <typename T> 
-        SP_FORCEINLINE SP_PURE constexpr size_type operator()(T val, size_type bucket_size=0){ 
-            size_type value = 0; 
-            SP_IF_CONSTEXPR((spt::is_same<T,int>::value||spt::is_same<T, unsigned int>::value)) value = static_cast<size_type>(val*2654435769U);
-            else SP_IF_CONSTEXPR((spt::is_same<T,long long>::value||spt::is_same<T, ull>::value)) value = static_cast<size_type>(val*11400714819323198485ULL);
-            else SP_IF_CONSTEXPR((spt::is_same<T, double>::value||spt::is_same<T,float>::value)) value = static_cast<size_type>(val*2654435769);
-            else SP_IF_CONSTEXPR(SP_HAS_METHOD(T, c_str)&&SP_HAS_METHOD(T, size)) return ____private_string_hash(val.c_str(), val.size(), bucket_size);
-            else SP_IF_CONSTEXPR((spt::is_same<T,const char*>::value||spt::is_same<T,char*>::value)) return ____private_string_hash(val,sp::strlen(val));
-            else SP_IF_CONSTEXPR((spt::is_same<T, char>::value)) value = static_cast<size_type>(val);
+        /// Hashes @p val using the strategy appropriate for its type.
+        /// @tparam T Key type; see class doc for the full dispatch table.
+        /// @param val         Value to hash.
+        /// @param bucket_size Unused; present for @c hash_with_cap compatibility.
+        /// @return 64-bit hash.
+        template <typename T>
+        SP_FORCEINLINE SP_PURE constexpr size_type operator()(T val, size_type bucket_size=0) const {
+            size_type value = 0;
+            // --- integer types ---
+            SP_IF_CONSTEXPR(spt::is_same<T,bool>::value)
+                value = static_cast<size_type>(val) * 2654435761ULL;
+            else SP_IF_CONSTEXPR(spt::is_same<T,char>::value || spt::is_same<T,unsigned char>::value || spt::is_same<T,signed char>::value)
+                value = static_cast<size_type>(static_cast<unsigned char>(val)) * 2654435761ULL;
+            else SP_IF_CONSTEXPR(spt::is_same<T,short>::value || spt::is_same<T,unsigned short>::value)
+                value = static_cast<size_type>(static_cast<unsigned short>(val)) * 2654435761ULL;
+            else SP_IF_CONSTEXPR(spt::is_same<T,int>::value || spt::is_same<T,unsigned int>::value)
+                value = static_cast<size_type>(static_cast<unsigned int>(val) * 2654435769U);
+            else SP_IF_CONSTEXPR(spt::is_same<T,long>::value || spt::is_same<T,unsigned long>::value)
+                value = static_cast<size_type>(static_cast<unsigned long>(val) * 11400714819323198485ULL);
+            else SP_IF_CONSTEXPR(spt::is_same<T,long long>::value || spt::is_same<T,ull>::value)
+                value = static_cast<size_type>(static_cast<ull>(val) * 11400714819323198485ULL);
+            // --- floating point: bit-reinterpret then hash as integer ---
+            else SP_IF_CONSTEXPR(spt::is_same<T,float>::value){
+                unsigned int bits = detail::bit_cast_hash<unsigned int>(val);
+                // Canonicalise -0.0 → 0
+                if(bits == 0x80000000U) bits = 0;
+                value = static_cast<size_type>(bits * 2654435769U);
+            }
+            else SP_IF_CONSTEXPR(spt::is_same<T,double>::value){
+                ull bits = detail::bit_cast_hash<ull>(val);
+                if(bits == 0x8000000000000000ULL) bits = 0;
+                value = static_cast<size_type>(bits * 11400714819323198485ULL);
+            }
+            // --- pointer types: shift out alignment bits, then multiply ---
+            else SP_IF_CONSTEXPR(spt::is_pointer_v<T>){
+                ull addr = reinterpret_cast<ull>(val);
+                addr >>= 3; // strip likely-zero low bits
+                value = static_cast<size_type>(addr * 11400714819323198485ULL);
+            }
+            // --- string-like types (c_str() + size()) ---
+            else SP_IF_CONSTEXPR(SP_HAS_METHOD(T, c_str) && SP_HAS_METHOD(T, size))
+                return ____private_string_hash(val.c_str(), val.size());
+            // --- raw C-strings ---
+            else SP_IF_CONSTEXPR(spt::is_same<T,const char*>::value || spt::is_same<T,char*>::value)
+                return ____private_string_hash(val, sp::strlen(val));
             return value;
         }
 
         private:
-        constexpr size_type ____private_string_hash(const char* data, size_type len, size_type bucket_size=0){
+        /// FNV-1a over @p len bytes of @p data followed by a custom avalanche mix.
+        /// @param data        Pointer to character data.
+        /// @param len         Number of bytes to hash.
+        /// @param bucket_size Unused; kept for potential future adaptive mixing.
+        /// @return 64-bit hash.
+        static SP_FORCEINLINE constexpr size_type ____private_string_hash(const char* data, size_type len, size_type bucket_size=0){
             ull h = 14695981039346656037ULL;
             const ull fnv_prime = 1099511628211ULL;
             for(int ch = 0; ch < len; ch++){
@@ -587,7 +654,198 @@ namespace sp{
             h ^= (h >> 33);
             return h;*/
         }
+    }; // class basic_hash
+
+
+    // ─── identity_hash ──────────────────────────────────────────────────────────
+    /// Zero-overhead hash for dense integer keys (e.g. array indices).
+    /// Returns the key cast to @c size_type with no mixing.
+    /// @warning Only suitable when the caller controls key distribution;
+    ///          clustered keys will cause heavy collisions in a hash map.
+    struct identity_hash {
+        /// @param val         Integer key to "hash".
+        /// @param bucket_size Unused.
+        /// @return @c static_cast<size_type>(val).
+        template <typename T>
+        SP_FORCEINLINE SP_PURE constexpr size_type operator()(T val, size_type = 0) const noexcept {
+            return static_cast<size_type>(val);
+        }
     };
-}; // namespace sp
+
+
+    // ─── fnv1a_hash ─────────────────────────────────────────────────────────────
+    /// Standalone FNV-1a (64-bit) hash functor.
+    /// Faster than @c basic_hash for short strings due to no extra avalanche passes.
+    /// Non-string types fall back to hashing their raw bytes.
+    struct fnv1a_hash {
+        /// Hashes @p len bytes starting at @p data.
+        /// @return 64-bit FNV-1a digest.
+        SP_FORCEINLINE SP_PURE constexpr size_type operator()(const char* data, size_type len, size_type = 0) const noexcept {
+            ull h = 14695981039346656037ULL;
+            for(size_type i = 0; i < len; ++i){
+                h ^= static_cast<unsigned char>(data[i]);
+                h *= 1099511628211ULL;
+            }
+            return static_cast<size_type>(h);
+        }
+        /// Dispatches to the byte-buffer overload via @c c_str()+size(), @c strlen,
+        /// or a raw @c sizeof(T) byte view for other types.
+        template <typename T>
+        SP_FORCEINLINE SP_PURE constexpr size_type operator()(T val, size_type bucket_size = 0) const noexcept {
+            SP_IF_CONSTEXPR(SP_HAS_METHOD(T, c_str) && SP_HAS_METHOD(T, size))
+                return (*this)(val.c_str(), val.size());
+            else SP_IF_CONSTEXPR(spt::is_same<T,const char*>::value || spt::is_same<T,char*>::value)
+                return (*this)(val, sp::strlen(val));
+            // fallback: hash raw bytes of the value
+            return (*this)(reinterpret_cast<const char*>(&val), sizeof(T));
+        }
+    };
+
+
+    // ─── murmur3_hash ───────────────────────────────────────────────────────────
+    /// MurmurHash3 128-bit body with 64-bit output.
+    /// Excellent avalanche and distribution; a good general-purpose alternative
+    /// to @c basic_hash when collision resistance matters more than raw speed.
+    struct murmur3_hash {
+    private:
+        /// Final avalanche mix for a 64-bit word (MurmurHash3 fmix64).
+        static SP_FORCEINLINE constexpr ull fmix64(ull k) noexcept {
+            k ^= k >> 33;
+            k *= 0xff51afd7ed558ccdULL;
+            k ^= k >> 33;
+            k *= 0xc4ceb9fe1a85ec53ULL;
+            k ^= k >> 33;
+            return k;
+        }
+    public:
+        /// Hashes @p len bytes of @p data with an optional @p seed.
+        /// @return 64-bit digest (sum of two fmix64-finalised accumulators).
+        SP_FORCEINLINE SP_PURE constexpr size_type operator()(const char* data, size_type len, size_type seed = 0) const noexcept {
+            const size_type nblocks = len >> 3;
+            ull h1 = seed, h2 = seed;
+            const ull c1 = 0x87c37b91114253d5ULL;
+            const ull c2 = 0x4cf5ad432745937fULL;
+            // body
+            for(size_type i = 0; i < nblocks; ++i){
+                ull k1 = 0, k2 = 0;
+                __builtin_memcpy(&k1, data + i*16,     8);
+                __builtin_memcpy(&k2, data + i*16 + 8, 8);
+                k1 *= c1; k1 = (k1<<31)|(k1>>33); k1 *= c2; h1 ^= k1;
+                h1 = (h1<<27)|(h1>>37); h1 += h2; h1 = h1*5 + 0x52dce729ULL;
+                k2 *= c2; k2 = (k2<<33)|(k2>>31); k2 *= c1; h2 ^= k2;
+                h2 = (h2<<31)|(h2>>33); h2 += h1; h2 = h2*5 + 0x38495ab5ULL;
+            }
+            // tail
+            const unsigned char* tail = reinterpret_cast<const unsigned char*>(data + nblocks*16);
+            ull k1 = 0, k2 = 0;
+            switch(len & 15){
+                case 15: k2 ^= static_cast<ull>(tail[14]) << 48; [[fallthrough]];
+                case 14: k2 ^= static_cast<ull>(tail[13]) << 40; [[fallthrough]];
+                case 13: k2 ^= static_cast<ull>(tail[12]) << 32; [[fallthrough]];
+                case 12: k2 ^= static_cast<ull>(tail[11]) << 24; [[fallthrough]];
+                case 11: k2 ^= static_cast<ull>(tail[10]) << 16; [[fallthrough]];
+                case 10: k2 ^= static_cast<ull>(tail[ 9]) <<  8; [[fallthrough]];
+                case  9: k2 ^= static_cast<ull>(tail[ 8]);       [[fallthrough]];
+                         k2 *= c2; k2 = (k2<<33)|(k2>>31); k2 *= c1; h2 ^= k2; [[fallthrough]];
+                case  8: k1 ^= static_cast<ull>(tail[ 7]) << 56; [[fallthrough]];
+                case  7: k1 ^= static_cast<ull>(tail[ 6]) << 48; [[fallthrough]];
+                case  6: k1 ^= static_cast<ull>(tail[ 5]) << 40; [[fallthrough]];
+                case  5: k1 ^= static_cast<ull>(tail[ 4]) << 32; [[fallthrough]];
+                case  4: k1 ^= static_cast<ull>(tail[ 3]) << 24; [[fallthrough]];
+                case  3: k1 ^= static_cast<ull>(tail[ 2]) << 16; [[fallthrough]];
+                case  2: k1 ^= static_cast<ull>(tail[ 1]) <<  8; [[fallthrough]];
+                case  1: k1 ^= static_cast<ull>(tail[ 0]);
+                         k1 *= c1; k1 = (k1<<31)|(k1>>33); k1 *= c2; h1 ^= k1;
+            }
+            h1 ^= len; h2 ^= len;
+            h1 += h2; h2 += h1;
+            return static_cast<size_type>(fmix64(h1) + fmix64(h2));
+        }
+        /// Dispatches to the byte-buffer overload via @c c_str()+size(), @c strlen,
+        /// or a raw @c sizeof(T) byte view for other types.
+        template <typename T>
+        SP_FORCEINLINE SP_PURE constexpr size_type operator()(T val, size_type bucket_size = 0) const noexcept {
+            SP_IF_CONSTEXPR(SP_HAS_METHOD(T, c_str) && SP_HAS_METHOD(T, size))
+                return (*this)(val.c_str(), val.size());
+            else SP_IF_CONSTEXPR(spt::is_same<T,const char*>::value || spt::is_same<T,char*>::value)
+                return (*this)(val, sp::strlen(val));
+            return (*this)(reinterpret_cast<const char*>(&val), sizeof(T));
+        }
+    };
+
+
+    // ─── wyhash ─────────────────────────────────────────────────────────────────
+    /// wyhash v4 — highest throughput hash in most benchmarks.
+    /// Uses a 128-bit multiply-xor mix (@c _wymix) with four secret constants.
+    /// Handles strings of any length via size-specialised fast paths (1–16 bytes)
+    /// and a 48-byte-per-iteration streaming loop for longer inputs.
+    /// Non-string types fall back to hashing their raw bytes.
+    struct wyhash {
+    private:
+        /// Core mix: XORs the low and high halves of the 128-bit product of @p a and @p b.
+        static SP_FORCEINLINE constexpr ull _wymix(ull a, ull b) noexcept {
+            // 128-bit multiply via two 64-bit halves (portable, no __uint128_t required)
+            ull lo = a * b;
+            // hi approximation: good enough for hashing
+            ull hi = (ull)((__uint128_t)a * b >> 64);
+            return lo ^ hi;
+        }
+        /// Loads 8 bytes from @p p (unaligned-safe via @c __builtin_memcpy).
+        static SP_FORCEINLINE constexpr ull _wyr8(const unsigned char* p) noexcept {
+            ull v; __builtin_memcpy(&v, p, 8); return v;
+        }
+        /// Loads 4 bytes from @p p.
+        static SP_FORCEINLINE constexpr ull _wyr4(const unsigned char* p) noexcept {
+            unsigned int v; __builtin_memcpy(&v, p, 4); return v;
+        }
+        /// Reads 1–3 bytes from @p p as a single 24-bit word (wyhash short-string trick).
+        static SP_FORCEINLINE constexpr ull _wyr3(const unsigned char* p, size_type k) noexcept {
+            return (static_cast<ull>(p[0]) << 16) | (static_cast<ull>(p[k>>1]) << 8) | p[k-1];
+        }
+    public:
+        static constexpr ull secret0 = 0xa0761d6478bd642fULL; ///< Mix constant 0.
+        static constexpr ull secret1 = 0xe7037ed1a0b428dbULL; ///< Mix constant 1.
+        static constexpr ull secret2 = 0x8ebc6af09c88c6e3ULL; ///< Mix constant 2.
+        static constexpr ull secret3 = 0x589965cc75374cc3ULL; ///< Mix constant 3 (final mix).
+
+        /// Hashes @p len bytes of @p data with an optional @p seed.
+        /// @return 64-bit wyhash digest.
+        SP_FORCEINLINE SP_PURE constexpr size_type operator()(const char* data, size_type len, size_type seed = 0) const noexcept {
+            const unsigned char* p = reinterpret_cast<const unsigned char*>(data);
+            ull h = seed ^ secret0;
+            if(len <= 3){
+                h = _wymix(h ^ secret1, (len ? _wyr3(p, len) : 0) ^ secret2);
+            } else if(len <= 8){
+                h = _wymix(_wyr4(p) ^ h ^ secret1, _wyr4(p + len - 4) ^ secret2);
+            } else if(len <= 16){
+                h = _wymix(_wyr8(p) ^ h ^ secret1, _wyr8(p + len - 8) ^ secret2);
+            } else {
+                ull see1 = h, see2 = h;
+                size_type i = 0;
+                for(; i + 48 <= len; i += 48){
+                    h    = _wymix(_wyr8(p+i)    ^ secret1, _wyr8(p+i+ 8) ^ h);
+                    see1 = _wymix(_wyr8(p+i+16) ^ secret2, _wyr8(p+i+24) ^ see1);
+                    see2 = _wymix(_wyr8(p+i+32) ^ secret3, _wyr8(p+i+40) ^ see2);
+                }
+                for(; i + 16 <= len; i += 16)
+                    h = _wymix(_wyr8(p+i) ^ secret1, _wyr8(p+i+8) ^ h);
+                h ^= see1 ^ see2;
+                h = _wymix(_wyr8(p + len - 16) ^ secret1, _wyr8(p + len - 8) ^ h);
+            }
+            return static_cast<size_type>(_wymix(h ^ len, secret3));
+        }
+        /// Dispatches to the byte-buffer overload via @c c_str()+size(), @c strlen,
+        /// or a raw @c sizeof(T) byte view for other types.
+        template <typename T>
+        SP_FORCEINLINE SP_PURE constexpr size_type operator()(T val, size_type bucket_size = 0) const noexcept {
+            SP_IF_CONSTEXPR(SP_HAS_METHOD(T, c_str) && SP_HAS_METHOD(T, size))
+                return (*this)(val.c_str(), val.size());
+            else SP_IF_CONSTEXPR(spt::is_same<T,const char*>::value || spt::is_same<T,char*>::value)
+                return (*this)(val, sp::strlen(val));
+            return (*this)(reinterpret_cast<const char*>(&val), sizeof(T));
+        }
+    };
+
+} // namespace sp
 
 #endif // ____SP_HASHES____
