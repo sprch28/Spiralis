@@ -62,9 +62,9 @@ static sp::tensor<T> linspace(T start, T stop, size_type steps) {
 template <typename T=double, typename... Args>
 static spt::enable_if_t<spt::is_trivially_copyable_v<T>,sp::tensor<T>> randoms(Args&&... args){
     sp::tensor<T> result(args...);
-    const ull sz = result.size();
-    for(ull i = 0; i < sz; ++i){
-        ull raw_rand = sp::get_psrand64();
+    const sp::ull sz = result.size();
+    for(sp::ull i = 0; i < sz; ++i){
+        sp::ull raw_rand = sp::get_psrand64();
         std::memcpy(&result._data[i],&raw_rand,sizeof(T));
     }
     return result;

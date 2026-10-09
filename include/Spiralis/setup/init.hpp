@@ -144,11 +144,11 @@
 #ifndef _SP_APPLY_UNROLLED_
 #define _SP_APPLY_UNROLLED_(loop_until, operation) \
     do { \
-        IF_UNROLL( ull __i = 0; for (; __i + 3 < loop_until; __i += 4) { \
-            { ull i = __i; operation; } { ull i = __i + 1; operation; } \
-            { ull i = __i + 2; operation; } { ull i = __i + 3; operation; } \
-        } while (__i < loop_until) { ull i = __i; operation; __i++; } ) \
-        IF_NO_UNROLL( for (ull i = 0; i < loop_until; i++) { operation; } ) \
+        IF_UNROLL( unsigned long long __i = 0; for (; __i + 3 < loop_until; __i += 4) { \
+            { unsigned long long i = __i; operation; } { unsigned long long i = __i + 1; operation; } \
+            { unsigned long long i = __i + 2; operation; } { unsigned long long i = __i + 3; operation; } \
+        } while (__i < loop_until) { unsigned long long i = __i; operation; __i++; } ) \
+        IF_NO_UNROLL( for (unsigned long long i = 0; i < loop_until; i++) { operation; } ) \
     } while (0)
 #endif
 
@@ -163,11 +163,11 @@
 #ifndef _SP_EXPLICIT_UNROLLED_
 #define _SP_EXPLICIT_UNROLLED_(loop_var, start_value, loop_until, operation) \
     do { \
-        IF_UNROLL( ull __i = start_value; for (; __i + 3 < loop_until; __i += 4) { \
-            { ull loop_var = __i; operation; } { ull loop_var = __i + 1; operation; } \
-            { ull loop_var = __i + 2; operation; } { ull loop_var = __i + 3; operation; } \
-        } while (__i < loop_until) { ull loop_var = __i; operation; __i++; } ) \
-        IF_NO_UNROLL( for (ull loop_var = start_value; loop_var < loop_until; loop_var++) { operation; } ) \
+        IF_UNROLL( unsigned long long __i = start_value; for (; __i + 3 < loop_until; __i += 4) { \
+            { unsigned long long loop_var = __i; operation; } { unsigned long long loop_var = __i + 1; operation; } \
+            { unsigned long long loop_var = __i + 2; operation; } { unsigned long long loop_var = __i + 3; operation; } \
+        } while (__i < loop_until) { unsigned long long loop_var = __i; operation; __i++; } ) \
+        IF_NO_UNROLL( for (unsigned long long loop_var = start_value; loop_var < loop_until; loop_var++) { operation; } ) \
     } while (0)
 #endif
 

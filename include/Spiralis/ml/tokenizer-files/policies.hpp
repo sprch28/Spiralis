@@ -10,6 +10,9 @@
 // =================== // =================== // =================== // =================== // =================== 
 
 namespace sp_pol{
+#if __SP_GLOBAL_NAMESPACE_ULL__ == 0
+using ull = sp::ull;
+#endif
 template <ull min_len, ull max_len, typename T = uint32_t>
 class greedy_subword_tokenizer : public TokenizerPolicy<T>{
 private:
@@ -213,7 +216,7 @@ public:
 
         sp::vector<ull> min_costs(n + 1, sp::npos);
         sp::vector<T> token_ids(n + 1, -1);
-        sp::vector<ll> parent_indices(n + 1, -1);
+        sp::vector<sp::ll> parent_indices(n + 1, -1);
 
         min_costs[0] = 0;
 

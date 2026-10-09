@@ -356,6 +356,7 @@ public:
     SP_FORCEINLINE IO& print(double msg) { __sp_backend_o.writeDouble(msg); return *this; }
     SP_FORCEINLINE IO& print(float msg) { __sp_backend_o.writeDouble(static_cast<double>(msg)); return *this; }
     SP_FORCEINLINE IO& print(unsigned long msg) { __sp_backend_o.writeUL(msg); return *this; }
+    SP_FORCEINLINE IO& print(unsigned int msg) { __sp_backend_o.writeUL(msg); return *this; }
     SP_FORCEINLINE IO& print(long msg) { __sp_backend_o.writeL(msg); return *this; }
     SP_FORCEINLINE IO& print(bool msg) {
         if (__sp_backend_o._boolalpha) __sp_backend_o.writeString(msg ? "true" : "false");

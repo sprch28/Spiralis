@@ -438,7 +438,7 @@ public:
         std::cout << "Average probe length: " << average_probe_length() << "\n";
         std::cout << "Max probe length: " << max_probe_length() << "\n";
 
-        size_type mem = memory_usage();
+        decltype(sizeof(0)) mem = memory_usage();
         // print anywhere from bytes to tb
         if(mem < 1024) std::cout << "Memory usage: " << mem << " bytes\n";
         else if(mem < 1024*1024) std::cout << "Memory usage: " << mem/1024.0 << " KB\n";

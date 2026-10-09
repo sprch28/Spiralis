@@ -1342,7 +1342,7 @@ inline constexpr bool operator==(const sp::string_impl<safety>& str, const compr
 using string = string_impl<1>;
 using ustring = string_impl<0>;
 } // namespace sp
-SP_FORCEINLINE SP_CONSTEXPR20 sp::string_impl<__SP_DEFAULT_SAFETY_LEVEL__,sp::allocator,true> operator""_sp(const char* str, size_type N){
+SP_FORCEINLINE SP_CONSTEXPR20 sp::string_impl<__SP_DEFAULT_SAFETY_LEVEL__,sp::allocator,true> operator""_sp(const char* str, decltype(sizeof(0)) N){
     return sp::string_impl<__SP_DEFAULT_SAFETY_LEVEL__,sp::allocator,true>(str, N);
 }
 #endif // ____SP_STRING____

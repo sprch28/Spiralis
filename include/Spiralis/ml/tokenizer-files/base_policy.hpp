@@ -13,8 +13,8 @@ namespace sp_pol{
     public:
         using s_t = T;
         SP_FORCEINLINE TokenizerPolicy() { }
-        SP_FORCEINLINE virtual void build_mapping(const sp::string& text, ull vocab_size) {}
-        SP_FORCEINLINE virtual void build_mapping_debug(const sp::string& text, ull vocab_size) { return build_mapping(text, vocab_size); }
+        SP_FORCEINLINE virtual void build_mapping(const sp::string& text, sp::ull vocab_size) {}
+        SP_FORCEINLINE virtual void build_mapping_debug(const sp::string& text, sp::ull vocab_size) { return build_mapping(text, vocab_size); }
         SP_FORCEINLINE virtual sp::vector<T> tokenize(const sp::string& text) const { return sp::vector<T>(); }
         SP_FORCEINLINE virtual sp::vector<sp::string> reconstructed(const sp::vector<T> tokens) const { return sp::vector<sp::string>(); }
         SP_FORCEINLINE virtual void to_file(const sp::string& filename) const{}
