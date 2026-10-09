@@ -399,16 +399,10 @@
 // ===========================// ===========================// ===========================// ===========================
 // VARIABLES AND UTILITY FUNCTIONS
 // ---------------------------------------------------------------------------------------------------------------------
-#if __SP_GLOBAL_NAMESPACE_ULL__ == 1
-    typedef unsigned long long ull;
-    typedef long long ll;
-#endif
 
 namespace sp {
-    #if __SP_GLOBAL_NAMESPACE_ULL__ != 1
-        typedef unsigned long long ull;
-        typedef long long ll;
-    #endif
+    typedef unsigned long long ull;
+    typedef long long ll;
     // Forward declarations
     enum Device { CPU, GPU };
     class IO;
@@ -441,6 +435,11 @@ namespace sp {
 
     static constexpr size_type npos = (size_type)(-1);
 } // namespace sp
+
+#if __SP_GLOBAL_NAMESPACE_ULL__ == 1
+    typedef sp::ull ull;
+    typedef sp::ll ll;
+#endif
 
 typedef sp::size_type size_type;
 

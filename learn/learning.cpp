@@ -22,7 +22,8 @@
 // __SP_DEFAULT_MAP_TRAITS__ is used by default when not all values are entered by the user.
 // It can be customized like this:
 #define __SP_DEFAULT_MAP_TRAITS__ 1, 90, sp::wyhash, sp::aligned_allocator
-// Now creating sp::hash_map<sp::string, int> anywhere in the file defaults to those settings
+// Now creating sp::hmap<sp::string, int> anywhere in the file defaults to those settings
+// Using sp::hash_map still keeps the normal defaults, while def_map uses these customized ones.
 
 // Some containers such as sp::array have a safety level of 1 (safe) and 0 (unsafe).
 // The level chosen by default can be controlled using:
@@ -30,11 +31,12 @@
 
 // size_type is used everywhere, and you can decide what it is globally at compile time.
 // by default, it's decltype(sizeof(0)) which is usually something like unsigned long
-#define __SP_SIZE_TYPE__ unsigned int
+// I'm noticing errors when making it below 64-bit, so I'd be cautious about using this one
+#define __SP_SIZE_TYPE__ unsigned long
 
 // The I/O module uses a char buffer to minimize system calls. 
 // By default, this buffer can hold 32768 chars (1 << 15).
-#define __SP_IO_BUFFER_SIZE__ (1 << 20)
+#define __SP_IO_BUFFER_SIZE__ (1 << 16)
 
 // The hba is an array where you can puncture holes.
 // When calling size-modifying functions, we need to decide what happens when reallocation is needed.
@@ -107,7 +109,7 @@ int main(){
     // I fw hash maps heavy lowk
     // As mentioned above it has lots of params
     {
-    sp::hash_map<sp::string, int> i = {
+    sp::hmap<sp::string, int> i = {
         {"Hello",1},
         {"World",2}
     };// Because of the above macro, it will default to:
@@ -133,14 +135,37 @@ int main(){
     // As seen above, any text followed by '_sp' creates a string by default. This is pretty cool imo
     sp::println("Hello"_sp*5); // I lowk noticed some error here when doing this; It will be fixed soon
     }
+    
 
     // ------------------
-    // hba
+    // hba (prototype)
     // ------------------
+    // To the user, it behaves identical to sp::array (but without the safety level)
+    // However, you can puncture holes.
+    // int, 2 layers, compress on realloc by default, aligned allocator
+    {
+    sp::hba<int, 2, true, sp::aligned_allocator> arr = {1, 2, 3, 4, 5};
+
+    arr.erase(1).erase(1); // Erases elements '2' and '3'
+    arr.print(); // [1, 4, 5]
+    // This looks normal, but the data layout under the hood is:
+    // [1, x, x, 4, 5], where x represents a hole.
+    // Grabbing the logical index works perfectly because get_idx maps logical to physical.
+    // It's a bit slower than a normal operator[] (obviously), but we can fix this.
+    arr.compress().print(); // Still prints the same stuff
+    // However, now the data is:
+    // [1, 4, 5] instead of [1, x, x, 4, 5].
+    // operator[] now returns the physical idx directly (fast path)
+    }
 
     // ------------------
     // bitset
     // ------------------
+    // This one's simple but useful for debugging.
+    sp::size_type i = 39172918;
+    // Bitset of 'sizeof(size_type)*8 number of bits'
+    sp::bitset<sizeof(size_type)*8> set(i);
+    sp::println(set.to_string());
 
     // ------------------
     // tensor

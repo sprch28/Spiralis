@@ -43,7 +43,7 @@ class string_impl{
 private:
     friend class string_view;
     _SP_GRANT_IO_ACCESS_
-    SP_FORCEINLINE const char* __getSpiralMessage() const { return c_str(); }
+    //SP_FORCEINLINE const char* __getSpiralMessage() const { return c_str(); }
     SP_FORCEINLINE sp::pair<const char*, size_type> __getSpiralBinary() const { return {c_str(), size()*sizeof(char)}; }
     static constexpr short _other_safety_level = (short)(!((bool)_safety_level));
     struct __small_mode{
