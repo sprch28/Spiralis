@@ -45,26 +45,26 @@ namespace sp{
         SP_FORCEINLINE SP_PURE constexpr size_type operator()(T val, size_type bucket_size=0) const {
             size_type value = 0;
             // --- integer types ---
-            SP_IF_CONSTEXPR(spt::is_same<T,bool>::value)
+            SP_IF_CONSTEXPR((spt::is_same<T,bool>::value))
                 value = static_cast<size_type>(val) * 2654435761ULL;
-            else SP_IF_CONSTEXPR(spt::is_same<T,char>::value || spt::is_same<T,unsigned char>::value || spt::is_same<T,signed char>::value)
+            else SP_IF_CONSTEXPR((spt::is_same<T,char>::value || spt::is_same<T,unsigned char>::value || spt::is_same<T,signed char>::value))
                 value = static_cast<size_type>(static_cast<unsigned char>(val)) * 2654435761ULL;
-            else SP_IF_CONSTEXPR(spt::is_same<T,short>::value || spt::is_same<T,unsigned short>::value)
+            else SP_IF_CONSTEXPR((spt::is_same<T,short>::value || spt::is_same<T,unsigned short>::value))
                 value = static_cast<size_type>(static_cast<unsigned short>(val)) * 2654435761ULL;
-            else SP_IF_CONSTEXPR(spt::is_same<T,int>::value || spt::is_same<T,unsigned int>::value)
+            else SP_IF_CONSTEXPR((spt::is_same<T,int>::value || spt::is_same<T,unsigned int>::value))
                 value = static_cast<size_type>(static_cast<unsigned int>(val) * 2654435769U);
-            else SP_IF_CONSTEXPR(spt::is_same<T,long>::value || spt::is_same<T,unsigned long>::value)
+            else SP_IF_CONSTEXPR((spt::is_same<T,long>::value || spt::is_same<T,unsigned long>::value))
                 value = static_cast<size_type>(static_cast<unsigned long>(val) * 11400714819323198485ULL);
-            else SP_IF_CONSTEXPR(spt::is_same<T,long long>::value || spt::is_same<T,ull>::value)
+            else SP_IF_CONSTEXPR((spt::is_same<T,long long>::value || spt::is_same<T,ull>::value))
                 value = static_cast<size_type>(static_cast<ull>(val) * 11400714819323198485ULL);
             // --- floating point: bit-reinterpret then hash as integer ---
-            else SP_IF_CONSTEXPR(spt::is_same<T,float>::value){
+            else SP_IF_CONSTEXPR((spt::is_same<T,float>::value)){
                 unsigned int bits = detail::bit_cast_hash<unsigned int>(val);
                 // Canonicalise -0.0 → 0
                 if(bits == 0x80000000U) bits = 0;
                 value = static_cast<size_type>(bits * 2654435769U);
             }
-            else SP_IF_CONSTEXPR(spt::is_same<T,double>::value){
+            else SP_IF_CONSTEXPR((spt::is_same<T,double>::value)){
                 ull bits = detail::bit_cast_hash<ull>(val);
                 if(bits == 0x8000000000000000ULL) bits = 0;
                 value = static_cast<size_type>(bits * 11400714819323198485ULL);
@@ -79,7 +79,7 @@ namespace sp{
             else SP_IF_CONSTEXPR(SP_HAS_METHOD(T, c_str) && SP_HAS_METHOD(T, size))
                 return ____private_string_hash(val.c_str(), val.size());
             // --- raw C-strings ---
-            else SP_IF_CONSTEXPR(spt::is_same<T,const char*>::value || spt::is_same<T,char*>::value)
+            else SP_IF_CONSTEXPR((spt::is_same<T,const char*>::value || spt::is_same<T,char*>::value))
                 return ____private_string_hash(val, sp::strlen(val));
             return value;
         }
@@ -694,7 +694,7 @@ namespace sp{
         SP_FORCEINLINE SP_PURE constexpr size_type operator()(T val, size_type bucket_size = 0) const noexcept {
             SP_IF_CONSTEXPR(SP_HAS_METHOD(T, c_str) && SP_HAS_METHOD(T, size))
                 return (*this)(val.c_str(), val.size());
-            else SP_IF_CONSTEXPR(spt::is_same<T,const char*>::value || spt::is_same<T,char*>::value)
+            else SP_IF_CONSTEXPR((spt::is_same<T,const char*>::value || spt::is_same<T,char*>::value))
                 return (*this)(val, sp::strlen(val));
             // fallback: hash raw bytes of the value
             return (*this)(reinterpret_cast<const char*>(&val), sizeof(T));
@@ -745,7 +745,7 @@ namespace sp{
                 case 12: k2 ^= static_cast<ull>(tail[11]) << 24; [[fallthrough]];
                 case 11: k2 ^= static_cast<ull>(tail[10]) << 16; [[fallthrough]];
                 case 10: k2 ^= static_cast<ull>(tail[ 9]) <<  8; [[fallthrough]];
-                case  9: k2 ^= static_cast<ull>(tail[ 8]);       [[fallthrough]];
+                case  9: k2 ^= static_cast<ull>(tail[ 8]);
                          k2 *= c2; k2 = (k2<<33)|(k2>>31); k2 *= c1; h2 ^= k2; [[fallthrough]];
                 case  8: k1 ^= static_cast<ull>(tail[ 7]) << 56; [[fallthrough]];
                 case  7: k1 ^= static_cast<ull>(tail[ 6]) << 48; [[fallthrough]];
@@ -767,7 +767,7 @@ namespace sp{
         SP_FORCEINLINE SP_PURE constexpr size_type operator()(T val, size_type bucket_size = 0) const noexcept {
             SP_IF_CONSTEXPR(SP_HAS_METHOD(T, c_str) && SP_HAS_METHOD(T, size))
                 return (*this)(val.c_str(), val.size());
-            else SP_IF_CONSTEXPR(spt::is_same<T,const char*>::value || spt::is_same<T,char*>::value)
+            else SP_IF_CONSTEXPR((spt::is_same<T,const char*>::value || spt::is_same<T,char*>::value))
                 return (*this)(val, sp::strlen(val));
             return (*this)(reinterpret_cast<const char*>(&val), sizeof(T));
         }
@@ -810,7 +810,7 @@ namespace sp{
 
         /// Hashes @p len bytes of @p data with an optional @p seed.
         /// @return 64-bit wyhash digest.
-        SP_FORCEINLINE SP_PURE constexpr size_type operator()(const char* data, size_type len, size_type seed = 0) const noexcept {
+        SP_FORCEINLINE SP_PURE size_type operator()(const char* data, size_type len, size_type seed = 0) const noexcept {
             const unsigned char* p = reinterpret_cast<const unsigned char*>(data);
             ull h = seed ^ secret0;
             if(len <= 3){
@@ -840,7 +840,7 @@ namespace sp{
         SP_FORCEINLINE SP_PURE constexpr size_type operator()(T val, size_type bucket_size = 0) const noexcept {
             SP_IF_CONSTEXPR(SP_HAS_METHOD(T, c_str) && SP_HAS_METHOD(T, size))
                 return (*this)(val.c_str(), val.size());
-            else SP_IF_CONSTEXPR(spt::is_same<T,const char*>::value || spt::is_same<T,char*>::value)
+            else SP_IF_CONSTEXPR((spt::is_same<T,const char*>::value || spt::is_same<T,char*>::value))
                 return (*this)(val, sp::strlen(val));
             return (*this)(reinterpret_cast<const char*>(&val), sizeof(T));
         }
