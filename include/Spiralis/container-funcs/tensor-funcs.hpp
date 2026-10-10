@@ -23,11 +23,18 @@ template <typename T, typename... Args>
 static sp::tensor<T> ones(Args&&... args){
     return full(1, args...);
 }
+
 template <typename T>
-static sp::tensor<T> arange(T start, T stop, T step = 1){
-    sp::tensor<T> result((stop-start+step-1)/step);
-    size_type idx = 0;
-    for(size_type i = start; i < stop; i += step) result._data[idx++] = i; 
+static sp::tensor<T> arange(T start, T stop, T step = 1) {
+    if(step == 0) throw sp::exceptions::TensorException("Step cannot be zero.");
+
+    auto count = std::floor((stop - start) / step);
+    size_type size = (count > 0) ? static_cast<size_type>(count) : 0;
+
+    sp::tensor<T> result(size);
+    
+    for(size_type idx = 0; idx < size; ++idx) result._data[idx] = start + static_cast<T>(idx) * step;
+
     return result;
 }
 
