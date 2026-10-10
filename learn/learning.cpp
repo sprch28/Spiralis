@@ -162,20 +162,144 @@ int main(){
     // bitset
     // ------------------
     // This one's simple but useful for debugging.
+    {
     sp::size_type i = 39172918;
-    // Bitset of 'sizeof(size_type)*8 number of bits'
+    // Bitset of 'sizeof(size_type)*8' number of bits
     sp::bitset<sizeof(size_type)*8> set(i);
     sp::println(set.to_string());
+    }
 
     // ------------------
     // tensor
     // ------------------
+    // Still a work in progress, but so far it has lots of math ops.
+    // Similar to an array, but size is fixed at creation.
+    {
+    sp::tensor<int, sp::aligned_allocator> t(3,3,3); // 3D tensor of shape 3x3x3 (size 27 in total)
+    // Data layout is contiguous, and dimensions are simulated by calculating shapes and strides
+    t.print_flat(); // Auto filled with zeros
+
+    // Using namespace spml gives tensor creation functions
+    for(auto& u : spml::arange(10)) sp::println(u);
+    auto u = spml::full(5, 3, 3); // 3x3 matrix of element 5
+    u.print_flat();
+
+    auto u2 = spml::linspace<double, false>(0, 60, 8); // from range 0-60, non-inclusive, within 8 steps
+    u2.print_flat();
+
+    auto u3 = spml::arange<double>(0.0,2.0,0.1); // start, stop, step
+    u3.print_flat();
+
+    // There are a shit ton of operations already so far. functions leading with c_ create a copy.
+    // Functions without c_ at the start modify their calling tensors.
+    u.c_exp().print_flat(); // copied version with sin function applied elementwise
+    u.print_flat(); // Will still be the same
+
+    u2.cosh().print_flat(); // modifying cosh applied elementwise
+    u2.print_flat(); // will be permanently modified
+    }
+
+    // This shits already got prob close to 100 functions if not more. It has lots of math functions and activation functions.
+    // The modulo sign is used for matmul, or you can just call matmul() directly.
 
     // ------------------
     // tokenizer (this ones cool)
     // ------------------
+    // Assuming you have some dataset file in the same directory:
+    // (setup using IO, which will be covered later):
+    {
+    sp::print("Enter dataset file name: ",sp::flush);
+    sp::io.flush();
+    sp::string filename = sp::io.getLine();
+    sp::println(filename.size());
+    sp::println(filename);
+    sp::file f(filename.c_str()); sp::IO scanner(f);
+    sp::string dataset; 
+    while(scanner.getLine<false>(dataset)){}
 
-    // When I wake up I'll also cover allocators, math functions, I/O, SIMD, Multithreading, and the testing framework
+    // And now the tokenizer:
+        // max vocab size, greedy_subword<min char length, max char length, integral data type for tokens>
+    sp::tokenizer<40'000ULL, sp_pol::greedy_subword_tokenizer<2ULL, 6ULL, uint32_t>> tok;
+    tok.build_mapping_debug(dataset); // build_mapping() builds without printing completion progress info
+    sp::vector<uint32_t> tokens = tok.tokenize("Hello World!");
+    sp::println(tokens.size()); // How many tokens?
+    sp::string r = tok.reconstructed_string(tokens); // Turning tokens array back into a string
+    sp::println(r);
+    // Can also save the tokenizer to a file and load it later using tok.to_file() / tok.from_file()
+    }
+
+    // ------------------
+    // Now one of the biggest parts: I/O
+    // ------------------
+    // I'm most proud of this API because it reads in a very modern way.
+    {
+    sp::file f("sample.txt",sp::file_mode::write); // Possible modes are read, write, rw, append. You can write sp::write or sp::file_mode::write. Both work.
+    sp::IO scanner(f); // Create a new I/O module, constructed to be attached to the file
+    scanner.println("Hello World"); // Writes to file and flushes (println calls flush automatically)
+    sp::vector<int> vec = {1, 2, 3, 4, 5};
+    // Write the size in binary, then the vector using its serialization protocol
+    scanner.write(vec.size(),vec).flush(); // Binary serialization automatically provided with many types
+
+    // We can also redirect inputs/outputs separately.
+    // This writes whatever the user enters in the console into the file. 
+    // Input is reading stdin, while output is directed to a file directory.
+    scanner.println(scanner.input_to_console().getLine());
+    scanner.output_to_console().println("Input recorded."); // Now both are pointing to stdin/stdout
+
+    f.change_mode(sp::read).rewind(); // Change permissions and go to start
+    // to_file(), to_console(), to_cerr() change both input AND output streams
+    sp::println(scanner.to_file(f).getLine().to_upper()); // HELLO WORLD
+    sp::size_type reconstructed_size = scanner.read<sp::size_type>().first; // sp::pair<size_type, bool>
+    // rebuild vec: {1, 2, 3, 4, 5}
+    sp::vector<int> reconstructed(reconstructed_size);
+    scanner.read(reconstructed);
+    reconstructed.print(); // {1, 2, 3, 4, 5}
+    }
+
+    // ------------------
+    // SIMD
+    // ------------------
+    // The simd file is easily the biggest pain in the ass, which you'll see right away if you click on it.
+    // There's so much macro soup. Worth it? tbh idk, but tensor automatically uses it where supported under the hood to accelerate its elementwise ops
+    {
+    auto one = spml::full<double>(3.0, 10);
+    auto two = spml::full<double>(5.0, 10);
+    sp::tensor<double> res(10);
+    sp::simd::add(one.data(),two.data(),res.data(),res.size());
+    res.print(); // Filled with 8.0
+    }
+
+    // simd also has sub, mul, div, fma, and a lot of selection functions.
+    // You can pass a sp::thread_pool (see below) object as the final parameter to any function, and it will split the work if the size is big enough.
+    // I'm considering a refactor of SIMD to be more practical but idk yet
+
+    // ------------------
+    // thread
+    // ------------------
+    // Very simple thread class that wraps pthread.
+    sp::thread t;
+    t.run([](){sp::println("Hi");});
+    t.detach();
+    t.join();
+    // Can also pass functions when constructing.
+
+    // ------------------
+    // thread_pool
+    // ------------------
+    // No constructor params defaults to max system threads
+    // Or you can specify number of threads
+    sp::thread_pool p(4); // Use 4 threads
+    // p.size() returns 4
+    thread_local int sum = 0;
+    for(sp::ull i = 0; i < 50; ++i) p.enqueue([](){
+        sum += 5; // Add to the thread local counter
+    });
+    p.wait_all();
+    for(sp::ull i = 0; i < p.size(); ++i) p.enqueue([](){
+        sp::println(sum);
+        sleep(2);
+    });
+    p.wait_all();
 
     //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
