@@ -98,7 +98,10 @@ private:
         constexpr void reallocate(size_type cap){
             size_type true_cap = allocator_ext<Allocator<char>>::true_capacity(cap);
             char* temp = sp::allocator_traits<Allocator<char>>::allocate(_alloc,true_cap);
-            if(_data) memcpy(temp,_data,_size);
+            if(_data){
+                memcpy(temp,_data,_size);
+                sp::allocator_traits<Allocator<char>>::deallocate(_alloc, _data, _size);
+            }
             _data = temp;
             _capacity = true_cap;
         }
@@ -182,7 +185,7 @@ private:
 
 
 SP_FORCEINLINE constexpr string_impl& __priv_assign(const char* other, size_type len){
-    if (len <= 22) {
+    if(len <= 22){
         if (is_big()) B().~__big_mode();
         memcpy(S()._data, other, len);
         S()._data[len] = '\0';
@@ -202,10 +205,11 @@ SP_FORCEINLINE constexpr string_impl& __priv_push_back(const char element){
     if(len<22&&is_small()){
         S().push_back(element);
     }else{
-        SP_IF_NOT_EXPECT(is_small()) _inflate(len+1);
-        else SP_IF_NOT_EXPECT(len>B()._capacity) B().reallocate(next_pow2(len+1));
-        B().push_back('\0'); // push_back handles reallocations and changing the length
-        B()._data[len] = element; // set the new last char
+        if(is_small()) _inflate(len+2);
+        else if(len+1 >= B()._capacity) B().reallocate(next_pow2(len+2));
+        B()._data[len] = element;
+        B()._data[len+1] = '\0';
+        B()._size = len+1;
     }
     return *this;
 }
@@ -260,7 +264,7 @@ SP_FORCEINLINE constexpr string_impl& __priv_replace(size_type index, size_type 
         dta[new_len] = '\0'; // null terminate at end
     }else{
         SP_IF_NOT_EXPECT(is_small()) _inflate(new_len+1); // create big data
-        else SP_IF_NOT_EXPECT(new_len > B()._capacity) B().reserve(new_len+1); // reallocation check
+        else SP_IF_NOT_EXPECT(new_len > B()._capacity) B().reallocate(new_len+1); // reallocation check
         char* SP_RESTRICT dta = B()._data;
         memmove(dta + index + len, dta + index + len_to_replace, current_len - index - len_to_replace); // Shift existing data to the right
         memcpy(dta + index, other, len); // Insert new data
@@ -767,25 +771,25 @@ SP_FORCEINLINE constexpr void swap(string_impl& other) noexcept{
     bool o_b = !o_s;
     if(i_s&&o_s){
         char temp[23]{};
-        memcpy(temp, S()._data, 24);
-        memcpy(S()._data, other.S()._data, 24);
-        memcpy(other.S()._data, temp, 24);
+        memcpy(temp, S()._data, 23);
+        memcpy(S()._data, other.S()._data, 23);
+        memcpy(other.S()._data, temp, 23);
     }else if(i_b&&o_b){
         B().swap(other.B());
     }else if(i_s&&o_b){
         char temp[23]{};
-        memcpy(temp, S()._data, 24);
+        memcpy(temp, S()._data, 23);
         new(&B()) __big_mode(sp::move(other.B()));
         other.S()._data[0] = '\0';
         other.S()._flag = 0x80;
-        memcpy(S()._data, temp, 24);
+        memcpy(S()._data, temp, 23);
     }else{ // is_big()&&other.is_small()
         char temp[23]{};
-        memcpy(temp, other.S()._data, 24);
+        memcpy(temp, other.S()._data, 23);
         new(&other.B()) __big_mode(sp::move(B()));
         S()._data[0] = '\0';
         S()._flag = 0x80;
-        memcpy(other.S()._data, temp, 24);
+        memcpy(other.S()._data, temp, 23);
     }
 }
 
