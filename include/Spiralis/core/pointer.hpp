@@ -358,9 +358,8 @@ constexpr shared_ptr<T, Alloc> make_shared(Alloc<typename shared_ptr<T, Alloc>::
 /// @tparam T     Pointed-to type.
 /// @tparam Alloc Allocator template; must match the @c shared_ptr being observed.
 template<typename T, template <typename> typename Alloc = sp::allocator>
-class weak_ptr {
+class weak_ptr{
     using block_t = typename shared_ptr<T, Alloc>::control_block;
-
     block_t* control_ = nullptr;
 
 public:
@@ -368,22 +367,22 @@ public:
     constexpr weak_ptr() noexcept = default;
 
     /// Constructs from a @c shared_ptr, incrementing the weak reference count.
-    constexpr weak_ptr(const shared_ptr<T, Alloc>& sp) noexcept : control_(sp.control_) {
+    constexpr weak_ptr(const shared_ptr<T, Alloc>& sp) noexcept : control_(sp.control_){
         if(control_) ++control_->weak_count;
     }
 
     /// Copy constructor.
-    constexpr weak_ptr(const weak_ptr& other) noexcept : control_(other.control_) {
+    constexpr weak_ptr(const weak_ptr& other) noexcept : control_(other.control_){
         if(control_) ++control_->weak_count;
     }
 
     /// Move constructor.  Leaves @p other null.
-    constexpr weak_ptr(weak_ptr&& other) noexcept : control_(other.control_) {
+    constexpr weak_ptr(weak_ptr&& other) noexcept : control_(other.control_){
         other.control_ = nullptr;
     }
 
     /// Copy assignment.
-    constexpr weak_ptr& operator=(const weak_ptr& other) noexcept {
+    constexpr weak_ptr& operator=(const weak_ptr& other) noexcept{
         SP_IF_NOT_EXPECT(this == &other) return *this;
         reset();
         control_ = other.control_;
@@ -392,7 +391,7 @@ public:
     }
 
     /// Move assignment.
-    constexpr weak_ptr& operator=(weak_ptr&& other) noexcept {
+    constexpr weak_ptr& operator=(weak_ptr&& other) noexcept{
         SP_IF_NOT_EXPECT(this == &other) return *this;
         reset();
         control_ = other.control_;
@@ -401,7 +400,7 @@ public:
     }
 
     /// Assign from a @c shared_ptr.
-    constexpr weak_ptr& operator=(const shared_ptr<T, Alloc>& sp) noexcept {
+    constexpr weak_ptr& operator=(const shared_ptr<T, Alloc>& sp) noexcept{
         reset();
         control_ = sp.control_;
         if(control_) ++control_->weak_count;
@@ -411,11 +410,9 @@ public:
     SP_CONSTEXPR20 ~weak_ptr() noexcept { reset(); }
 
     /// Decrements the weak count and frees the control block if both counts hit zero.
-    constexpr void reset() noexcept {
-        if(!control_) return;
-        if(--control_->weak_count == 0 && control_->strong_count == 0) {
-            // Object is already destroyed (strong_count hit 0 first);
-            // we are the last weak observer — free the block.
+    constexpr void reset() noexcept{
+        SP_IF_NOT_EXPECT(control_==nullptr) return;
+        if(--control_->weak_count == 0 && control_->strong_count == 0){
             auto* block = control_;
             Alloc<block_t> alloc = sp::move(block->alloc);
             sp::allocator_traits<Alloc<block_t>>::destroy(alloc, block);
@@ -425,18 +422,18 @@ public:
     }
 
     /// @return @c true if the observed object has already been destroyed.
-    constexpr bool expired() const noexcept {
+    constexpr bool expired() const noexcept{
         return !control_ || control_->strong_count == 0;
     }
 
     /// @return Current strong reference count, or 0 if expired.
-    constexpr size_type use_count() const noexcept {
+    constexpr size_type use_count() const noexcept{
         return control_ ? control_->strong_count : 0;
     }
 
     /// Attempts to obtain a @c shared_ptr to the managed object.
     /// @return A valid @c shared_ptr if the object is still alive, otherwise a null @c shared_ptr.
-    constexpr shared_ptr<T, Alloc> lock() const noexcept {
+    constexpr shared_ptr<T, Alloc> lock() const noexcept{
         if(expired()) return shared_ptr<T, Alloc>(nullptr);
         ++control_->strong_count;
         return shared_ptr<T, Alloc>(control_);
@@ -453,7 +450,7 @@ public:
 /// Convenience factory: creates a @c weak_ptr from an existing @c shared_ptr.
 /// @return A @c weak_ptr observing the same object as @p sp.
 template<typename T, template<typename> typename Alloc = sp::allocator>
-constexpr weak_ptr<T, Alloc> make_weak(const shared_ptr<T, Alloc>& sp) noexcept {
+constexpr weak_ptr<T, Alloc> make_weak(const shared_ptr<T, Alloc>& sp) noexcept{
     return weak_ptr<T, Alloc>(sp);
 }
 
