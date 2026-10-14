@@ -2,6 +2,25 @@
 
 ## [Unreleased]
 
+### Added — `include/Spiralis/containers/hash_map.hpp`
+
+I added a few new functions to speed things up a bit, and replaced old functions with these ones 
+wherever it wasn't efficient enough. Everything should still work as intended though.
+
+#### New functions
+- `get_or_insert_with(key, callable)` / `get_or_insert_with_as(key, callable)` — returns the existing value for `key` if present; otherwise invokes `callable()` exactly once to construct the value, inserts it, and returns a reference to it. Callable is never invoked on a hit.
+- `merge(other)` — inserts all entries from `other` into `*this`, skipping keys that already exist. Returns the number of entries actually inserted.
+- `merge_into(other)` — moves all entries from `*this` into `other`, skipping keys already present in `other`. Trivially-copyable entries are copied; non-trivial entries are move-assigned. Clears `*this` after the operation. Returns the number of entries actually moved.
+
+#### Documentation
+- `get_or_insert_with_as` (const & rvalue overloads) — `@tparam`, `@param key`, `@param callable`, `@return` tags; rvalue overload uses `@copydoc`
+- `get_or_insert_with` (const & rvalue overloads) — `@param` / `@return` tags; rvalue overload uses `@copydoc`
+- `merge` — `@param other`, `@return` tags
+- `merge_into` — `@param other`, `@return` tags; `@note` on trivial vs non-trivial move behaviour
+
+---
+
+
 ### Documentation — `include/Spiralis/containers/pair.hpp`
 
 #### Added

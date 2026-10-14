@@ -1481,6 +1481,89 @@ public:
     // ─────────────────────────────────────────────────────────────────────────────
     // Hash policy & probing introspection
     // ─────────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Lazy insertion & map merging
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /// Returns the value for @p key if present; otherwise calls @p callable() to
+    /// construct the value, inserts it, and returns a reference to the new entry.
+    /// The callable is invoked at most once and only on a cache miss.
+    /// @tparam K        Key type (may differ from `Key` for heterogeneous lookup).
+    /// @tparam Callable Nullary callable returning `Value`.
+    /// @param key      Key to look up or insert.
+    /// @param callable Factory invoked as `callable()` to produce the value on miss.
+    /// @return Reference to the existing or newly inserted value.
+    template <typename K, short safety = _safety_level, typename Callable>
+    SP_CONSTEXPR23 Value& get_or_insert_with_as(const K& key, Callable&& callable) {
+        __sp_start:
+        _SP_PROBE_LOOP_(
+            return _buckets[probe].second;
+        );
+        _SP_SIZE_REALLOC_CHECK_(get_or_insert_with_as, key, callable());
+        _count++;
+        set_state(probe);
+        return _buckets[probe].second;
+    }
+
+    /// @copydoc get_or_insert_with_as(const K&, Callable&&)
+    template <typename K, short safety = _safety_level, typename Callable>
+    SP_CONSTEXPR23 Value& get_or_insert_with_as(K&& key, Callable&& callable) {
+        __sp_start:
+        _SP_PROBE_LOOP_(
+            return _buckets[probe].second;
+        );
+        _SP_SIZE_REALLOC_CHECK_(get_or_insert_with_as, sp::move(key), callable());
+        _count++;
+        set_state(probe);
+        return _buckets[probe].second;
+    }
+
+    /// Thin wrapper over `get_or_insert_with_as` for the map's own `Key` type.
+    /// @param key      Key to look up or insert.
+    /// @param callable Factory invoked as `callable()` to produce the value on miss.
+    /// @return Reference to the existing or newly inserted value.
+    template <short safety = _safety_level, typename Callable>
+    SP_FORCEINLINE constexpr Value& get_or_insert_with(const Key& key, Callable&& callable) {
+        return get_or_insert_with_as<Key, safety>(key, sp::forward<Callable>(callable));
+    }
+    /// @copydoc get_or_insert_with(const Key&, Callable&&)
+    template <short safety = _safety_level, typename Callable>
+    SP_FORCEINLINE constexpr Value& get_or_insert_with(Key&& key, Callable&& callable) {
+        return get_or_insert_with_as<Key, safety>(sp::forward<Key>(key), sp::forward<Callable>(callable));
+    }
+
+    /// Inserts all entries from @p other into this map, skipping keys that already exist.
+    /// Equivalent to calling `insert` for every entry in @p other.
+    /// @param other Source map to merge from; left unmodified.
+    /// @return Number of entries actually inserted (duplicates are skipped).
+    template <short safety = _safety_level>
+    SP_FORCEINLINE constexpr size_type merge(const hash_map& other) {
+        size_type inserted = 0;
+        for (const_entry_loop_type e : other) {
+            if (insert_as<Key, safety>(e.first, e.second).second) ++inserted;
+        }
+        return inserted;
+    }
+
+    /// Moves all entries from `*this` into @p other, skipping keys already present in @p other.
+    /// Trivially-copyable entries are copied; non-trivial entries are move-assigned.
+    /// `*this` is cleared after the operation regardless of how many entries were transferred.
+    /// @param other Destination map to receive the entries.
+    /// @return Number of entries actually moved (duplicates are skipped).
+    template <short safety = _safety_level>
+    SP_FORCEINLINE constexpr size_type merge_into(hash_map& other) {
+        size_type inserted = 0;
+        for (entry_loop_type e : *this) {
+            SP_IF_CONSTEXPR(key_trivially_copyable && value_trivially_copyable) {
+                if (other.template insert_as<Key, safety>(e.first, e.second).second) ++inserted;
+            } else {
+                if (other.template insert_as<Key, safety>(sp::move(e.first), sp::move(e.second)).second) ++inserted;
+            }
+        }
+        clear();
+        return inserted;
+    }
+
     _SP_FUNC_FI_ constexpr bool would_fit_without_rehash(size_type additional_elements) const{
         return (_count + additional_elements) <= _max_count;
     }

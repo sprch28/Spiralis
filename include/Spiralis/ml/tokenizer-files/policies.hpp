@@ -194,7 +194,7 @@ private:
 
         for (int i = 0; i < 256; ++i){
             sp::string c(1, (char)i);
-            if(stoi_mapping.find(c) == stoi_mapping.end()) stoi_mapping.insert(c, idx++);
+            if(stoi_mapping.insert(sp::move(c), idx).second) ++idx;
         }
 
         itos_mapping = sp::vector<sp::compressed_string_view>(stoi_mapping.size());
@@ -284,7 +284,7 @@ public:
             sp::string str(string_sz,' ');
             scanner.read<sp::string>(str);
             T occ; scanner.read<T>(occ);
-            auto [it, inserted] = stoi_mapping.insert(sp::move(str),occ);
+            stoi_mapping.insert_fast(sp::move(str), occ);
         }
         for(const auto& i : stoi_mapping){
             itos_mapping[i.second] = sp::compressed_string_view(i.first.c_str(),i.first.size());
