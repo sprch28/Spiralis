@@ -29,6 +29,17 @@ private:
     SP_NO_UNIQUE_ADDRESS Allocator<T> _data_alloc;
     SP_NO_UNIQUE_ADDRESS Allocator<size_type> _meta_alloc;
     static constexpr bool _trivially_copyable = spt::is_trivially_copyable_v<T>;
+    struct _uninit_tag {};
+    SP_FORCEINLINE tensor(_uninit_tag, size_type sz){
+        _shape_size = 1;
+        _stride_size = 1;
+        _shapes = sp::allocator_traits<Allocator<size_type>>::allocate(_meta_alloc, 1);
+        _strides = sp::allocator_traits<Allocator<size_type>>::allocate(_meta_alloc, 1);
+        _shapes[0] = sz;
+        _strides[0] = 1;
+        _size = sz;
+        _data = sp::allocator_traits<Allocator<T>>::allocate(_data_alloc, sz);
+    }
     SP_FORCEINLINE constexpr void destroy_data(){
         SP_IF_CONSTEXPR(!_trivially_copyable){
             for(size_type i = 0; i < _size; ++i)

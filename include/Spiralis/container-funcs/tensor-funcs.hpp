@@ -31,7 +31,7 @@ static sp::tensor<T> arange(T start, T stop, T step = 1) {
     auto count = std::floor((stop - start) / step);
     size_type size = (count > 0) ? static_cast<size_type>(count) : 0;
 
-    sp::tensor<T> result(size);
+    sp::tensor<T> result(typename sp::tensor<T>::_uninit_tag{}, size);
     
     for(size_type idx = 0; idx < size; ++idx) result._data[idx] = start + static_cast<T>(idx) * step;
 
@@ -40,7 +40,7 @@ static sp::tensor<T> arange(T start, T stop, T step = 1) {
 
 template <typename T>
 static sp::tensor<T> arange(T stop){
-    sp::tensor<T> result(static_cast<size_type>(stop));
+    sp::tensor<T> result(typename sp::tensor<T>::_uninit_tag{}, static_cast<size_type>(stop));
     _SP_APPLY_UNROLLED_(stop, result._data[i] = i);
     return result;
 }
@@ -48,7 +48,7 @@ static sp::tensor<T> arange(T stop){
 template <typename T=double, bool inclusive=false>
 static sp::tensor<T> linspace(T start, T stop, size_type steps) {
     SP_IF_NOT_EXPECT(steps == 0) return sp::tensor<T>();
-    sp::tensor<T> result(steps);
+    sp::tensor<T> result(typename sp::tensor<T>::_uninit_tag{}, steps);
     if(steps == 1){
         result.data()[0] = start;
         return result;

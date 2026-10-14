@@ -1819,6 +1819,145 @@ public:
     }
 
     /**
+     * @brief Binary search for @p value in a sorted array.
+     * @param value element to search for
+     * @return index of a matching element, or size() if not found
+     * @note array must be sorted in ascending order; behaviour is undefined otherwise
+     */
+    _SP_SAFETY_TEMPLATE_
+    SP_NODISCARD SP_PURE SP_FORCEINLINE constexpr ull binary_search(type_param value) const noexcept {
+        ull lo = 0, hi = _size;
+        while (lo < hi) {
+            ull mid = lo + ((hi - lo) >> 1);
+            if (_data[mid] == value) return mid;
+            if (_data[mid] < value) lo = mid + 1;
+            else hi = mid;
+        }
+        return _size;
+    }
+
+    /**
+     * @brief Binary search using a custom comparator.
+     * @tparam Comp binary comparator satisfying strict-weak ordering
+     * @param value element to search for
+     * @param comp comparator; `comp(a, b)` returns true if `a < b`
+     * @return index of a matching element, or size() if not found
+     * @note array must be sorted according to @p comp; behaviour is undefined otherwise
+     */
+    template <typename Comp>
+    SP_NODISCARD SP_PURE SP_FORCEINLINE constexpr ull binary_search_by(type_param value, Comp comp) const noexcept {
+        ull lo = 0, hi = _size;
+        while (lo < hi) {
+            ull mid = lo + ((hi - lo) >> 1);
+            if (!comp(_data[mid], value) && !comp(value, _data[mid])) return mid;
+            if (comp(_data[mid], value)) lo = mid + 1;
+            else hi = mid;
+        }
+        return _size;
+    }
+
+    /**
+     * @brief Returns the index of the first element not less than @p value (lower bound).
+     * @param value element to compare against
+     * @return index of the first element where `!(element < value)`, or size() if all elements are less
+     * @note array must be sorted in ascending order
+     */
+    _SP_SAFETY_TEMPLATE_
+    SP_NODISCARD SP_PURE SP_FORCEINLINE constexpr ull lower_bound(type_param value) const noexcept {
+        ull lo = 0, hi = _size;
+        while (lo < hi) {
+            ull mid = lo + ((hi - lo) >> 1);
+            if (_data[mid] < value) lo = mid + 1;
+            else hi = mid;
+        }
+        return lo;
+    }
+
+    /**
+     * @brief Returns the index of the first element not less than @p value, using a custom comparator.
+     * @tparam Comp binary comparator satisfying strict-weak ordering
+     * @param value element to compare against
+     * @param comp comparator; `comp(a, b)` returns true if `a < b`
+     * @return index of the first element where `!comp(element, value)`, or size() if all elements compare less
+     * @note array must be sorted according to @p comp
+     */
+    template <typename Comp>
+    SP_NODISCARD SP_PURE SP_FORCEINLINE constexpr ull lower_bound_by(type_param value, Comp comp) const noexcept {
+        ull lo = 0, hi = _size;
+        while (lo < hi) {
+            ull mid = lo + ((hi - lo) >> 1);
+            if (comp(_data[mid], value)) lo = mid + 1;
+            else hi = mid;
+        }
+        return lo;
+    }
+
+    /**
+     * @brief Returns the index of the first element greater than @p value (upper bound).
+     * @param value element to compare against
+     * @param sort_first if true, sorts the array before searching (default: false)
+     * @return index of the first element where `value < element`, or size() if no such element exists
+     * @note if @p sort_first is false, array must already be sorted in ascending order
+     */
+    _SP_SAFETY_TEMPLATE_
+    SP_NODISCARD SP_PURE SP_FORCEINLINE constexpr ull upper_bound(type_param value, bool sort_first = false) noexcept {
+        if (sort_first) std::sort(_data, _data + _size);
+        ull lo = 0, hi = _size;
+        while (lo < hi) {
+            ull mid = lo + ((hi - lo) >> 1);
+            if (value < _data[mid]) hi = mid;
+            else lo = mid + 1;
+        }
+        return lo;
+    }
+
+    /**
+     * @brief Returns the index of the first element greater than @p value, using a custom comparator.
+     * @tparam Comp binary comparator satisfying strict-weak ordering
+     * @param value element to compare against
+     * @param comp comparator; `comp(a, b)` returns true if `a < b`
+     * @param sort_first if true, sorts the array by @p comp before searching (default: false)
+     * @return index of the first element where `comp(value, element)`, or size() if no such element exists
+     * @note if @p sort_first is false, array must already be sorted according to @p comp
+     */
+    template <typename Comp>
+    SP_NODISCARD SP_PURE SP_FORCEINLINE constexpr ull upper_bound_by(type_param value, Comp comp, bool sort_first = false) noexcept {
+        if (sort_first) std::sort(_data, _data + _size, comp);
+        ull lo = 0, hi = _size;
+        while (lo < hi) {
+            ull mid = lo + ((hi - lo) >> 1);
+            if (comp(value, _data[mid])) hi = mid;
+            else lo = mid + 1;
+        }
+        return lo;
+    }
+
+    /**
+     * @brief Apply @p func to every element in-place, replacing each element with `func(element)`.
+     * @param func unary callable; must return `T`
+     * @return reference to `*this` for chaining
+     * @warning modifies the array in-place
+     */
+    template <typename Func>
+    SP_FORCEINLINE constexpr array& transform_(Func func) {
+        _SP_APPLY_UNROLLED_(_size, _data[i] = func(_data[i]));
+        return *this;
+    }
+
+    /**
+     * @brief Apply @p func to every element and return a new array of the result type.
+     * @tparam U result element type; deduced from the return type of @p func
+     * @param func unary callable returning `U`
+     * @return new `array<U>` of the same size
+     */
+    template <typename U, typename Func>
+    SP_NODISCARD SP_FORCEINLINE constexpr array<U, _safety_level, Allocator> transform_to(Func func) const {
+        array<U, _safety_level, Allocator> result(_size);
+        _SP_APPLY_UNROLLED_(_size, result[i] = func(_data[i]));
+        return result;
+    }
+
+    /**
      * @brief Stably partition the array around the element at pivot_index.
      * @param pivot_index index of the pivot element
      * @note elements less than the pivot precede elements greater than or equal to it; relative order within each group is preserved

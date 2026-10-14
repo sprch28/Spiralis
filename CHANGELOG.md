@@ -2,6 +2,33 @@
 
 ## [Unreleased]
 
+### Performance — `include/Spiralis/containers/tensor.hpp` & `include/Spiralis/container-funcs/tensor-funcs.hpp`
+
+I added a new constructor in the tensor file and edited the functions to use it. 
+This does in fact make them a lot more efficient it actually saves us a shit ton of memset size and
+lets us function with memory bandwidth at much larger sizes.
+
+#### Changed
+- Added private `_uninit_tag` sentinel and a corresponding flat uninitialized constructor to `tensor` — allocates and sets up 1D shape/stride metadata without zero-initializing the data buffer
+- `arange(start, stop, step)` — replaced `tensor(size)` (allocate + memset) with `tensor(_uninit_tag{}, size)` (allocate only); eliminates a redundant write pass over the entire buffer
+- `arange(stop)` — same change as above
+- `linspace(start, stop, steps)` — same change as above
+
+---
+
+### Added — `include/Spiralis/containers/array.hpp`
+
+#### New functions
+- `binary_search(value)` — O(log n) binary search on a sorted array; returns the index of a matching element or `size()` if not found
+- `binary_search_by(value, comp)` — same as `binary_search` but uses a custom strict-weak-ordering comparator
+- `lower_bound(value)` — returns the index of the first element not less than `value`; array must be sorted ascending
+- `lower_bound_by(value, comp)` — same as `lower_bound` but uses a custom comparator
+- `upper_bound(value, sort_first=false)` — returns the index of the first element greater than `value`; optional `sort_first` parameter sorts the array before searching
+- `upper_bound_by(value, comp, sort_first=false)` — same as `upper_bound` but uses a custom comparator
+- `transform_(func)` — applies `func` to every element in-place, replacing each with `func(element)`; returns `*this` for chaining
+- `transform_to<U>(func)` — applies `func` to every element and returns a new `array<U>` of the same size; `U` is the result type
+
+---
 ### Added — `include/Spiralis/containers/hash_map.hpp`
 
 I added a few new functions to speed things up a bit, and replaced old functions with these ones 

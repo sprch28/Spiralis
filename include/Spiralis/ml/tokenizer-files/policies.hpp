@@ -255,10 +255,9 @@ public:
     }
 
     sp::vector<sp::string> reconstructed(const sp::vector<T> tokens) const override{
-        sp::vector<sp::string> result;
-        result.reserve_exact(tokens.size());
-        for(T tok : tokens) result.push_back(sp::string(itos_mapping.at(tok).data(),itos_mapping[tok].size()));
-        return result;
+        return tokens.template transform_to<sp::string>([this](T tok){
+            return sp::string(itos_mapping.at(tok).data(), itos_mapping[tok].size());
+        });
     }
 
     void to_file(const sp::string& filename) const override{
