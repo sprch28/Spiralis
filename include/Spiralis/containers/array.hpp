@@ -1107,9 +1107,9 @@ public:
             i -= 4;
         }
         i++;
-    while(i>0) { SP_IF_NOT_EXPECT(predicate(_data[i-1])) return i-1; i--; }
+    while(i>0) { SP_IF_NOT_EXPECT(_data[i-1]==value) return i-1; i--; }
     #else
-    for (ull i = _size; i > 0; i--) SP_IF_NOT_EXPECT(predicate(_data[i - 1])) return i - 1;
+    for (ull i = _size; i > 0; i--) SP_IF_NOT_EXPECT(_data[i - 1] == value) return i - 1;
     #endif
         return _size;
     }
@@ -1593,13 +1593,13 @@ public:
     }
 
     /**
-     * @brief Shrink the array by a certain amount.
-     * @param amount amount to shrink by
+     * @brief Destroy the last @p amount elements and reduce the size accordingly.
+     * @param amount number of elements to remove from the back
      */
     _SP_SAFETY_TEMPLATE_
     SP_FORCEINLINE constexpr void shrink_by(ull amount){
         SP_IF_NOT_EXPECT(amount >= _size) clear();
-        else { _SP_APPLY_UNROLLED_(_size, sp::allocator_traits<Allocator<T>>::destroy(_alloc,_data+i)); _size -= amount; }
+        else { _SP_EXPLICIT_UNROLLED_(i, _size - amount, _size, sp::allocator_traits<Allocator<T>>::destroy(_alloc,_data+i)); _size -= amount; }
     }
 
     /**
@@ -1714,12 +1714,12 @@ public:
     }
 
     /**
-     * @brief Remove consecutive duplicate elements from the array.
-     * @return *this: enables chaining
+     * @brief Remove consecutive duplicate elements from the array in-place.
+     * @return reference to @c *this for chaining
      * @warning modifies the original
      */
     _SP_SAFETY_TEMPLATE_
-    SP_FORCEINLINE constexpr array<T, _safety_level> dedupe_consecutive_(){
+    SP_FORCEINLINE constexpr array<T, _safety_level>& dedupe_consecutive_(){
         _SP_CHECK_SAFETY_(1) if(_size==0)_SP_UNLIKELY_ throw exceptions::ArrayException("Cannot dedupe an empty array.");
         array<T, _safety_level> result;
         result.push_back(_data[0]);

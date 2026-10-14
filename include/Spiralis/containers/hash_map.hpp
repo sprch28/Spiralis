@@ -54,13 +54,20 @@
 
 namespace sp {
 
-
+/// Open-addressing hash map with linear probing and a bitset occupancy array.
+/// Aligned to the system cache line to prevent false sharing.
+/// @tparam Key           Key type.
+/// @tparam Value         Mapped value type.
+/// @tparam _safety_level 0 = no checks, 1 = bounds+realloc guards, 2 = exception-wrapped ops.
+/// @tparam _threshold    Integer load-factor percentage (0–100) before automatic rehash.
+/// @tparam Hash          Hash functor; may expose `operator()(key, cap)` for capacity-aware hashing.
+/// @tparam Allocator     Allocator template; user writes `sp::allocator`, not `sp::allocator<int>`.
 template <typename Key, typename Value, short _safety_level=1, int _threshold = 70, typename Hash = sp::basic_hash, template <typename> class Allocator = sp::allocator>
-class alignas(sp_cache_line_size) hash_map { // align to system's cache line: prevents overlapping and smoothes performance
+class alignas(sp_cache_line_size) hash_map {
 private:
-struct Entry { // structure of each entry: Key mapped to Value
-    Key first; // used to look up the value; cannot have duplicate keys
-    Value second; // linked to its corresponding key; can have duplicate values
+struct Entry {
+    Key first;   ///< Lookup key; duplicates are not allowed.
+    Value second; ///< Value associated with the key.
     constexpr Entry(){}
     SP_CONSTEXPR20 ~Entry(){}
     constexpr bool operator==(const Entry& other) const {
@@ -75,11 +82,11 @@ struct Entry { // structure of each entry: Key mapped to Value
     SP_FORCEINLINE sp::pair<Entry*, size_type> __getSpiralBinary() const{ return {_buckets._data, _max_count*sizeof(Entry)}; }
     SP_FORCEINLINE const char* __getSpiralMessage() const;
 
-    size_type _count = 0; // Number of entries currently in the map
-    size_type _max_count = 0; // bucket size * threshold: max count tolerated before rehash
+    size_type _count = 0;     ///< Number of entries currently in the map.
+    size_type _max_count = 0;  ///< Bucket count × threshold: max entries before rehash.
 
-    sp::array<Entry, 0, Allocator> _buckets; // array of the entries in fast mode
-    sp::array<ull, 0, Allocator> _states; // ull is defined as unsigned long long; each bit represents the occupation of a bucket
+    sp::array<Entry, 0, Allocator> _buckets; ///< Flat bucket array.
+    sp::array<ull, 0, Allocator> _states;    ///< Bitset: each bit marks a bucket as occupied.
 
     static constexpr double threshold = static_cast<double>(_threshold) / 100;
 
@@ -98,8 +105,12 @@ public:
 // ====================================================================================================================================
 // ====================================================================================================================================
 
+/// Bidirectional iterator that skips empty buckets.
+/// When the load factor is below 30 % it "teleports" by scanning the 64-bit
+/// state chunks instead of checking every slot individually.
+/// @tparam IsConst `true` for `const_iterator`, `false` for mutable `iterator`.
 template <bool IsConst>
-class iterator_impl { // teleporting iterator: skips up to 64 empty buckets at a time
+class iterator_impl {
     friend class hash_map;
 private:
     using bucket_ptr = spt::conditional_t<IsConst, const Entry*, Entry*>;
@@ -314,12 +325,16 @@ private:
 
 public:
 
-    // Default Constructor
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Constructors / assignment
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /// Default constructor — allocates 16 buckets.
     SP_FORCEINLINE constexpr hash_map() : _buckets(16), _count(0), _max_count(static_cast<size_type>(16 * threshold)), _states(p_state_array_size(16)) {
         init_buckets();
     }
     
-    // Size Constructor
+    /// Constructs with at least @p size bucket slots (rounded up to next power of two, min 16).
     SP_FORCEINLINE constexpr hash_map(size_type size) : _count(0) {
         size_type num = next_pow2(size);
         if (num < 16) num = 16;
@@ -328,7 +343,7 @@ public:
         init_buckets();
     }
 
-    // Initializer List Constructor
+    /// Constructs from an initializer list of `{key, value}` pairs.
     SP_FLATTEN constexpr hash_map(std::initializer_list<sp::pair<Key,Value>> list) : _count(0) {
         size_type required = static_cast<size_type>(static_cast<float>(list.size()) / threshold) + 1;
         size_type num = next_pow2(required);
@@ -341,14 +356,16 @@ public:
         }
     }
 
+    /// Copy constructor.
     SP_FLATTEN constexpr hash_map(const hash_map& other){
         *this = other;
     }
+    /// Move constructor.
     SP_FLATTEN constexpr hash_map(hash_map&& other) noexcept{
         *this = sp::move(other);
     }
 
-    // Range constructor
+    /// Range constructor — inserts all `[first, last)` key-value pairs.
     template <class InputIt>
     SP_FLATTEN constexpr hash_map(InputIt first, InputIt last){
         size_type required = static_cast<size_type>(static_cast<float>(std::distance(first, last)) / threshold) + 1;
@@ -362,7 +379,7 @@ public:
         }
     }
 
-    // Initializer list assignment
+    /// Initializer-list assignment — clears and re-inserts all pairs.
     constexpr hash_map& operator=(std::initializer_list<sp::pair<Key, Value>> ilist) {
         clear();                                    // safe reset first
         reserve(static_cast<size_type>(ilist.size() / threshold) + 16);
@@ -372,7 +389,7 @@ public:
         return *this;
     }
 
-    // Copy assignment
+    /// Copy assignment.
     constexpr hash_map& operator=(const hash_map& other) {
         if (this != &other) {
             _buckets = other._buckets;
@@ -383,7 +400,7 @@ public:
         return *this;
     }
 
-    // Move assignment
+    /// Move assignment.
     constexpr hash_map& operator=(hash_map&& other) noexcept {
         if (this != &other) {
             _buckets   = sp::move(other._buckets);
@@ -406,6 +423,7 @@ public:
 // ========== // ========== // ========== // ========== // ========== // ========== // ========== // ==========
 // ========== // ========== // ========== // ========== // ========== // ========== // ========== // ==========
 
+    /// Prints all key→value pairs to stdout with colour formatting.
     SP_FORCEINLINE hash_map& print() {
         for(const_entry_loop_type e : *this) {   // use const version
             std::cout << e.first << console::FG_BRIGHT_GREEN << " -> " 
@@ -414,6 +432,7 @@ public:
         return *this;
     }
 
+    /// Prints detailed diagnostics (capacity, load factor, probe stats, memory) to stdout.
     SP_FORCEINLINE hash_map& print_stats(){
         std::cout << console::FG_BRIGHT_RED << "-----------------------------------------" << console::FG_BRIGHT_YELLOW << std::endl;
         const size_type cap = capacity();
@@ -464,13 +483,15 @@ public:
     // ─────────────────────────────────────────────────────────────────────────────
     // Capacity & basic state
     // ─────────────────────────────────────────────────────────────────────────────
-    _SP_SAFETY_TEMPLATE_ _SP_FUNC_NIP_ constexpr bool is_empty() const noexcept { return !((bool)(_count)); }
-    _SP_SAFETY_TEMPLATE_ _SP_FUNC_NIP_ constexpr size_type size() const noexcept { return _count; }
-    _SP_SAFETY_TEMPLATE_ _SP_FUNC_NIP_ constexpr size_type max_size() const noexcept { return _max_count; }
-    _SP_SAFETY_TEMPLATE_ _SP_FUNC_NIP_ constexpr size_type capacity() const noexcept { return _buckets.size(); }               // current _buckets.size()
-    _SP_SAFETY_TEMPLATE_ _SP_FUNC_NIP_ constexpr float load_factor() const noexcept { return (double)_count / _buckets.size(); }
-    _SP_SAFETY_TEMPLATE_ _SP_FUNC_NI_ SP_CONST constexpr double max_load_factor() const noexcept { return threshold; }            // returns threshold (compile-time default)
-    _SP_SAFETY_TEMPLATE_ SP_FLATTEN SP_COLD constexpr void reserve(size_type n){
+    _SP_SAFETY_TEMPLATE_ _SP_FUNC_NIP_ constexpr bool is_empty() const noexcept { return !((bool)(_count)); }          ///< Returns `true` if the map has no entries.
+    _SP_SAFETY_TEMPLATE_ _SP_FUNC_NIP_ constexpr size_type size() const noexcept { return _count; }                    ///< Number of entries currently stored.
+    _SP_SAFETY_TEMPLATE_ _SP_FUNC_NIP_ constexpr size_type max_size() const noexcept { return _max_count; }            ///< Maximum entries before the next automatic rehash.
+    _SP_SAFETY_TEMPLATE_ _SP_FUNC_NIP_ constexpr size_type capacity() const noexcept { return _buckets.size(); }       ///< Total number of allocated bucket slots.
+    _SP_SAFETY_TEMPLATE_ _SP_FUNC_NIP_ constexpr float load_factor() const noexcept { return (double)_count / _buckets.size(); }  ///< Current load factor (size / capacity).
+    _SP_SAFETY_TEMPLATE_ _SP_FUNC_NI_ SP_CONST constexpr double max_load_factor() const noexcept { return threshold; } ///< Compile-time load-factor threshold (0–1).
+    /// Ensures capacity for at least @p n elements, rehashing if necessary.
+    _SP_SAFETY_TEMPLATE_
+    SP_FLATTEN SP_COLD constexpr void reserve(size_type n){
         SP_IF_NOT_EXPECT(n<=_count) return;
         SP_IF_NOT_EXPECT(n<=_buckets.size()) return;
         SP_IF_NOT_EXPECT(_count==0){
@@ -482,8 +503,9 @@ public:
             rehash(n);
         }
     }
+    /// Shrinks the bucket array to the smallest power-of-two that fits the current entries.
     _SP_SAFETY_TEMPLATE_
-    SP_FLATTEN constexpr void shrink_to_fit(){ // OPTIMIZATIONS AVAILABLE: REFER TO REHASH
+    SP_FLATTEN constexpr void shrink_to_fit(){
         SP_IF_NOT_EXPECT(_count==0){
             _buckets = array<Entry, 0>(16);
             _states = array<ull, 0, Allocator>(1);
@@ -513,16 +535,13 @@ public:
     }
 
     _SP_SAFETY_TEMPLATE_
-    _SP_FUNC_NIP_ constexpr size_type bucket_count() const noexcept { return _buckets.size(); }
+    _SP_FUNC_NIP_ constexpr size_type bucket_count() const noexcept { return _buckets.size(); } ///< Alias for `capacity()`.
 
     _SP_SAFETY_TEMPLATE_
-    _SP_FUNC_NIP_ constexpr size_type empty_slots() const{
-        return _buckets.size() - _count;
-    }
+    _SP_FUNC_NIP_ constexpr size_type empty_slots() const{ return _buckets.size() - _count; }  ///< Number of unoccupied bucket slots.
     _SP_SAFETY_TEMPLATE_
-    _SP_FUNC_NIP_ constexpr size_type used_slots() const{
-        return _count;
-    }
+    _SP_FUNC_NIP_ constexpr size_type used_slots() const{ return _count; }                      ///< Alias for `size()`.
+    /// Returns the sum of probe displacements across all occupied buckets.
     _SP_SAFETY_TEMPLATE_
     _SP_FUNC_NIP_ constexpr size_type total_collisions() const{
         size_type cap = _buckets.size();
@@ -537,6 +556,7 @@ public:
         }
         return sum;
     }
+    /// Returns the longest probe chain length across all occupied buckets.
     _SP_SAFETY_TEMPLATE_
     _SP_FUNC_NIP_ constexpr size_type max_probe_length() const{
         size_type cap = _buckets.size();
@@ -552,6 +572,7 @@ public:
         }
         return max_length;
     }
+    /// Returns the mean probe chain length across all occupied buckets.
     _SP_SAFETY_TEMPLATE_
     _SP_FUNC_NIP_ constexpr double average_probe_length() const{
         size_type cap = _buckets.size();
@@ -569,6 +590,7 @@ public:
         }
         return static_cast<double>(total_length) / count;
     }
+    /// Returns the number of 64-bit state chunks that contain at least one occupied bit.
     _SP_SAFETY_TEMPLATE_
     _SP_FUNC_NIP_ constexpr size_type occupied_state_chunks() const{
         size_type cap = _states.size();
@@ -579,10 +601,11 @@ public:
         }
         return count;
     }
+    /// Returns the total number of 64-bit state chunks (= `ceil(capacity / 64)`).
     _SP_SAFETY_TEMPLATE_
-    _SP_FUNC_NIP_ constexpr size_type states_array_size() const{
-        return _states.size();
-    }
+    _SP_FUNC_NIP_ constexpr size_type states_array_size() const{ return _states.size(); }
+
+    /// Returns a histogram mapping probe-length → bucket count.
     _SP_SAFETY_TEMPLATE_
     _SP_FUNC_NIP_ sp::array<size_type> bucket_occupancy_histogram() const{
         size_type cap = _buckets.size();
@@ -596,6 +619,7 @@ public:
         }
         return histogram;
     }
+    /// Returns the number of probes needed to reach @p key from its ideal bucket.
     _SP_SAFETY_TEMPLATE_
     _SP_FUNC_NIP_ constexpr size_type probe_count(const Key& key) const{
         size_type cap = _buckets.size();
@@ -612,6 +636,7 @@ public:
         return count;
     }
 
+    /// Returns the total heap memory used by this map in bytes.
     _SP_SAFETY_TEMPLATE_
     _SP_FUNC_NIP_ constexpr size_type memory_usage() const{
         return sizeof(*this) + _buckets.capacity() * sizeof(Entry) + _states.capacity() * sizeof(ull);
@@ -650,12 +675,14 @@ public:
     // ─────────────────────────────────────────────────────────────────────────────
     // Modifiers
     // ─────────────────────────────────────────────────────────────────────────────
+    /// Resets the map to an empty 16-bucket state.
     SP_COLD SP_FORCEINLINE constexpr void clear() noexcept{
         _buckets = sp::array<Entry,0,Allocator>(16);
         _states = sp::array<ull,0,Allocator>(1);
         init_buckets();
     }
 
+    /// Inserts all entries in the range `[first, last)`.
     template <short safety = _safety_level, class InputIt>
     SP_FLATTEN
     constexpr void insert(InputIt first, InputIt last){
@@ -665,6 +692,7 @@ public:
         }
     }
 
+    /// Inserts all entries from an initializer list.
     template <short safety = _safety_level, class P = sp::pair<Key,Value>>
     SP_FLATTEN
     constexpr void insert(std::initializer_list<P> ilist){
@@ -673,6 +701,7 @@ public:
         }
     }
 
+    /// Fast insert — skips the duplicate-key return value; no iterator is returned.
     _SP_SAFETY_TEMPLATE_
     SP_FLATTEN SP_CONSTEXPR23 void insert_fast(const Key& key, const Value& value){
         __sp_start:
@@ -684,6 +713,7 @@ public:
         set_state(probe);
     }
 
+    /// Inserts @p key / @p value. Returns `{iterator, true}` on insertion, `{iterator, false}` if key already existed.
     _SP_SAFETY_TEMPLATE_
     SP_FLATTEN SP_CONSTEXPR23 pair<iterator, bool> insert(const Key& key, const Value& value){
         return insert_as<Key, safety>(key, value);
@@ -694,6 +724,7 @@ public:
         return insert_as<Key, safety>(key, sp::forward<Value>(value));
     }
 
+    /// Heterogeneous insert — accepts any key type @p K comparable to `Key`.
     template <typename K, short safety=_safety_level>
     SP_CONSTEXPR23 pair<iterator, bool> insert_as(const K& key, const Value& value){
         __sp_start:
@@ -718,6 +749,7 @@ public:
         return {iterator(_buckets.data(), _states.data(), probe, _buckets.size(), (load_factor()<0.3)?true:false), 1};
     }
 
+    /// Inserts or overwrites the value for @p key. Returns `{iterator, true}` on insert, `{iterator, false}` on assign.
     _SP_SAFETY_TEMPLATE_
     SP_FLATTEN constexpr pair<iterator, bool> insert_or_assign(const Key& key, const Value& obj) {
         return insert_or_assign_as<Key, safety>(key, obj);
@@ -790,6 +822,7 @@ public:
         return {iterator(_buckets.data(), _states.data(), probe, cap, (load_factor()<0.3)?true:false), 1};
     }
 
+    /// Constructs the value in-place from @p args if @p key is absent.
     template <short safety=_safety_level, class... Args>
     constexpr pair<iterator, bool> emplace(const Key& key, Args&&... args){
         return emplace_as<Key, safety, Args...>(key, sp::forward<Args>(args)...);
@@ -824,6 +857,7 @@ public:
         return { iterator(_buckets.data(), _states.data(), probe, _buckets.size(), (load_factor()<0.3)?true:false), true };
     }
 
+    /// Erases the entry pointed to by @p pos and returns an iterator to the next occupied bucket.
     SP_FLATTEN constexpr iterator erase(const_iterator pos){
         size_type idx = pos._index;
         erase(_buckets[idx].first);
@@ -832,8 +866,9 @@ public:
         return it;
     }
 
+    /// Erases the entry with @p key. Returns `true` if an entry was removed.
     _SP_SAFETY_TEMPLATE_
-    SP_HOT _SP_FUNC_FI_ SP_CONSTEXPR23 bool erase(const Key& key){ // My own algorithm: O(k^2) worst-case views, O(1) moves, better map health
+    SP_HOT _SP_FUNC_FI_ SP_CONSTEXPR23 bool erase(const Key& key){
         const size_type cap = _buckets.size();
         const size_type mask = cap - 1;
         size_type hole=0;
@@ -874,6 +909,7 @@ public:
         }
     }
 
+    /// Erases all entries in `[first, last)`.
     _SP_SAFETY_TEMPLATE_
     SP_FLATTEN constexpr iterator erase(const_iterator first, const_iterator last){
         while(first!=last){
@@ -882,6 +918,7 @@ public:
         }
     }
 
+    /// Swaps contents with @p other in O(1).
     _SP_SAFETY_TEMPLATE_
     constexpr void swap(hash_map& other){
         using std::swap;
@@ -894,6 +931,7 @@ public:
     // ─────────────────────────────────────────────────────────────────────────────
     // Lookup
     // ─────────────────────────────────────────────────────────────────────────────
+    /// Returns a reference to the value for @p key; throws `MapException` if not found.
     _SP_SAFETY_TEMPLATE_
     _SP_FUNC_NI_ SP_HOT constexpr Value& at(const Key& key){
         _SP_PROBE_LOOP_(
@@ -906,6 +944,7 @@ public:
         return const_cast<Value&>(at<safety>(key));
     }
 
+    /// Returns a reference to the value for @p key, inserting a default-constructed value if absent.
     template <typename K>
     SP_CONSTEXPR23 Value& operator[](const K& key){
         __sp_start:

@@ -2,6 +2,30 @@
 
 ## [Unreleased]
 
+### Documentation — `include/Spiralis/containers/pair.hpp`
+
+#### Added
+- Class-level `@tparam T1`/`@tparam T2` doc
+- `first`/`second` members — `///<` inline docs
+- Default constructor — `@brief`
+- Forwarding constructor — `@brief`, `@tparam U1`/`@tparam U2`
+- `operator<<` — `@brief`, `@return`
+
+---
+
+### Fixes — `include/Spiralis/containers/array.hpp`
+
+New update: as of 10/14/2026 I fixed some more issues in the array file, mainly that in some places it was calling `predicate(_data[i-1])` instead of `_data[i-1] == value'`so it should work a bit better now.
+Also there was some issues with the function returning the wrong data value so I fixed those
+Double check these once or twice though
+
+#### Fixed
+- `find_last` — tail loop and `#else` path called `predicate(_data[i-1])` instead of `_data[i-1] == value`; corrected to value comparison (code bug)
+- `dedupe_consecutive_` — return type in signature was `array<T, _safety_level>` (value) instead of `array<T, _safety_level>&` (reference); corrected; `@return` doc updated to match
+- `shrink_by` — was calling `_SP_APPLY_UNROLLED_(_size, destroy(...))` which destroyed elements from index 0 instead of from `_size - amount`; corrected to `_SP_EXPLICIT_UNROLLED_(i, _size - amount, _size, destroy(...))`; `@brief` updated to clarify it removes from the back
+
+---
+
 ### Documentation & Changes — `include/Spiralis/math/hashes.hpp`
 
 I added a few new hashes that seemed sensible to me and wrote the Doxygen docs for them, but I'm
@@ -32,9 +56,6 @@ still pretty new to ts and claude was used quite a bit so double check the valid
 The `array.hpp` file had a shit ton of ai slop and blatantly wrong info that I had to go through and fix up the accuracy. 
 Full disclosure I still got claude to write most of this but I did double check it so it should be fine.
 
-
-
-
 #### Added
 - `is_aligned` — added missing Doxygen comment documenting that it returns true when the allocator provides cache-line alignment
 - `access_and_prefetch` (both overloads) — added missing Doxygen comments explaining that the prefetch is a no-op when the allocator does not provide alignment
@@ -60,3 +81,28 @@ Full disclosure I still got claude to write most of this but I did double check 
 - `find_nth` — `@param n` was documented as 0-based; corrected to 1-based to match the implementation (`count` starts at 1 and matches when `count == n`)
 - `find_nth_if` — same 0-based/1-based mismatch as `find_nth`; corrected to 1-based
 - `stable_partition` — `@brief` contained a typo ("pivolt"); corrected to "pivot"; added `@note` describing ordering semantics and `@throws` tag
+
+---
+
+### Added & Documented — `include/Spiralis/core/pointer.hpp`
+
+Also, I added the weak_ptr stuff we were talking about but mostly used claude for this so again, double check the validity
+It might have made some ai slop.
+
+#### Added
+- `weak_ptr<T, Alloc>` — non-owning observer of a `shared_ptr`-managed object
+  - Increments/decrements `control_block::weak_count` on construction/destruction
+  - `lock()` — returns a valid `shared_ptr` if the object is still alive, otherwise null
+  - `expired()` — returns `true` if the strong count has already hit zero
+  - `use_count()` — returns the current strong reference count
+  - `reset()` — releases the weak reference; frees the control block if both counts are zero
+  - Full copy/move constructors and assignment operators
+  - `operator bool`, `operator==`/`!=` against `nullptr`, `swap()`
+- `make_weak(const shared_ptr<T,Alloc>&)` — convenience factory mirroring `make_shared`
+- `friend class weak_ptr<T, Alloc>` added inside `shared_ptr` so `lock()` can call the private `shared_ptr(control_block*)` constructor
+- Forward declaration of `weak_ptr` added alongside the existing `shared_ptr` forward declaration
+
+#### Documentation
+- `ptr<T, Alloc>` — class-level doc, all public members, both `make_ptr` overloads
+- `shared_ptr<T, Alloc>` — class-level doc, `control_block` struct and its members (`strong_count`, `weak_count`, `alloc`, `object()`), all public members, both `make_shared` overloads
+- `weak_ptr<T, Alloc>` — class-level doc, all public members, `make_weak`
