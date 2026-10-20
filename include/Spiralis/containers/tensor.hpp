@@ -442,7 +442,7 @@ public:
 
     /// @brief Returns an iterator one past the last element of the flat data buffer.
     constexpr flat_iterator end() { return flat_iterator(_data+_size); }
-    /// @copydoc tensor::end()
+    /// @copydoc tensor::end()999999999999999999999999
     constexpr const_flat_iterator end() const { return const_flat_iterator(_data+_size); }
     /// @copydoc tensor::end()
     constexpr const_flat_iterator cend() const { return const_flat_iterator(_data+_size); }
