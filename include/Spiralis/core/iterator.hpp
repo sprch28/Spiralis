@@ -18,6 +18,8 @@ public:
     // size_type is defined in init.hpp
 
     SP_FORCEINLINE constexpr iterator(pointer p = nullptr) : _data(p){}
+    template <typename U, typename = spt::enable_if_t<spt::is_same_v<const U, T>>>
+    SP_FORCEINLINE constexpr iterator(const iterator<U>& other) : _data(other.operator->()) {}
     SP_FORCEINLINE constexpr iterator(const iterator& other) : _data(other._data) {}
     SP_FORCEINLINE constexpr iterator& operator=(const iterator& other) {
         SP_IF_EXPECT(this != &other) {
@@ -67,10 +69,8 @@ using string_iterator = iterator<T>;
 template <typename T>
 using array_iterator = iterator<T>;
 
-#if defined(__SP_ML__)
-    template <typename T>
-    using flat_tensor_iterator = iterator<T>;
-#endif
+template <typename T>
+using flat_tensor_iterator = iterator<T>;
 
 }; // namespace sp
 

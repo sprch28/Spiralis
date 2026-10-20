@@ -12,6 +12,11 @@
 #include <cmath>
 class spml;
 namespace sp{
+/// @brief N-dimensional tensor with optional SIMD-accelerated math operations.
+/// @tparam T Element type.
+/// @tparam Allocator Allocator template; defaults to `sp::aligned_allocator` for cache-line-aligned allocation.
+/// @note The class alignment is derived from the allocator's alignment at compile time.
+/// @note All in-place math ops return `*this` for chaining. Copying variants are prefixed `c_`.
 template <typename T, template <typename> class Allocator = sp::aligned_allocator>
 class alignas(spt::get_allocator_alignment<Allocator<T>>()
 ? spt::get_allocator_alignment<Allocator<T>>()
@@ -98,15 +103,18 @@ private:
     //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 public:
-    using type_param = spt::conditional_t<spt::is_trivially_copyable_v<T> || sizeof(T) <= 8, T, const T&>;
-    using flat_iterator = flat_tensor_iterator<T>;
-    using const_flat_iterator = const flat_tensor_iterator<T>;
+    using type_param = spt::conditional_t<spt::is_trivially_copyable_v<T> || sizeof(T) <= 8, T, const T&>; ///< Pass `T` by value for small/trivial types, by `const T&` otherwise.
+    using flat_iterator = flat_tensor_iterator<T>;               ///< Iterator over the flat data buffer.
+    using const_flat_iterator = flat_tensor_iterator<const T>;   ///< Const iterator over the flat data buffer.
     //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+    /// @brief Default constructor; produces an empty tensor with no allocation.
     constexpr tensor() {}
+    /// @brief Construct from a nested initializer list, inferring shape from the list structure.
+    /// @tparam U Element type of the initializer list; converted to `T` on insertion.
     template <typename U>
     SP_CONSTEXPR23 tensor(std::initializer_list<std::initializer_list<U>> list){
         sp::vector<size_type> shape; // sp::vector has no constexpr support yet
@@ -132,6 +140,7 @@ public:
         size_type offset = 0;
         _fill_from_list(list, offset);
     }
+    /// @brief Construct a 1D tensor from a flat initializer list.
     constexpr tensor(std::initializer_list<T> list){
         _shape_size = 1;
         _stride_size = 1;
@@ -150,6 +159,8 @@ public:
             }
         }
     }
+    /// @brief Construct a zero-initialized tensor from a vector of dimension sizes.
+    /// @param shapes Each element is the size of the corresponding dimension.
     tensor(sp::vector<size_type> shapes){
         _shape_size = shapes.size();
         _stride_size = _shape_size;
@@ -171,9 +182,12 @@ public:
         SP_IF_CONSTEXPR(_trivially_copyable){
             std::memset(_data,0,_size*sizeof(T));
         }else{
-            _SP_APPLY_UNROLLED_(_size, sp::allocator_traits<Allocator<T>>::construct(_data_alloc,&_data+i,0));
+            _SP_APPLY_UNROLLED_(_size, sp::allocator_traits<Allocator<T>>::construct(_data_alloc,_data+i,0));
         }
     }
+    /// @brief Construct a zero-initialized tensor from variadic integral dimension sizes.
+    /// @tparam Args Integral types for each dimension size.
+    /// @param args Dimension sizes in order; e.g. `tensor(3, 4)` produces a 3×4 tensor.
     template <typename... Args, 
               typename = spt::enable_if_t<(spt::is_integral_v<spt::remove_reference_t<Args>> && ...)>>
     constexpr tensor(Args&&... args){
@@ -198,15 +212,18 @@ public:
         SP_IF_CONSTEXPR(_trivially_copyable){
             std::memset(_data,0,_size*sizeof(T));
         }else{
-            _SP_APPLY_UNROLLED_(_size, sp::allocator_traits<Allocator<T>>::construct(_data_alloc,&_data+i,0));
+            _SP_APPLY_UNROLLED_(_size, sp::allocator_traits<Allocator<T>>::construct(_data_alloc,_data+i,0));
         }
     }
+    /// @brief Copy constructor.
     constexpr tensor(const tensor& other){
         *this = other;
     }
+    /// @brief Move constructor.
     constexpr tensor(tensor&& other){
         *this = sp::move(other);
     }
+    /// @brief Destructor; releases data and metadata allocations.
     SP_CONSTEXPR20 ~tensor(){
         if(_data){
             destroy_data();
@@ -220,25 +237,35 @@ public:
     //=-=-=-=-=-=-=-=-=-=-=-s=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+    /// @brief Access element by multi-dimensional indices; computes flat offset via strides.
+    /// @param idxs One index per dimension.
+    /// @return Reference to the element at the given position.
     template <typename... Idxs>
     SP_FORCEINLINE constexpr T& operator()(Idxs... idxs) {
         static_assert(sizeof...(Idxs) > 0, "At least one index required to use operator()");
         return _data[_offset(idxs...)];
     }
 
+    /// @copydoc tensor::operator()(Idxs...)
     template <typename... Idxs>
     SP_FORCEINLINE constexpr const T& operator()(Idxs... idxs) const {
         return const_cast<tensor*>(this)->operator()(idxs...);
     }
 
+    /// @brief Access element by flat physical index into the data buffer.
+    /// @param physical_idx Flat index; no stride computation is applied.
+    /// @return Reference to the element.
     SP_FORCEINLINE constexpr T& operator[](size_type physical_idx){
         return _data[physical_idx];
     }
 
+    /// @copydoc tensor::operator[](size_type)
     SP_FORCEINLINE constexpr const T& operator[](size_type physical_idx) const{
         return _data[physical_idx];
     }
 
+    /// @brief Copy assignment; deep-copies data and metadata from `other`.
+    /// @return `*this`
     SP_FORCEINLINE constexpr tensor& operator=(const tensor& other){
         if(this == &other) return *this;
 
@@ -272,6 +299,8 @@ public:
         return *this;
     }
 
+    /// @brief Move assignment; transfers ownership of data and metadata from `other`, leaving it empty.
+    /// @return `*this`
     SP_FORCEINLINE constexpr tensor& operator=(tensor&& other) noexcept {
         if(this == &other) return *this;
 
@@ -299,44 +328,71 @@ public:
         return *this;
     }
 
+    /// @brief In-place element-wise addition. Scalar, same-type tensor, or any type exposing `.data()` are accepted.
     SP_FORCEINLINE constexpr tensor& operator+=(const tensor& other) { return add(other); }
+    /// @copydoc tensor::operator+=(const tensor&)
     template <typename Other> SP_FORCEINLINE constexpr tensor& operator+=(const Other& other) { return add(other); }
+    /// @copydoc tensor::operator+=(const tensor&)
     SP_FORCEINLINE constexpr tensor& operator+=(type_param other) { return add(other); }
 
+    /// @brief In-place element-wise subtraction.
     SP_FORCEINLINE constexpr tensor& operator-=(const tensor& other) { return sub(other); }
+    /// @copydoc tensor::operator-=(const tensor&)
     template <typename Other> SP_FORCEINLINE constexpr tensor& operator-=(const Other& other) { return sub(other); }
+    /// @copydoc tensor::operator-=(const tensor&)
     SP_FORCEINLINE constexpr tensor& operator-=(type_param other) { return sub(other); }
 
+    /// @brief In-place element-wise multiplication.
     SP_FORCEINLINE constexpr tensor& operator*=(const tensor& other) { return mul(other); }
+    /// @copydoc tensor::operator*=(const tensor&)
     template <typename Other> SP_FORCEINLINE constexpr tensor& operator*=(const Other& other) { return mul(other); }
+    /// @copydoc tensor::operator*=(const tensor&)
     SP_FORCEINLINE constexpr tensor& operator*=(type_param other) { return mul(other); }
 
+    /// @brief In-place element-wise division.
     SP_FORCEINLINE constexpr tensor& operator/=(const tensor& other) { return div(other); }
+    /// @copydoc tensor::operator/=(const tensor&)
     template <typename Other> SP_FORCEINLINE constexpr tensor& operator/=(const Other& other) { return div(other); }
+    /// @copydoc tensor::operator/=(const tensor&)
     SP_FORCEINLINE constexpr tensor& operator/=(type_param other) { return div(other); }
 
-    SP_FORCEINLINE constexpr tensor operator+(const tensor& other) { tensor result(*this); return result.add(other); }
-    template <typename Other> SP_FORCEINLINE constexpr tensor operator+(const Other& other) { tensor result(*this); return result.add(other); }
-    SP_FORCEINLINE constexpr tensor operator+(type_param other) { tensor result(*this); return result.add(other); }
+    /// @brief Copying element-wise addition; returns a new tensor.
+    SP_FORCEINLINE constexpr tensor operator+(const tensor& other) const { tensor result(*this); return result.add(other); }
+    /// @copydoc tensor::operator+(const tensor&)
+    template <typename Other> SP_FORCEINLINE constexpr tensor operator+(const Other& other) const { tensor result(*this); return result.add(other); }
+    /// @copydoc tensor::operator+(const tensor&)
+    SP_FORCEINLINE constexpr tensor operator+(type_param other) const { tensor result(*this); return result.add(other); }
 
-    SP_FORCEINLINE constexpr tensor operator-(const tensor& other) { tensor result(*this); return result.sub(other); }
-    template <typename Other> SP_FORCEINLINE constexpr tensor operator-(const Other& other) { tensor result(*this); return result.sub(other); }
-    SP_FORCEINLINE constexpr tensor operator-(type_param other) { tensor result(*this); return result.sub(other); }
+    /// @brief Copying element-wise subtraction; returns a new tensor.
+    SP_FORCEINLINE constexpr tensor operator-(const tensor& other) const { tensor result(*this); return result.sub(other); }
+    /// @copydoc tensor::operator-(const tensor&)
+    template <typename Other> SP_FORCEINLINE constexpr tensor operator-(const Other& other) const { tensor result(*this); return result.sub(other); }
+    /// @copydoc tensor::operator-(const tensor&)
+    SP_FORCEINLINE constexpr tensor operator-(type_param other) const { tensor result(*this); return result.sub(other); }
 
-    SP_FORCEINLINE constexpr tensor operator*(const tensor& other) { tensor result(*this); return result.mul(other); }
-    template <typename Other> SP_FORCEINLINE constexpr tensor operator*(const Other& other) { tensor result(*this); return result.mul(other); }
-    SP_FORCEINLINE constexpr tensor operator*(type_param other) { tensor result(*this); return result.mul(other); }
+    /// @brief Copying element-wise multiplication; returns a new tensor.
+    SP_FORCEINLINE constexpr tensor operator*(const tensor& other) const { tensor result(*this); return result.mul(other); }
+    /// @copydoc tensor::operator*(const tensor&)
+    template <typename Other> SP_FORCEINLINE constexpr tensor operator*(const Other& other) const { tensor result(*this); return result.mul(other); }
+    /// @copydoc tensor::operator*(const tensor&)
+    SP_FORCEINLINE constexpr tensor operator*(type_param other) const { tensor result(*this); return result.mul(other); }
 
-    SP_FORCEINLINE constexpr tensor operator/(const tensor& other) { tensor result(*this); return result.div(other); }
-    template <typename Other> SP_FORCEINLINE constexpr tensor operator/(const Other& other) { tensor result(*this); return result.div(other); }
-    SP_FORCEINLINE constexpr tensor operator/(type_param other) { tensor result(*this); return result.div(other); }
+    /// @brief Copying element-wise division; returns a new tensor.
+    SP_FORCEINLINE constexpr tensor operator/(const tensor& other) const { tensor result(*this); return result.div(other); }
+    /// @copydoc tensor::operator/(const tensor&)
+    template <typename Other> SP_FORCEINLINE constexpr tensor operator/(const Other& other) const { tensor result(*this); return result.div(other); }
+    /// @copydoc tensor::operator/(const tensor&)
+    SP_FORCEINLINE constexpr tensor operator/(type_param other) const { tensor result(*this); return result.div(other); }
 
+    /// @brief Element-wise greater-than comparison; returns a new tensor of `0` or `1`.
     SP_FORCEINLINE constexpr tensor operator>(type_param other) { tensor result(*this); _SP_APPLY_UNROLLED_(_size, result._data[i] = (T)(_data[i] > other)); return result; }
 
 
     // SPECIAL OPERATORS
 
+    /// @brief Returns the transpose of this tensor (alias for `c_t()`).
     SP_FORCEINLINE constexpr tensor operator~() { return c_t(); }
+    /// @brief Matrix multiplication (alias for `matmul(other)`).
     SP_FORCEINLINE constexpr tensor operator%(const tensor& other) { return matmul(other); }
 
     //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -344,14 +400,24 @@ public:
     //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // Access
+    /// @brief Returns a pointer to the raw data buffer.
     SP_FORCEINLINE constexpr T* data() noexcept { return _data; }
+    /// @copydoc tensor::data()
     SP_FORCEINLINE constexpr const T* data() const noexcept { return _data; }
+    /// @brief Returns the total number of elements across all dimensions.
     SP_FORCEINLINE constexpr size_type size() const noexcept { return _size; }
+    /// @brief Returns the number of dimensions.
     SP_FORCEINLINE constexpr size_type rank() const noexcept { return _shape_size; }
+    /// @brief Returns the size of dimension `i`.
     SP_FORCEINLINE constexpr size_type shape(size_type i) const { return _shapes[i]; }
+    /// @brief Returns the stride of dimension `i`.
     SP_FORCEINLINE constexpr size_type stride(size_type i) const { return _strides[i]; }
+    /// @brief Returns `true` if the tensor has no elements.
     SP_FORCEINLINE constexpr bool empty() const noexcept { return _size == 0; }
+    /// @copydoc tensor::empty()
     SP_FORCEINLINE constexpr bool is_empty() const noexcept { return _size == 0; }
+    /// @brief Prints all elements as a flat list in `Tensor([...])` format.
+    /// @return `*this` for chaining.
     SP_FORCEINLINE tensor& print_flat(){
         sp::print("Tensor([");
         SP_IF_EXPECT(_size>0){
@@ -361,32 +427,47 @@ public:
         sp::println("])");
         return *this;
     }
+    /// @brief Alias for `print_flat()`.
+    /// @return `*this` for chaining.
     SP_FORCEINLINE tensor& print(){
         return print_flat();
     }
 
+    /// @brief Returns an iterator to the first element of the flat data buffer.
     constexpr flat_iterator begin() { return flat_iterator(_data); }
-    constexpr const flat_iterator begin() const { return const_flat_iterator(_data); }
-    constexpr const flat_iterator cbegin() const { return const_flat_iterator(_data); }
+    /// @copydoc tensor::begin()
+    constexpr const_flat_iterator begin() const { return const_flat_iterator(_data); }
+    /// @copydoc tensor::begin()
+    constexpr const_flat_iterator cbegin() const { return const_flat_iterator(_data); }
 
+    /// @brief Returns an iterator one past the last element of the flat data buffer.
     constexpr flat_iterator end() { return flat_iterator(_data+_size); }
-    constexpr const flat_iterator end() const { return const_flat_iterator(_data+_size); }
-    constexpr const flat_iterator cend() const { return const_flat_iterator(_data+_size); }
+    /// @copydoc tensor::end()
+    constexpr const_flat_iterator end() const { return const_flat_iterator(_data+_size); }
+    /// @copydoc tensor::end()
+    constexpr const_flat_iterator cend() const { return const_flat_iterator(_data+_size); }
 
     //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // Tensor data manipulation
+        /// @brief Transposes the tensor in-place by reversing the shape and stride arrays.
+        /// @return `*this` for chaining.
         SP_FORCEINLINE constexpr tensor& t(){
             for(size_type i = 0, j = _stride_size-1; i < j; ++i, --j) { sp::swap(_strides[i],_strides[j]); sp::swap(_shapes[i],_shapes[j]); }
             return *this;
         }
+        /// @brief Returns a transposed copy of this tensor.
         SP_FORCEINLINE constexpr tensor c_t(){
             tensor result(*this);
             return result.t();
         }
 
+        /// @brief Reinterprets the tensor's shape in-place without moving data; total element count must be preserved.
+        /// @param args New dimension sizes; their product must equal `size()`.
+        /// @return `*this` for chaining.
+        /// @throws sp::exceptions::spiralis_exception if no arguments are given or the product mismatches `size()`.
         template <typename... Args>
         SP_FORCEINLINE constexpr tensor& reshape(Args&&... args){
             size_type new_size = sizeof...(args);
@@ -405,6 +486,8 @@ public:
             compute_strides();
             return *this;
         }
+        /// @brief Returns a reshaped copy of this tensor.
+        /// @param args New dimension sizes; their product must equal `size()`.
         template <typename... Args>
         SP_FORCEINLINE constexpr tensor c_reshape(Args&&... args) { tensor result(*this); return result.reshape(args...); }
 
@@ -466,12 +549,19 @@ public:
     //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         // Math Ops
-
+    /// @name Base arithmetic
+    /// @brief Element-wise in-place ops. Each has a copying `c_` variant and accepts a tensor, any type with `.data()`, or a scalar.
+    /// @{
     // Base functions
     _SP_DEF_TENSOR_MATH_OP_1_(add, _data[i] += other.data()[i], _data[i] += other, true, add);
     _SP_DEF_TENSOR_MATH_OP_1_(sub, _data[i] -= other.data()[i], _data[i] -= other, true, sub);
     _SP_DEF_TENSOR_MATH_OP_1_(mul, _data[i] *= other.data()[i], _data[i] *= other, true, mul);
     _SP_DEF_TENSOR_MATH_OP_1_(div, _data[i] /= other.data()[i], _data[i] /= other, true, div);
+    /// @}
+
+    /// @name Curved / exponential functions
+    /// @brief Element-wise in-place ops. Each has a copying `c_` variant.
+    /// @{
     // Curved functions
     _SP_DEF_TENSOR_MATH_OP_1_(pow, _data[i] = std::pow(_data[i],other.data()[i]), _data[i] = std::pow(_data[i],other), false, add);
     _SP_DEF_TENSOR_MATH_OP_0_(sqrt, _data[i] = std::sqrt(_data[i]));
@@ -479,6 +569,11 @@ public:
     _SP_DEF_TENSOR_MATH_OP_0_(log, _data[i] = std::log(_data[i]));
     _SP_DEF_TENSOR_MATH_OP_0_(log2, _data[i] = std::log2(_data[i]));
     _SP_DEF_TENSOR_MATH_OP_0_(log10, _data[i] = std::log10(_data[i]));
+    /// @}
+
+    /// @name Limiting / rounding functions
+    /// @brief Element-wise in-place ops. Each has a copying `c_` variant.
+    /// @{
     // Limiting functions
     _SP_DEF_TENSOR_MATH_OP_0_(abs, _data[i] = std::abs(_data[i]));
     _SP_DEF_TENSOR_MATH_OP_0_(neg, _data[i] *= -1);
@@ -486,6 +581,11 @@ public:
     _SP_DEF_TENSOR_MATH_OP_0_(floor, _data[i] = std::floor(_data[i]));
     _SP_DEF_TENSOR_MATH_OP_0_(ceil, _data[i] = std::ceil(_data[i]));
     _SP_DEF_TENSOR_MATH_OP_0_(round, _data[i] = std::round(_data[i]));
+    /// @}
+
+    /// @name Activation functions
+    /// @brief Neural-network activation functions applied element-wise in-place. Each has a copying `c_` variant.
+    /// @{
     // Activation functions
     _SP_DEF_TENSOR_MATH_OP_0_(relu, _data[i] = sp::max(_data[i], 0));
     _SP_DEF_TENSOR_MATH_OP_0_(sigmoid, _data[i] = (1/(1+std::exp(-_data[i]))));
@@ -504,12 +604,25 @@ public:
     _SP_DEF_TENSOR_MATH_OP_0_(hard_sigmoid, _data[i] = sp::min(sp::max(_data[i] + static_cast<T>(3), static_cast<T>(0)), static_cast<T>(6)) / static_cast<T>(6));
     _SP_DEF_TENSOR_MATH_OP_0_(hard_swish, _data[i] = _data[i] * sp::min(sp::max(_data[i] + static_cast<T>(3), static_cast<T>(0)), static_cast<T>(6)) / static_cast<T>(6));
     _SP_DEF_TENSOR_MATH_OP_0_(relu6, _data[i] = sp::min(sp::max(_data[i], static_cast<T>(0)), static_cast<T>(6)));
+    /// @brief Leaky ReLU: `x` if `x > 0`, else `x * alpha`.
+    /// @param alpha Negative-slope coefficient; defaults to `0.01`.
+    /// @return `*this` for chaining.
     SP_FORCEINLINE constexpr tensor& leaky_relu(type_param alpha = static_cast<T>(0.01)) { _SP_APPLY_UNROLLED_(_size, _data[i] = _data[i] > 0 ? _data[i] : _data[i] * alpha); return *this; }
+    /// @brief Returns a copy with leaky ReLU applied.
+    /// @param alpha Negative-slope coefficient; defaults to `0.01`.
     SP_FORCEINLINE constexpr tensor c_leaky_relu(type_param alpha = static_cast<T>(0.01)) const { tensor result(*this); return result.leaky_relu(alpha);  }
+    /// @}
 
+    /// @brief Clamps every element to `[min_val, max_val]` in-place.
+    /// @return `*this` for chaining.
     SP_FORCEINLINE constexpr tensor& clamp(type_param min_val, type_param max_val) { _SP_APPLY_UNROLLED_(_size, _data[i] = sp::min(sp::max(_data[i], min_val), max_val)); return *this; }
+    /// @brief Returns a copy with every element clamped to `[min_val, max_val]`.
     SP_FORCEINLINE constexpr tensor c_clamp(type_param min_val, type_param max_val) const { tensor result(*this); return result.clamp(min_val, max_val); }
 
+    /// @name Softmax variants
+    /// @{
+    /// @brief Numerically stable in-place softmax over the flat buffer.
+    /// @return `*this` for chaining.
     SP_FORCEINLINE constexpr tensor& softmax(){
         SP_IF_NOT_EXPECT(_size == 0) return *this;
         T max_elem = _data[0];
@@ -523,8 +636,11 @@ public:
         for(size_type i = 0; i < _size; ++i) _data[i] /= sum;
         return *this;
     }
+    /// @brief Returns a copy with softmax applied.
     SP_FORCEINLINE constexpr tensor c_softmax() const { tensor result(*this); return result.softmax(); }
 
+    /// @brief Numerically stable in-place log-softmax over the flat buffer.
+    /// @return `*this` for chaining.
     SP_FORCEINLINE constexpr tensor& log_softmax(){
         SP_IF_NOT_EXPECT(_size == 0) return *this;
         T max_elem = _data[0];
@@ -537,8 +653,13 @@ public:
         for (size_type i = 0; i < _size; ++i) _data[i] = (_data[i] - max_elem) - log_sum;
         return *this;
     }
+    /// @brief Returns a copy with log-softmax applied.
     SP_FORCEINLINE constexpr tensor c_log_softmax() const { tensor result(*this); return result.log_softmax(); }
+    /// @}
 
+    /// @name Trigonometric functions
+    /// @brief Element-wise in-place trig ops. Each has a copying `c_` variant.
+    /// @{
     // Trigonometric functions
     _SP_DEF_TENSOR_MATH_OP_0_(sin, _data[i] = std::sin(_data[i]));
     _SP_DEF_TENSOR_MATH_OP_0_(cos, _data[i] = std::cos(_data[i]));
@@ -546,36 +667,61 @@ public:
     _SP_DEF_TENSOR_MATH_OP_0_(asin, _data[i] = std::asin(_data[i]));
     _SP_DEF_TENSOR_MATH_OP_0_(acos, _data[i] = std::acos(_data[i]));
     _SP_DEF_TENSOR_MATH_OP_0_(atan, _data[i] = std::atan(_data[i]));
+    /// @}
 
+    /// @name Hyperbolic functions
+    /// @brief Element-wise in-place hyperbolic ops and their inverses. Each has a copying `c_` variant.
+    /// @{
     // Hyperbolic functions & inverses
     _SP_DEF_TENSOR_MATH_OP_0_(sinh, _data[i] = std::sinh(_data[i]));
     _SP_DEF_TENSOR_MATH_OP_0_(cosh, _data[i] = std::cosh(_data[i]));
     _SP_DEF_TENSOR_MATH_OP_0_(asinh, _data[i] = std::asinh(_data[i]));
     _SP_DEF_TENSOR_MATH_OP_0_(acosh, _data[i] = std::acosh(_data[i]));
     _SP_DEF_TENSOR_MATH_OP_0_(atanh, _data[i] = std::atanh(_data[i]));
+    /// @}
 
+    /// @name Special mathematical functions
+    /// @brief Element-wise in-place special functions. Each has a copying `c_` variant.
+    /// @{
     // Special Mathematical functions
     _SP_DEF_TENSOR_MATH_OP_0_(erf, _data[i] = std::erf(_data[i]));
     _SP_DEF_TENSOR_MATH_OP_0_(erfc, _data[i] = std::erfc(_data[i]));
     _SP_DEF_TENSOR_MATH_OP_0_(lgamma, _data[i] = std::lgamma(_data[i]));
     _SP_DEF_TENSOR_MATH_OP_0_(tgamma, _data[i] = std::tgamma(_data[i]));
+    /// @}
 
+    /// @name Fractional / floating-point utilities
+    /// @brief Element-wise in-place fractional ops. Each has a copying `c_` variant.
+    /// @{
     // Fractional / Floating point utilities
     _SP_DEF_TENSOR_MATH_OP_0_(trunc, _data[i] = std::trunc(_data[i]));
     _SP_DEF_TENSOR_MATH_OP_0_(frac, _data[i] = _data[i] - std::trunc(_data[i]));
+    /// @}
 
-    // Scalar reductions
+    /// @name Scalar reductions
+    /// @{
+    /// @brief Returns the sum of all elements.
     _SP_DEF_SCALAR_REDUCTION_(sum, 0, result += _data[i], return result);
+    /// @brief Returns the arithmetic mean of all elements.
     _SP_DEF_SCALAR_REDUCTION_(mean, 0, result += _data[i], return result / _size);
+    /// @brief Returns the product of all elements; returns `T()` if empty.
     SP_FORCEINLINE constexpr T prod() { SP_IF_NOT_EXPECT(_size==0) return T(); T result = _data[0]; _SP_EXPLICIT_UNROLLED_(i, 1, _size, result *= _data[i]); return result; }
+    /// @brief Returns the minimum element value; returns `T()` if empty.
     SP_FORCEINLINE constexpr T min() { SP_IF_NOT_EXPECT(_size==0) return T(); T result = _data[0]; _SP_EXPLICIT_UNROLLED_(i, 1, _size, if(_data[i]<result) result = _data[i]); return result; }
+    /// @brief Returns the maximum element value; returns `T()` if empty.
     SP_FORCEINLINE constexpr T max() { SP_IF_NOT_EXPECT(_size==0) return T(); T result = _data[0]; _SP_EXPLICIT_UNROLLED_(i, 1, _size, if(_data[i]>result) result = _data[i]); return result; }
+    /// @brief Returns the flat index of the minimum element; returns `T()` if empty.
     SP_FORCEINLINE constexpr T argmin() { SP_IF_NOT_EXPECT(_size==0) return T(); T tracker = _data[0]; T result = 0; _SP_EXPLICIT_UNROLLED_(i, 1, _size, if(_data[i]<tracker) { tracker = _data[i]; result = i; }); return result; }
+    /// @brief Returns the flat index of the maximum element; returns `T()` if empty.
     SP_FORCEINLINE constexpr T argmax() { SP_IF_NOT_EXPECT(_size==0) return T(); T tracker = _data[0]; T result = 0; _SP_EXPLICIT_UNROLLED_(i, 1, _size, if(_data[i]>tracker) { tracker = _data[i]; result = i; }); return result; }
+    /// @}
 
-    // When multiplying matrix A (M × K) by matrix B (K × N), result will be of (M × N)
-    // offset(i, j) = (i * _strides[0]) + (j * _strides[1])
-    // Use of template <typename Other> on this function is disabled for now
+    /// @brief Multiplies matrix `*this` (M×K) by matrix `B` (K×N), returning a new (M×N) tensor.
+    /// @tparam check_dims If `true` (default), validates that both tensors are 2D and inner dimensions match.
+    /// @param B Right-hand matrix; must be 2D with `B.shape(0) == this->shape(1)`.
+    /// @return New tensor of shape (M×N).
+    /// @throws sp::exceptions::spiralis_exception if `check_dims` is true and dimensions are incompatible.
+    /// @note Uses i-k-j loop order for contiguous memory access on the inner loop.
     template <bool check_dims=true>
     SP_NODISCARD SP_FORCEINLINE SP_HOT constexpr tensor matmul(const tensor& B) const{
         const tensor& A = *this;

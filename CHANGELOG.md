@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Fixes — `include/Spiralis/core/iterator.hpp`
+
+#### Fixed
+- `flat_tensor_iterator<T>` alias was wrapped in `#if defined(__SP_ML__)`, making it invisible to any translation unit that didn't define `__SP_ML__` before including the header — caused red underlines on all iterator return types in `tensor.hpp`; moved the alias outside the guard so it is always available alongside `string_iterator` and `array_iterator`
+
+---
+
 ### Performance — `include/Spiralis/containers/tensor.hpp` & `include/Spiralis/container-funcs/tensor-funcs.hpp`
 
 I added a new constructor in the tensor file and edited the functions to use it. 
@@ -13,6 +20,63 @@ lets us function with memory bandwidth at much larger sizes.
 - `arange(start, stop, step)` — replaced `tensor(size)` (allocate + memset) with `tensor(_uninit_tag{}, size)` (allocate only); eliminates a redundant write pass over the entire buffer
 - `arange(stop)` — same change as above
 - `linspace(start, stop, steps)` — same change as above
+
+---
+
+### Documentation — `include/Spiralis/containers/tensor.hpp` & `include/Spiralis/container-funcs/tensor-funcs.hpp`
+
+This is just a bunch of documentation that I added.
+
+#### Added
+- `tensor<T, Allocator>` — class-level doc with `@tparam`, `@note` on alignment derivation and `c_` naming convention
+- `type_param`, `flat_iterator`, `const_flat_iterator` — `///<` inline docs
+- Default constructor — `@brief`
+- Nested init-list constructor — `@brief`, `@tparam U`
+- Flat init-list constructor — `@brief`
+- `vector<size_type>` constructor — `@brief`, `@param shapes`
+- Variadic integral constructor — `@brief`, `@tparam Args`, `@param args`
+- Copy constructor — `@brief`
+- Move constructor — `@brief`
+- Destructor — `@brief`
+- `operator()(Idxs...)` (both overloads) — `@brief`, `@param idxs`, `@return`; const overload uses `@copydoc`
+- `operator[](size_type)` (both overloads) — `@brief`, `@param physical_idx`, `@return`; const overload uses `@copydoc`
+- `operator=(const tensor&)` — `@brief`, `@return`
+- `operator=(tensor&&)` — `@brief`, `@return`
+- `operator+=/-=/*=/=` (all three overloads each) — `@brief` on tensor overload; scalar and generic overloads use `@copydoc`
+- `operator+/-/*/` (all three overloads each) — same pattern
+- `operator>` — `@brief`
+- `operator~` — `@brief`
+- `operator%` — `@brief`
+- `data()` (both overloads) — `@brief`; const overload uses `@copydoc`
+- `size()`, `rank()`, `shape()`, `stride()` — `@brief` each
+- `empty()`, `is_empty()` — `@brief`; `is_empty` uses `@copydoc`
+- `print_flat()` — `@brief`, `@return`
+- `print()` — `@brief`, `@return`
+- `begin()`/`cbegin()`, `end()`/`cend()` (all overloads) — `@brief`, `@return`; const overloads use `@copydoc`
+- `t()` — `@brief`, `@return`
+- `c_t()` — `@brief`
+- `reshape()` — `@brief`, `@param args`, `@return`, `@throws`
+- `c_reshape()` — `@brief`, `@param args`
+- Math op groups (base arithmetic, curved/exponential, limiting/rounding, activation, trig, hyperbolic, special, fractional) — `@name` group doc with `@brief` describing the pattern
+- `leaky_relu()` — `@brief`, `@param alpha`, `@return`
+- `c_leaky_relu()` — `@brief`, `@param alpha`
+- `clamp()` — `@brief`, `@return`
+- `c_clamp()` — `@brief`
+- `softmax()` — `@brief`, `@return`
+- `c_softmax()` — `@brief`
+- `log_softmax()` — `@brief`, `@return`
+- `c_log_softmax()` — `@brief`
+- `sum()`, `mean()` — `@brief` each
+- `prod()`, `min()`, `max()`, `argmin()`, `argmax()` — `@brief` each
+- `matmul()` — `@brief`, `@tparam check_dims`, `@param B`, `@return`, `@throws`, `@note` on loop order
+- `spml` class — class-level doc with `@brief`, `@note` on friend access
+- `zeros()` — `@brief`, `@tparam T`, `@param args`
+- `full()` — `@brief`, `@tparam T`, `@param val`, `@param args`
+- `ones()` — `@brief`, `@tparam T`, `@param args`
+- `arange(start, stop, step)` — `@brief`, `@tparam T`, `@param start/stop/step`, `@throws`
+- `arange(stop)` — `@brief`, `@tparam T`, `@param stop`
+- `linspace()` — `@brief`, `@tparam T`, `@tparam inclusive`, `@param start/stop/steps`
+- `randoms()` — `@brief`, `@tparam T`, `@param args`, `@note` on distribution
 
 ---
 
