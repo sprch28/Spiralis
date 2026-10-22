@@ -436,7 +436,7 @@ public:
     /// @brief Returns an iterator to the first element of the flat data buffer.
     constexpr flat_iterator begin() { return flat_iterator(_data); }
     /// @copydoc tensor::begin()
-    constexpr const_flat_iterator begin(g) const { return const_flat_iterator(_data); }
+    constexpr const_flat_iterator begin() const { return const_flat_iterator(_data); }
     /// @copydoc tensor::begin()
     constexpr const_flat_iterator cbegin() const { return const_flat_iterator(_data); }
 
