@@ -735,26 +735,26 @@ namespace sp{
                 k2 *= c2; k2 = (k2<<33)|(k2>>31); k2 *= c1; h2 ^= k2;
                 h2 = (h2<<31)|(h2>>33); h2 += h1; h2 = h2*5 + 0x38495ab5ULL;
             }
-            // tail
-            const unsigned char* tail = reinterpret_cast<const unsigned char*>(data + nblocks*16);
+            // tail: read bytes through a char pointer to stay constexpr-safe.
+            const char* tail = data + nblocks*16;
             ull k1 = 0, k2 = 0;
             switch(len & 15){
-                case 15: k2 ^= static_cast<ull>(tail[14]) << 48; [[fallthrough]];
-                case 14: k2 ^= static_cast<ull>(tail[13]) << 40; [[fallthrough]];
-                case 13: k2 ^= static_cast<ull>(tail[12]) << 32; [[fallthrough]];
-                case 12: k2 ^= static_cast<ull>(tail[11]) << 24; [[fallthrough]];
-                case 11: k2 ^= static_cast<ull>(tail[10]) << 16; [[fallthrough]];
-                case 10: k2 ^= static_cast<ull>(tail[ 9]) <<  8; [[fallthrough]];
-                case  9: k2 ^= static_cast<ull>(tail[ 8]);
+                case 15: k2 ^= static_cast<ull>(static_cast<unsigned char>(tail[14])) << 48; [[fallthrough]];
+                case 14: k2 ^= static_cast<ull>(static_cast<unsigned char>(tail[13])) << 40; [[fallthrough]];
+                case 13: k2 ^= static_cast<ull>(static_cast<unsigned char>(tail[12])) << 32; [[fallthrough]];
+                case 12: k2 ^= static_cast<ull>(static_cast<unsigned char>(tail[11])) << 24; [[fallthrough]];
+                case 11: k2 ^= static_cast<ull>(static_cast<unsigned char>(tail[10])) << 16; [[fallthrough]];
+                case 10: k2 ^= static_cast<ull>(static_cast<unsigned char>(tail[ 9])) <<  8; [[fallthrough]];
+                case  9: k2 ^= static_cast<ull>(static_cast<unsigned char>(tail[ 8]));
                          k2 *= c2; k2 = (k2<<33)|(k2>>31); k2 *= c1; h2 ^= k2; [[fallthrough]];
-                case  8: k1 ^= static_cast<ull>(tail[ 7]) << 56; [[fallthrough]];
-                case  7: k1 ^= static_cast<ull>(tail[ 6]) << 48; [[fallthrough]];
-                case  6: k1 ^= static_cast<ull>(tail[ 5]) << 40; [[fallthrough]];
-                case  5: k1 ^= static_cast<ull>(tail[ 4]) << 32; [[fallthrough]];
-                case  4: k1 ^= static_cast<ull>(tail[ 3]) << 24; [[fallthrough]];
-                case  3: k1 ^= static_cast<ull>(tail[ 2]) << 16; [[fallthrough]];
-                case  2: k1 ^= static_cast<ull>(tail[ 1]) <<  8; [[fallthrough]];
-                case  1: k1 ^= static_cast<ull>(tail[ 0]);
+                case  8: k1 ^= static_cast<ull>(static_cast<unsigned char>(tail[ 7])) << 56; [[fallthrough]];
+                case  7: k1 ^= static_cast<ull>(static_cast<unsigned char>(tail[ 6])) << 48; [[fallthrough]];
+                case  6: k1 ^= static_cast<ull>(static_cast<unsigned char>(tail[ 5])) << 40; [[fallthrough]];
+                case  5: k1 ^= static_cast<ull>(static_cast<unsigned char>(tail[ 4])) << 32; [[fallthrough]];
+                case  4: k1 ^= static_cast<ull>(static_cast<unsigned char>(tail[ 3])) << 24; [[fallthrough]];
+                case  3: k1 ^= static_cast<ull>(static_cast<unsigned char>(tail[ 2])) << 16; [[fallthrough]];
+                case  2: k1 ^= static_cast<ull>(static_cast<unsigned char>(tail[ 1])) <<  8; [[fallthrough]];
+                case  1: k1 ^= static_cast<ull>(static_cast<unsigned char>(tail[ 0]));
                          k1 *= c1; k1 = (k1<<31)|(k1>>33); k1 *= c2; h1 ^= k1;
             }
             h1 ^= len; h2 ^= len;
