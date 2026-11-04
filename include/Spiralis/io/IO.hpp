@@ -1,120 +1,11 @@
 #ifndef ____SP_IO_SETUP____
 #define ____SP_IO_SETUP____
 #pragma once
-#include "../setup/init.hpp"
-#include "../core/type_traits.hpp"
-#include "../math/int128.hpp"
-#include "../containers/pair.hpp"
-#include "../containers/string.hpp"
-
-//#include <unistd.h>
-#include <cstdio>
-#include <fcntl.h>
-#include <stdexcept>
-#include <cstring>
+#include "io_files/constants.hpp"
+#include "io_files/file.hpp"
 
 namespace sp{
-enum /*class*/ io{ 
-    flush, // Flush the buffer
-    endl, // End line and flush buffer
-    nl, // End line without flushing
-    boolalpha, // Boolalpha: changes bool 1 and 0 to true and false
-    nboolalpha, // Disable boolalpha
-    hrule, // Horizontal rule
-    hline, // Horizontal line
-    sep // ", "
-};
 
-enum /*class*/ file_mode {
-    write,
-    append,
-    read, 
-    rw
-};
-
-const char digit_pairs[201] = 
-    "0001020304050607080910111213141516171819"
-    "2021222324252627282930313233343536373839"
-    "4041424344454647484950515253545556575859"
-    "6061626364656667686970717273747576777879"
-    "8081828384858687888990919293949596979899";
-
-
-class file{
-private:
-    int _fd;
-    const char* _filename;
-    file_mode _mode = file_mode::read;
-public:
-    file(const char* filename, file_mode mode = file_mode::read, mode_t m = 0644) : _mode(mode), _filename(filename){
-        int flags = 0;
-        switch (_mode) {
-            case file_mode::write:
-                flags = O_WRONLY | O_CREAT | O_TRUNC;
-                break;
-            case file_mode::append:
-                flags = O_WRONLY | O_CREAT | O_APPEND;
-                break;
-            case file_mode::read:
-                flags = O_RDONLY;
-                break;
-            case file_mode::rw:
-                flags = O_RDWR | O_CREAT;
-                break;
-        }
-        _fd = ::open(filename, flags, m);
-        SP_IF_NOT_EXPECT(_fd == -1) throw std::runtime_error("Failed to open file");
-    }
-    file(const file&) = delete;
-    file& operator=(const file&) = delete;
-    file(file&& other) noexcept : _fd(other._fd) { other._fd = -1; }
-    file& operator=(file&& other) noexcept {
-        SP_IF_EXPECT(this != &other){ 
-            if(_fd != -1) ::close(_fd); 
-            _fd = other._fd; 
-            other._fd = -1; 
-        }
-        return *this;
-    }
-
-    SP_FORCEINLINE file& change_mode(file_mode mode, mode_t m = 0644) {
-        _mode = mode;
-        SP_IF_NOT_EXPECT(_fd != -1) ::close(_fd);
-        int flags = 0;
-        switch (mode) {
-            case file_mode::write:
-                flags = O_WRONLY | O_CREAT | O_TRUNC;
-                break;
-            case file_mode::append:
-                flags = O_WRONLY | O_CREAT | O_APPEND;
-                break;
-            case file_mode::read:
-                flags = O_RDONLY;
-                break;
-            case file_mode::rw:
-                flags = O_RDWR | O_CREAT;
-                break;
-        }
-        _fd = ::open(_filename, flags, m);
-        SP_IF_NOT_EXPECT(_fd == -1) throw std::runtime_error("Failed to open file");
-        return *this;
-    }
-
-    SP_FORCEINLINE file& close(){
-        SP_IF_EXPECT(_fd != -1) {
-            ::close(_fd);
-            _fd = -1;
-        }
-        return *this;
-    }
-
-    SP_FORCEINLINE file_mode get_mode() const { return _mode; }
-    SP_FORCEINLINE file& rewind() { ::lseek(_fd, 0, SEEK_SET); return *this; }
-    SP_FORCEINLINE file& rewind_to(ull idx=0) { ::lseek(_fd, idx, SEEK_SET); return *this; }
-    SP_FORCEINLINE int get_fd() const { return _fd; }
-
-    ~file() { close(); }
-};
 
 class IO{
 private:
@@ -243,12 +134,12 @@ bool _boolalpha=false;
         while (n >= 100) {
             int r = n % 100;
             n /= 100;
-            local_buf[--local_idx] = digit_pairs[(r * 2) + 1];
-            local_buf[--local_idx] = digit_pairs[r * 2];
+            local_buf[--local_idx] = detail::digit_pairs[(r * 2) + 1];
+            local_buf[--local_idx] = detail::digit_pairs[r * 2];
         }
         SP_IF_EXPECT(n >= 10) {
-            local_buf[--local_idx] = digit_pairs[(n * 2) + 1];
-            local_buf[--local_idx] = digit_pairs[n * 2];
+            local_buf[--local_idx] = detail::digit_pairs[(n * 2) + 1];
+            local_buf[--local_idx] = detail::digit_pairs[n * 2];
         }else{
             local_buf[--local_idx] = n + '0';
         }
@@ -264,12 +155,12 @@ bool _boolalpha=false;
         while (n >= 100) {
             int r = n % 100;
             n /= 100;
-            local_buf[--local_idx] = digit_pairs[(r * 2) + 1];
-            local_buf[--local_idx] = digit_pairs[r * 2];
+            local_buf[--local_idx] = detail::digit_pairs[(r * 2) + 1];
+            local_buf[--local_idx] = detail::digit_pairs[r * 2];
         }
         SP_IF_EXPECT(n >= 10) {
-            local_buf[--local_idx] = digit_pairs[(n * 2) + 1];
-            local_buf[--local_idx] = digit_pairs[n * 2];
+            local_buf[--local_idx] = detail::digit_pairs[(n * 2) + 1];
+            local_buf[--local_idx] = detail::digit_pairs[n * 2];
         }else{
             local_buf[--local_idx] = n + '0';
         }
@@ -307,14 +198,14 @@ bool _boolalpha=false;
         while (n >= 100) {
             int r = static_cast<int>(n % 100);
             n /= 100;
-            local_buf[--local_idx] = digit_pairs[(r * 2) + 1];
-            local_buf[--local_idx] = digit_pairs[r * 2];
+            local_buf[--local_idx] = detail::digit_pairs[(r * 2) + 1];
+            local_buf[--local_idx] = detail::digit_pairs[r * 2];
         }
         
         if(n >= 10){
             int r = static_cast<int>(n);
-            local_buf[--local_idx] = digit_pairs[(r * 2) + 1];
-            local_buf[--local_idx] = digit_pairs[r * 2];
+            local_buf[--local_idx] = detail::digit_pairs[(r * 2) + 1];
+            local_buf[--local_idx] = detail::digit_pairs[r * 2];
         }else if(n > 0){
             local_buf[--local_idx] = static_cast<char>(n) + '0';
         }
