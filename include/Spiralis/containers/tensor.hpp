@@ -210,9 +210,12 @@ public:
         _size = sum;
         _data = sp::allocator_traits<Allocator<T>>::allocate(_data_alloc, _size);
         SP_IF_CONSTEXPR(_trivially_copyable){
-            std::memset(_data,0,_size*sizeof(T));
+            // std::memset(_data,0,_size*sizeof(T));
+            // This takes the quick route of uninitialized data.
+            // Use spml::zeros to ensure zero'd data.
         }else{
             _SP_APPLY_UNROLLED_(_size, sp::allocator_traits<Allocator<T>>::construct(_data_alloc,_data+i,0));
+            // Constructs when not trivially copyable to gurantee correct behavior
         }
     }
     /// @brief Copy constructor.

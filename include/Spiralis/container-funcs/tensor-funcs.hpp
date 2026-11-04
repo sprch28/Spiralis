@@ -1,7 +1,7 @@
 // Only to be included in tensor.hpp
 
 // to shut up the IDE while working
-//#include "../containers/tensor.hpp"
+#include "../containers/tensor.hpp"
 
 /// @brief Factory class for constructing `sp::tensor` instances.
 /// @note Declared as `friend` inside `sp::tensor` to allow direct access to private members (e.g. `_data`, `_uninit_tag`).
@@ -12,7 +12,10 @@ public:
 /// @param args Dimension sizes.
 template <typename T, typename... Args>
 static sp::tensor<T> zeros(Args&&... args){
-    return sp::tensor<T>(args...);
+    sp::tensor<T> new_tensor(args...);
+    SP_IF_CONSTEXPR(spt::is_trivially_copyable_v<T>){
+        std::memset(new_tensor._data, 0, new_tensor._size*sizeof(T));
+    }
 }
 
 /// @brief Returns a tensor filled with `val` and the given shape.
