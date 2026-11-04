@@ -8,13 +8,13 @@
 #include <iostream>
 #include <cstdlib>
 
-#if defined(_WIN32)
+#if ___SP_USING_PLATFORM_WINDOWS___
     #include <windows.h>
 #else
     #include <sys/mman.h>
 #endif
 
-#if defined(__APPLE__)
+#if ___SP_USING_PLATFORM_APPLE___
     #include <mach/arm/vm_param.h>
 #endif
 
@@ -135,7 +135,7 @@ public:
         SP_IF_NOT_EXPECT(n==0) return nullptr;
         ull bytes = (sizeof(T) * n + sp_cache_line_size - 1) & ~(sp_cache_line_size - 1);
         void* p = nullptr;
-    #if defined(__APPLE__) || defined(__linux__)
+    #if ___SP_USING_PLATFORM_APPLE___ || ___SP_USING_PLATFORM_LINUX___
         p = std::aligned_alloc(sp_cache_line_size, bytes);
     #else
         p = _aligned_malloc(bytes, sp_cache_line_size);
@@ -177,7 +177,7 @@ public:
         SP_IF_NOT_EXPECT(n == 0) return nullptr;
         size_type bytes = (n * sizeof(T) + 4095) & ~4095; // avoiding truncation loss
         
-    #if defined(_WIN32)
+    #if ___SP_USING_PLATFORM_WINDOWS___
         void* ptr = VirtualAlloc(nullptr, bytes, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     #else
         void* ptr = mmap(nullptr, bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
@@ -190,7 +190,7 @@ public:
     constexpr void deallocate(T* p, size_type n) noexcept {
         SP_IF_NOT_EXPECT(!p) return;
         size_type bytes = (n * sizeof(T) + 4095) & ~4095;
-    #if defined(_WIN32)
+    #if ___SP_USING_PLATFORM_WINDOWS___
         VirtualFree(p, 0, MEM_RELEASE);
     #else
         munmap(p, bytes);

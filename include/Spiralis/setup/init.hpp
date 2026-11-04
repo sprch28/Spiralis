@@ -42,18 +42,53 @@
 #endif
 
 #if ___SP_CPP_VER___ < 17
-    #error "Spiral-cpp currently requires C++17 or higher."
+    #error "Spiralis currently requires C++17 or higher."
 #endif
 
 // Compiler detection
 #if defined(__clang__)
-    #define ___SP_DETECTED_COMPILER___ clang
+    #define ___SP_USING_COMPILER_CLANG___ 1
+    #define ___SP_USING_COMPILER_GCC___ 0
+    #define ___SP_USING_COMPILER_MSVC___ 0
+    #define ___SP_USING_COMPILER_UNKNOWN___ 0
 #elif defined(__GNUC__)
-    #define ___SP_DETECTED_COMPILER___ gcc
+    #define ___SP_USING_COMPILER_CLANG___ 0
+    #define ___SP_USING_COMPILER_GCC___ 1
+    #define ___SP_USING_COMPILER_MSVC___ 0
+    #define ___SP_USING_COMPILER_UNKNOWN___ 0
 #elif defined(_MSC_VER)
-    #define ___SP_DETECTED_COMPILER___ msvc
+    #define ___SP_USING_COMPILER_GCC___ 0
+    #define ___SP_USING_COMPILER_CLANG___ 0
+    #define ___SP_USING_COMPILER_MSVC___ 1
+    #define ___SP_USING_COMPILER_UNKNOWN___ 0
 #else
-    #define ___SP_DETECTED_COMPILER___ other
+    #define ___SP_USING_COMPILER_GCC___ 0
+    #define ___SP_USING_COMPILER_CLANG___ 0
+    #define ___SP_USING_COMPILER_MSVC___ 1
+    #define ___SP_USING_COMPILER_UNKNOWN___ 0
+#endif
+
+// Platform detection
+#if defined(_WIN32)
+    #define ___SP_USING_PLATFORM_WINDOWS___ 1
+    #define ___SP_USING_PLATFORM_LINUX___ 0
+    #define ___SP_USING_PLATFORM_APPLE___ 0
+    #define ___SP_USING_PLATFORM_UNKNOWN___ 0
+#elif defined(__linux__)
+    #define ___SP_USING_PLATFORM_WINDOWS___ 0
+    #define ___SP_USING_PLATFORM_LINUX___ 1
+    #define ___SP_USING_PLATFORM_APPLE___ 0
+    #define ___SP_USING_PLATFORM_UNKNOWN___ 0
+#elif defined(__APPLE__)
+    #define ___SP_USING_PLATFORM_WINDOWS___ 0
+    #define ___SP_USING_PLATFORM_LINUX___ 0
+    #define ___SP_USING_PLATFORM_APPLE___ 1
+    #define ___SP_USING_PLATFORM_UNKNOWN___ 0
+#else
+    #define ___SP_USING_PLATFORM_WINDOWS___ 0
+    #define ___SP_USING_PLATFORM_LINUX___ 0
+    #define ___SP_USING_PLATFORM_APPLE___ 0
+    #define ___SP_USING_PLATFORM_UNKNOWN___ 1
 #endif
 
 // SIMD detection
@@ -153,7 +188,7 @@
 #endif
 
 #ifndef _SP_NP_APPLY_UNROLLED_
-    #if !defined(__GNUC__) && !defined(__clang__)
+    #if !(___SP_USING_COMPILER_GNU___ || ___SP_USING_COMPILER_CLANG___)
         #define _SP_NP_APPLY_UNROLLED_(loop_until, operation) _SP_APPLY_UNROLLED_(loop_until,operation)
     #else
         #define _SP_NP_APPLY_UNROLLED_(loop_until, operation) do { for(ull i = 0; i < loop_until; ++i) { operation; } }while(0);
@@ -172,9 +207,9 @@
 #endif
 
 // Prefetching
-#if defined(__GNUC__) || defined(__clang__)
+#if ___SP_USING_COMPILER_GCC__ || ___SP_USING_COMPILER_CLANG___
     #define _SP_PREFETCH_(addr, rw, locality) __builtin_prefetch(addr, rw, locality)
-#elif defined(_MSC_VER)
+#elif ___SP_USING_COMPILER_MSVC___
     #include <immintrin.h>
     #define _SP_PREFETCH_(addr, rw, locality) _mm_prefetch((const char*)(addr), _MM_HINT_T0)
 #else
@@ -182,10 +217,10 @@
 #endif
 
 // Alignment
-#if defined(__clang__) || defined(__GNUC__)
+#if ___SP_USING_COMPILER_GCC___ || ___SP_USING_COMPILER_CLANG___
     #define _SP_ASSUME_ALIGNED_(ptr, alignment) \
         ((decltype(ptr))__builtin_assume_aligned((ptr), (alignment)))
-#elif defined(_MSC_VER)
+#elif ___SP_USING_COMPILER_MSVC___
     #define _SP_ASSUME_ALIGNED_(ptr, alignment) \
         (__assume(((uintptr_t)(ptr) & ((alignment) - 1)) == 0), (ptr))
 #else
@@ -204,13 +239,13 @@
 // ===========================// ===========================// ===========================// ===========================
 // NO UNDERSCORES: COMPILER ATTRIBUTES & UTILITIES
 // ---------------------------------------------------------------------------------------------------------------------
-#if defined(__clang__)
+#if ___SP_USING_COMPILER_CLANG___
     #define SP_OPTIMIZE_LOOP _Pragma("clang loop vectorize(enable) interleave(enable)")
     #define SP_UNROLL        _Pragma("clang loop unroll(enable)")
-#elif defined(__GNUC__)
+#elif ___SP_USING_COMPILER_GNU___
     #define SP_OPTIMIZE_LOOP _Pragma("GCC ivdep")
     #define SP_UNROLL        _Pragma("GCC unroll 4")
-#elif defined(_MSC_VER)
+#elif ___SP_USING_COMPILER_MSVC___
     #define SP_OPTIMIZE_LOOP _Pragma("loop(ivdep)")
     #define SP_UNROLL
 #else
@@ -220,7 +255,7 @@
 
 // Core attributes
 #define SP_NODISCARD [[nodiscard]]
-#if defined(_MSC_VER) && (_MSC_VER >= 1929)
+#if ___SP_USING_COMPILER_MSVC___ && (_MSC_VER >= 1929)
     #define SP_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
 #elif defined(__has_cpp_attribute) && __has_cpp_attribute(no_unique_address) >= 201803L
     #define SP_NO_UNIQUE_ADDRESS [[no_unique_address]]
@@ -228,7 +263,7 @@
     #define SP_NO_UNIQUE_ADDRESS
 #endif
 
-#if defined(__GNUC__) || defined(__clang__)
+#if ___SP_USING_COMPILER_GCC__ || ___SP_USING_COMPILER_CLANG___
     // Forces function inlining
     #define SP_FORCEINLINE      __attribute__((always_inline)) inline
     // Ensures functions will not be inlined.
@@ -293,7 +328,7 @@
         #define SP_IF_NOT_EXPECT(expr)  if ((expr))
     #endif
 
-#elif defined(_MSC_VER)
+#elif ___SP_USING_COMPILER_MSVC___
     #include <sal.h>
     #define SP_MALLOC
     #define SP_ALLOC_ALIGN(n)
@@ -327,7 +362,7 @@
     #endif
 
 #else
-    #define SP_FORCEINLINE  inline
+    #define SP_FORCEINLINE
     #define SP_FLATTEN      inline
     #define SP_NOINLINE
     #define SP_HOT
@@ -386,11 +421,11 @@
     #define SP_CONSTEXPR20
 #endif
 
-#if defined(__clang__)
+#if ___SP_USING_COMPILER_CLANG___
     #define SP_PRAGMA_UNROLL _Pragma("clang loop unroll(enable)")
-#elif defined(__GNUC__)
+#elif ___SP_USING_COMPILER_GNU___
     #define SP_PRAGMA_UNROLL _Pragma("GCC unroll 4")
-#elif defined(_MSC_VER)
+#elif ___SP_USING_COMPILER_MSVC___
     #define SP_PRAGMA_UNROLL 
 #else
     #define SP_PRAGMA_UNROLL

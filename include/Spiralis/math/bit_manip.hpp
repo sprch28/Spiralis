@@ -118,7 +118,7 @@ SP_NODISCARD SP_FORCEINLINE SP_PURE constexpr T next_pow2(T min) {
     constexpr T max_pow2 = (T)1 << ((sizeof(T) * 8) - 1);
     SP_IF_NOT_EXPECT(min > max_pow2) return max_pow2;
     T val = min - 1; // Correctly handle exact powers of 2
-#if defined(__GNUC__) || defined(__clang__)
+#if ___SP_USING_COMPILER_GNU___ || ___SP_USING_COMPILER_CLANG___
     constexpr int total_bits = sizeof(T) * 8;
 
     SP_IF_CONSTEXPR (sizeof(T) <= sizeof(unsigned int)) {
@@ -129,7 +129,7 @@ SP_NODISCARD SP_FORCEINLINE SP_PURE constexpr T next_pow2(T min) {
         return (T)1 << (total_bits - __builtin_clzll((unsigned long long)val));
     }
 
-#elif defined(_MSC_VER)
+#elif ___SP_USING_COMPILER_MSVC___
     unsigned long index;
     SP_IF_CONSTEXPR (sizeof(T) > 4) {
         if (_BitScanReverse64(&index, (unsigned __int64)val)) return (T)1 << (index + 1);

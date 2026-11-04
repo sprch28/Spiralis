@@ -24,9 +24,9 @@ SP_HOT SP_FORCEINLINE constexpr ull strlen(const char* s) noexcept {
         return static_cast<ull>(p - s);
     }
 #endif
-#if __has_builtin(__builtin_strlen) || defined(__GNUC__)
+#if __has_builtin(__builtin_strlen) || ___SP_USING_COMPILER_GNU___
     return __builtin_strlen(s);
-#elif defined(_MSC_VER)
+#elif ___SP_USING_COMPILER_MSVC___
     return ::strlen(s);
 #else
     const char* p = s;

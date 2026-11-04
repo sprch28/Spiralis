@@ -18,10 +18,10 @@
 #include <memory>
 #include <limits>
 
-#if defined(__APPLE__)
+#if ___SP_USING_PLATFORM_APPLE___
     #include <mach/vm_statistics.h>
     #include <mach/mach_init.h>
-#elif defined(__linux__)
+#elif ___SP_USING_PLATFORM_LINUX___
     #include <sys/mman.h>
 #endif
 
@@ -90,9 +90,9 @@ private:
         SP_IF_CONSTEXPR(is_new) new_cap = 8;
         else new_cap = _capacity;// + (_capacity >> 1);
         SP_IF_NOT_EXPECT(new_cap<min) new_cap = min;
-    #if defined(__GNUC__) || defined(__clang__)
+    #if ___SP_USING_COMPILER_GNU___ || ___SP_USING_COMPILER_CLANG___
         return 1ULL << (64 - __builtin_clzll(new_cap - 1));
-    #elif defined(_MSC_VER)
+    #elif ___SP_USING_COMPILER_MSVC___
         unsigned long index;
         if(_BitScanReverse64(&index, new_cap - 1)){
             return 1ULL << (index + 1);

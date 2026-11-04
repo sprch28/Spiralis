@@ -28,7 +28,7 @@ SP_FORCEINLINE bool get_rand_set_bits64(ull* result) {
 }
 
 SP_FORCEINLINE bool get_psrand_set_bits64(ull* result){
-#if defined(__APPLE__)
+#if ___SP_USING_PLATFORM_APPLE___
     arc4random_buf(result, sizeof(ull));
     return true;
 #elif defined(__x86_64__) || defined(_M_X64)
