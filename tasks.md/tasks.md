@@ -27,6 +27,14 @@
 ---
 - If you have any other ideas on how we can make this more efficient technical wise, put them below this line. The idea is still kinda rough since it came to me on the toilet lmao.
 ---
+# Regarding the Patenting Idea
+- Patenting would be a smart business move if we can pull it off. However:
+- We don't have to sell our own chips. We can license our algorithms to manufacturers, who can put them into their own chips.
+This makes it more scalable and also less costly for use.
+- Developing a genuinely novel algorithm that's worthy of patenting will be the hardest part. We need to find a more efficient way to either compute single-threaded or store them better.
+- I like the idea of gearing towards microcontrollers; patents would be a good side effect of it.
+
+
 # Tasks
 ### Order of their completion doesn't matter, and you can give me any tasks you don't feel comfortable with.
 ---
