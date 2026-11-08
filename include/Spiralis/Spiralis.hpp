@@ -31,6 +31,8 @@
     #include "parallel/thread.hpp"
 #endif
 
+#include "net/socket.hpp"
+
 // SPECIALIZED LIBRARIES: Optionally included
 
 #if defined(__SP_ML__) && \

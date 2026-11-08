@@ -1288,6 +1288,7 @@ public:
      * @brief Fill the array with the specified value.
      * @param value element to fill the array with
      */
+    _SP_SAFETY_TEMPLATE_
     SP_FORCEINLINE constexpr array& fill(type_param value) {
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(_size == 0) throw exceptions::ArrayException("Cannot fill an empty array.");
     
