@@ -1288,12 +1288,17 @@ public:
      * @brief Fill the array with the specified value.
      * @param value element to fill the array with
      */
-    _SP_SAFETY_TEMPLATE_
     SP_FORCEINLINE constexpr array& fill(type_param value) {
         _SP_CHECK_SAFETY_(1) SP_IF_NOT_EXPECT(_size == 0) throw exceptions::ArrayException("Cannot fill an empty array.");
-        SP_IF_CONSTEXPR(_trivially_copyable){
-            std::memset(_data, value, _size * sizeof(T));
-        }else _SP_APPLY_UNROLLED_(_size, _data[i] = value);
+    
+        if(value == 0){
+            std::memset(_data, 0, _size * sizeof(T));
+        }else{
+            for(size_type i = 0; i < _size; ++i){
+                _data[i] = value;
+            }
+        }
+        
         return *this;
     }
 
