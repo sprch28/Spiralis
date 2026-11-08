@@ -108,7 +108,7 @@ class socket{
             sent_size += bytes;
         }
         
-        size_type total_sent = 0;
+        size_type total_sent = 0; 
         while(total_sent < size){
             const char* src = static_cast<const char*>(data) + total_sent;
             size_type remaining = size - total_sent;
