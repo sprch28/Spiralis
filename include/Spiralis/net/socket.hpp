@@ -37,6 +37,7 @@ struct packet{
 };
 
 class socket{
+    friend bool set_socket_buf_size(const socket&, int);
     #if ___SP_USING_PLATFORM_LINUX___ || ___SP_USING_PLATFORM_APPLE___
         int fd = -1;
         ip_type ip;
@@ -160,6 +161,18 @@ class socket{
 
     #endif
 };
+
+bool set_socket_buf_size(const socket& s, int buf_size = __SP_DEFAULT_SOCKET_BUF_SIZE__) {
+    if(setsockopt(s.fd, SOL_SOCKET, SO_SNDBUF, &buf_size, sizeof(buf_size)) < 0){
+        return false;
+    }
+
+    if(setsockopt(s.fd, SOL_SOCKET, SO_RCVBUF, &buf_size, sizeof(buf_size)) < 0){
+        return false;
+    }
+
+    return true;
+}
 }}
 
 #endif

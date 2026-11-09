@@ -168,6 +168,10 @@
     #define __SP_GLOBAL_NAMESPACE_ULL__ 0
 #endif
 
+#ifndef __SP_DEFAULT_SOCKET_BUF_SIZE__
+    #define __SP_DEFAULT_SOCKET_BUF_SIZE__ (1024 * 1024)
+#endif
+
 
 
 // ===========================// ===========================// ===========================// ===========================
