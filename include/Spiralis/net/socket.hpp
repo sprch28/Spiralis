@@ -60,6 +60,19 @@ class socket{
             other.fd = -1;
         }
 
+        socket& operator=(socket&& other) noexcept {
+            if(this != &other) {
+                if(fd >= 0) ::close(fd);
+                fd = other.fd;
+                ip = other.ip;
+                p = other.p;
+                port = other.port;
+                has_binded = other.has_binded;
+                other.fd = -1;
+            }
+            return *this;
+        }
+
         SP_FORCEINLINE socket& set_port(uint16_t p){
             port = p;
             return *this;
@@ -81,13 +94,16 @@ class socket{
             return ::listen(fd, backlog) == 0;
         }
 
-        socket accept(){
+        socket accept() {
             sockaddr_in client_addr{};
             socklen_t client_len = sizeof(client_addr);
             int client_fd = ::accept(fd, (struct sockaddr*)&client_addr, &client_len);
-            
-            socket client_sock(ip, p);
-            client_sock.fd = client_fd;
+            if(client_fd < 0) throw exceptions::spiralis_exception("accept failed");
+
+            socket client_sock;
+            client_sock.fd   = client_fd;
+            client_sock.ip   = ip;
+            client_sock.p    = p;
             client_sock.has_binded = true;
             return client_sock;
         }
@@ -146,7 +162,7 @@ class socket{
         while(total_payload_read < p.size){
             char* destination = static_cast<char*>(p.data) + total_payload_read;
             size_type remaining = p.size - total_payload_read;
-            size_type chunk_size = sp::min(static_cast<size_type>(1024), remaining);
+            size_type chunk_size = sp::min(static_cast<size_type>(__SP_DEFAULT_SOCKET_BUF_SIZE__), remaining);
 
             int bytes_read = ::recv(fd, destination, chunk_size, 0);
             if(bytes_read <= 0){
