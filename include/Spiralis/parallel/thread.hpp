@@ -10,7 +10,7 @@
 #include <queue>
 #include <functional>
 
-#if ___SP_USING_PLATFORM_WINDOWS___ || defined(_WIN64)
+#if ___SP_USING_PLATFORM_WINDOWS___
     #include <sysinfoapi.h>
 #else
     #include <pthread.h>
@@ -24,7 +24,7 @@ namespace sp {
 // ------------------------------------------------------------
 namespace detail {
     inline long get_num_processors() noexcept {
-    #if ___SP_USING_PLATFORM_WINDOWS___ || defined(_WIN64)
+    #if ___SP_USING_PLATFORM_WINDOWS___
         SYSTEM_INFO si;
         GetSystemInfo(&si);
         return static_cast<long>(si.dwNumberOfProcessors > 0 ? si.dwNumberOfProcessors : 1);

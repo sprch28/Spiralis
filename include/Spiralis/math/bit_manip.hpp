@@ -118,7 +118,7 @@ SP_NODISCARD SP_FORCEINLINE SP_PURE constexpr T next_pow2(T min) {
     constexpr T max_pow2 = (T)1 << ((sizeof(T) * 8) - 1);
     SP_IF_NOT_EXPECT(min > max_pow2) return max_pow2;
     T val = min - 1; // Correctly handle exact powers of 2
-#if ___SP_USING_COMPILER_GNU___ || ___SP_USING_COMPILER_CLANG___
+#if ___SP_USING_COMPILER_GCC___ || ___SP_USING_COMPILER_CLANG___ || ___SP_USING_COMPILER_MINGW___
     constexpr int total_bits = sizeof(T) * 8;
 
     SP_IF_CONSTEXPR (sizeof(T) <= sizeof(unsigned int)) {
@@ -150,11 +150,11 @@ SP_NODISCARD SP_FORCEINLINE SP_PURE constexpr T next_pow2(T min) {
 }
     template <typename T>
     SP_FORCEINLINE SP_PURE constexpr ull popcount(T val){
-    #if ___SP_DETECTED_COMPILER___ == clang || ___SP_DETECTED_COMPILER___ == gcc
+    #if ___SP_USING_COMPILER_CLANG___ || ___SP_USING_COMPILER_GCC___ || ___SP_USING_COMPILER_MINGW___
         SP_IF_CONSTEXPR((spt::is_same_v<T, ull>||spt::is_same_v<T, ll>)) return __builtin_popcountll(val);
         SP_IF_CONSTEXPR((spt::is_same_v<T, unsigned long>||spt::is_same_v<T, long>)) return __builtin_popcountl(val);
         return __builtin_popcount(val);
-    #elif ___SP_DETECTED_COMPILER___ == msvc
+    #elif ___SP_USING_COMPILER_MSVC___
         SP_IF_CONSTEXPR(sizeof(T) > 4) return __popcnt64(val);
         return __popcnt((unsigned long)val);
     #else
@@ -167,10 +167,10 @@ SP_NODISCARD SP_FORCEINLINE SP_PURE constexpr T next_pow2(T min) {
 
     template <typename T>
     SP_FORCEINLINE SP_PURE constexpr T reverse_bits(T val){
-    #if ___SP_DETECTED_COMPILER___ == clang || ___SP_DETECTED_COMPILER___ == gcc
+    #if ___SP_USING_COMPILER_CLANG___ || ___SP_USING_COMPILER_GCC___ || ___SP_USING_COMPILER_MINGW___
         SP_IF_CONSTEXPR((spt::is_same_v<T, ull>||spt::is_same_v<T, ll>)) return __builtin_bswap64(val);
         return __builtin_bswap32(val);
-    #elif ___SP_DETECTED_COMPILER___ == msvc
+    #elif ___SP_USING_COMPILER_MSVC___
         SP_IF_CONSTEXPR(sizeof(T) > 4) return _byteswap_uint64(val);
         return _byteswap_ulong(val);
     #else
@@ -181,11 +181,11 @@ SP_NODISCARD SP_FORCEINLINE SP_PURE constexpr T next_pow2(T min) {
     template <typename T>
     SP_FORCEINLINE SP_PURE constexpr ull leading_zeros(T val){
         SP_IF_NOT_EXPECT(val == 0) return sizeof(T) * 8;
-    #if ___SP_DETECTED_COMPILER___ == clang || ___SP_DETECTED_COMPILER___ == gcc
+    #if ___SP_USING_COMPILER_CLANG___ || ___SP_USING_COMPILER_GCC___ || ___SP_USING_COMPILER_MINGW___
         SP_IF_CONSTEXPR((spt::is_same_v<T,ull>||spt::is_same_v<T,ll>)) return __builtin_clzll(val);
         SP_IF_CONSTEXPR((spt::is_same_v<T,unsigned long>||spt::is_same_v<T,long>)) return __builtin_clzl(val);
         return __builtin_clz(val);
-    #elif ___SP_DETECTED_COMPILER___ == msvc
+    #elif ___SP_USING_COMPILER_MSVC___
         unsigned long index;
         SP_IF_CONSTEXPR (sizeof(T) > 4) {
             _BitScanReverse64(&index, val);
@@ -200,11 +200,11 @@ SP_NODISCARD SP_FORCEINLINE SP_PURE constexpr T next_pow2(T min) {
     template <typename T>
     SP_FORCEINLINE SP_PURE constexpr ull trailing_zeros(T val){
         SP_IF_NOT_EXPECT(val == 0) return sizeof(T) * 8;
-    #if ___SP_DETECTED_COMPILER___ == clang || ___SP_DETECTED_COMPILER___ == gcc
+    #if ___SP_USING_COMPILER_CLANG___ || ___SP_USING_COMPILER_GCC___ || ___SP_USING_COMPILER_MINGW___
         SP_IF_CONSTEXPR((spt::is_same_v<T, ull>||spt::is_same_v<T,ll>)) return __builtin_ctzll(val);
         SP_IF_CONSTEXPR((spt::is_same_v<T, unsigned long>||spt::is_same_v<T, long>)) return __builtin_ctzl(val);
         return __builtin_ctz(val);
-    #elif ___SP_DETECTED_COMPILER___ == msvc
+    #elif ___SP_USING_COMPILER_MSVC___
         unsigned long index;
         SP_IF_CONSTEXPR (sizeof(T) > 4) {
             _BitScanForward64(&index, val);
@@ -219,11 +219,11 @@ SP_NODISCARD SP_FORCEINLINE SP_PURE constexpr T next_pow2(T min) {
     template <typename T>
     SP_FORCEINLINE SP_PURE constexpr ull find_first_set(T val){
         SP_IF_NOT_EXPECT(val == 0) return 0;
-    #if ___SP_DETECTED_COMPILER___ == clang || ___SP_DETECTED_COMPILER___ == gcc
+    #if ___SP_USING_COMPILER_CLANG___ || ___SP_USING_COMPILER_GCC___ || ___SP_USING_COMPILER_MINGW___
         SP_IF_CONSTEXPR((spt::is_same_v<T, ull>||spt::is_same_v<T, ll>)) return __builtin_ffsll(val);
         SP_IF_CONSTEXPR((spt::is_same_v<T, unsigned long>||spt::is_same_v<T, long>)) return __builtin_ffsl(val);
         return __builtin_ffs(val);
-    #elif ___SP_DETECTED_COMPILER___ == msvc
+    #elif ___SP_USING_COMPILER_MSVC___
         unsigned long index;
         SP_IF_CONSTEXPR (sizeof(T) > 4) {
             if (_BitScanForward64(&index, val)) return index + 1;

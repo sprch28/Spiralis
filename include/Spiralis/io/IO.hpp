@@ -279,6 +279,20 @@ public:
         return *this;
     }
 
+    template <typename... Args>
+    SP_FORCEINLINE IO& printnl(Args&&... args){
+        this->print(sp::forward<Args>(args)...);
+        this->print(sp::io::nl);
+        return *this;
+    }
+
+    template <typename... Args>
+    SP_FORCEINLINE IO& printfl(Args&&... args){
+        this->print(sp::forward<Args>(args)...);
+        this->flush();
+        return *this;
+    }
+
     SP_FORCEINLINE IO& print(enum io trait){
         if(trait==io::flush) {  flush(); } 
         else if(trait==io::endl) { __sp_backend_o.writeChar('\n'); flush(); }
@@ -410,6 +424,19 @@ SP_FORCEINLINE void println(Args&&... args){
     io.print(sp::forward<Args>(args)...);
     io.print(sp::io::endl);
 }
+
+template <typename... Args>
+SP_FORCEINLINE void printnl(Args&&... args){
+    io.print(sp::forward<Args>(args)...);
+    io.print(sp::io::nl);
+}
+
+template <typename... Args>
+SP_FORCEINLINE void printfl(Args&&... args){
+    io.print(sp::forward<Args>(args)...);
+    io.flush();
+}
+
 SP_FORCEINLINE void flush_io() { io.flush(); }
 
 };

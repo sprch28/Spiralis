@@ -50,22 +50,32 @@
     #define ___SP_USING_COMPILER_CLANG___ 1
     #define ___SP_USING_COMPILER_GCC___ 0
     #define ___SP_USING_COMPILER_MSVC___ 0
+    #define ___SP_USING_COMPILER_MINGW___ 0
     #define ___SP_USING_COMPILER_UNKNOWN___ 0
 #elif defined(__GNUC__)
     #define ___SP_USING_COMPILER_CLANG___ 0
     #define ___SP_USING_COMPILER_GCC___ 1
     #define ___SP_USING_COMPILER_MSVC___ 0
+    #define ___SP_USING_COMPILER_MINGW___ 0
     #define ___SP_USING_COMPILER_UNKNOWN___ 0
 #elif defined(_MSC_VER)
     #define ___SP_USING_COMPILER_GCC___ 0
     #define ___SP_USING_COMPILER_CLANG___ 0
     #define ___SP_USING_COMPILER_MSVC___ 1
+    #define ___SP_USING_COMPILER_MINGW___ 0
+    #define ___SP_USING_COMPILER_UNKNOWN___ 0
+#elif defined(__MINGW32__)
+    #define ___SP_USING_COMPILER_GCC___ 0
+    #define ___SP_USING_COMPILER_CLANG___ 0
+    #define ___SP_USING_COMPILER_MSVC___ 0
+    #define ___SP_USING_COMPILER_MINGW___ 1
     #define ___SP_USING_COMPILER_UNKNOWN___ 0
 #else
     #define ___SP_USING_COMPILER_GCC___ 0
     #define ___SP_USING_COMPILER_CLANG___ 0
-    #define ___SP_USING_COMPILER_MSVC___ 1
-    #define ___SP_USING_COMPILER_UNKNOWN___ 0
+    #define ___SP_USING_COMPILER_MSVC___ 0
+    #define ___SP_USING_COMPILER_MINGW___ 0
+    #define ___SP_USING_COMPILER_UNKNOWN___ 1
 #endif
 
 // Platform detection

@@ -3,7 +3,7 @@
 #pragma once
 #include "../setup/init.hpp"
 #include "../containers/string.hpp"
-#if ___SP_USING_PLATFORM_LINUX___ || ___SP_USING_PLATFORM_APPLE___
+#if ___SP_USING_PLATFORM_LINUX___ || ___SP_USING_PLATFORM_APPLE___ || ___SP_USING_COMPILER_MINGW___
     #include <sys/types.h>    // Basic system data types (size_t, ssize_t, etc.)
     #include <sys/event.h>    // kqueue and kevent definitions
     #include <sys/time.h>     // struct timeval and struct timespec (often needed for timeouts)
@@ -38,7 +38,7 @@ struct packet{
 
 class socket{
     friend bool set_socket_buf_size(const socket&, int);
-    #if ___SP_USING_PLATFORM_LINUX___ || ___SP_USING_PLATFORM_APPLE___
+    #if ___SP_USING_PLATFORM_LINUX___ || ___SP_USING_PLATFORM_APPLE___ || ___SP_USING_COMPILER_MINGW___
         int fd = -1;
         ip_type ip;
         protocol p;
@@ -172,6 +172,18 @@ class socket{
         }
 
         return p;
+    }
+
+    bool shutdown(int how = SHUT_RDWR) {
+        if(fd < 0) return false;
+        return ::shutdown(fd, how) == 0;
+    }
+
+    void close() {
+        if(fd >= 0){
+            ::close(fd);
+            fd = -1;
+        }
     }
     #else
 
