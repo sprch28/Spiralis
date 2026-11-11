@@ -52,7 +52,7 @@
 #endif
 
 namespace sp{
-template <typename T, short _safety_level = __SP_DEFAULT_SAFETY_LEVEL__, template <typename> typename Allocator = sp::allocator>
+template <typename T, short _safety_level = __SP_DEFAULT_SAFETY_LEVEL__, template <typename> class Allocator = sp::allocator>
 class alignas(spt::get_allocator_alignment<Allocator<T>>()
 ? spt::get_allocator_alignment<Allocator<T>>()
 : sp::max(alignof(Allocator<T>),sp::max(alignof(T*),alignof(ull)))) array{
@@ -113,9 +113,11 @@ private:
             SP_IF_CONSTEXPR(_trivially_copyable){
                 memmove(new_block, _data, _size * sizeof(T));
             }
-            else SP_IF_CONSTEXPR(spt::is_nothrow_move_constructible_v<T>){
-                std::uninitialized_move(_data, _data + _size, new_block);
-            }
+            #if ___SP_CPP_VER___ >=  17
+                else SP_IF_CONSTEXPR(spt::is_nothrow_move_constructible_v<T>){
+                    std::uninitialized_move(_data, _data + _size, new_block);
+                }
+            #endif
             else{
                 std::uninitialized_copy(_data, _data + _size, new_block);
             }
@@ -146,7 +148,7 @@ public:
     struct is_array_specialization<sp::array<U>> : spt::true_type {};
 
     template<typename U>
-    inline static constexpr bool is_array_specialization_s = is_array_specialization<U>::value;
+    SP_INLINE17 static constexpr bool is_array_specialization_s = is_array_specialization<U>::value;
 
 
     /**
@@ -2005,8 +2007,10 @@ template <typename T> using aligned_uvec = sp::array<T, 0, sp::aligned_allocator
 template <typename T> using page_vec = sp::array<T, 1, sp::page_allocator>;
 template <typename T> using page_uvec = sp::array<T, 0, sp::page_allocator>;
 
-template <typename T, size_type N> using stack_vec = sp::array<T, 1, bind_alloc<sp::unbinded_stack_allocator, N>::template r>;
-template <typename T, size_type N> using stack_uvec = sp::array<T, 0, bind_alloc<sp::unbinded_stack_allocator, N>::template r>;
+#if ___SP_CPP_VER___ >= 17
+    template <typename T, size_type N> using stack_vec = sp::array<T, 1, bind_alloc<sp::unbinded_stack_allocator, N>::template r>;
+    template <typename T, size_type N> using stack_uvec = sp::array<T, 0, bind_alloc<sp::unbinded_stack_allocator, N>::template r>;
+#endif
 
 namespace vec{
     template <typename T> using vector = sp::array<T, 1, sp::allocator>;
@@ -2018,8 +2022,10 @@ namespace vec{
     template <typename T> using page_vec = sp::array<T, 1, sp::page_allocator>;
     template <typename T> using page_uvec = sp::array<T, 0, sp::page_allocator>;
 
-    template <typename T, size_type N> using stack_vec = sp::array<T, 1, bind_alloc<sp::unbinded_stack_allocator, N>::template r>;
-    template <typename T, size_type N> using stack_uvec = sp::array<T, 0, bind_alloc<sp::unbinded_stack_allocator, N>::template r>;
+    #if ___SP_CPP_VER___ >= 17
+        template <typename T, size_type N> using stack_vec = sp::array<T, 1, bind_alloc<sp::unbinded_stack_allocator, N>::template r>;
+        template <typename T, size_type N> using stack_uvec = sp::array<T, 0, bind_alloc<sp::unbinded_stack_allocator, N>::template r>;
+    #endif
 };
 
 

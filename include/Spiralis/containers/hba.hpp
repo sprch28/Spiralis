@@ -112,7 +112,7 @@ Drawbacks:
     #include <immintrin.h>
 #endif
 namespace sp{
-template <typename T, ull __num_layers=__SP_HBA_NUM_LAYERS__, bool _default_compress = __SP_HBA_DEFAULT_COMPRESS__, template <typename> typename Alloc = sp::allocator>
+template <typename T, ull __num_layers=__SP_HBA_NUM_LAYERS__, bool _default_compress = __SP_HBA_DEFAULT_COMPRESS__, template <typename> class Alloc = sp::allocator>
 class hba{
 private:
 static constexpr ull __max_layers = 10;

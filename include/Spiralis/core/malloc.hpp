@@ -23,9 +23,9 @@ struct FreeNode {
     FreeNode* next;
 };
 
-inline thread_local char* arena_start = nullptr;
-inline thread_local size_type arena_remaining = 0;
-inline thread_local FreeNode* free_buckets[NUM_BUCKETS] = { nullptr };
+SP_INLINE17 thread_local char* arena_start = nullptr;
+SP_INLINE17 thread_local size_type arena_remaining = 0;
+SP_INLINE17 thread_local FreeNode* free_buckets[NUM_BUCKETS] = { nullptr };
 
 inline int get_bucket_index(size_type size) {
     size_type alloc_size = SP_ALIGN_UP(size);

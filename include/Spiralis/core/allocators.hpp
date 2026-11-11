@@ -6,7 +6,7 @@
 #include "../core/malloc.hpp"
 
 #include <iostream>
-#include <cstdlib>
+#include <stdlib.h>
 
 #if ___SP_USING_PLATFORM_WINDOWS___
     #include <windows.h>
@@ -67,21 +67,25 @@ struct allocator_traits : public _spiral_alloc_traits{
 
     template <typename U, typename... Args>
     static SP_FORCEINLINE void construct(Alloc& a, U* p, Args&&... args) {
-        SP_IF_CONSTEXPR((spt::is_detected_v<construct_expr, Alloc, U, Args...>)) {
-            a.construct(p, sp::forward<Args>(args)...);
-        }else{
-            ::new (static_cast<void*>(p)) U(sp::forward<Args>(args)...);
-        }
+        construct_impl(spt::is_detected<construct_expr, Alloc, U, Args...>{}, a, p, sp::forward<Args>(args)...);
+    }
+    template <typename U, typename... Args>
+    static SP_FORCEINLINE void construct_impl(spt::true_type, Alloc& a, U* p, Args&&... args) {
+        a.construct(p, sp::forward<Args>(args)...);
+    }
+    template <typename U, typename... Args>
+    static SP_FORCEINLINE void construct_impl(spt::false_type, Alloc&, U* p, Args&&... args) {
+        ::new (static_cast<void*>(p)) U(sp::forward<Args>(args)...);
     }
 
     template <typename T>
     static SP_FORCEINLINE void destroy(Alloc& a, T* p) {
-        SP_IF_CONSTEXPR((spt::is_detected_v<destroy_expr, Alloc, T>)) {
-            a.destroy(p);
-        }else{
-            p->~T();
-        }
+        destroy_impl(spt::is_detected<destroy_expr, Alloc, T>{}, a, p);
     }
+    template <typename T>
+    static SP_FORCEINLINE void destroy_impl(spt::true_type, Alloc& a, T* p) { a.destroy(p); }
+    template <typename T>
+    static SP_FORCEINLINE void destroy_impl(spt::false_type, Alloc&, T* p) { p->~T(); }
 
     SP_NODISCARD SP_FORCEINLINE static pointer allocate(Alloc& a, size_type n){
         return a.allocate(n);
@@ -136,7 +140,7 @@ public:
         ull bytes = (sizeof(T) * n + sp_cache_line_size - 1) & ~(sp_cache_line_size - 1);
         void* p = nullptr;
     #if ___SP_USING_PLATFORM_APPLE___ || ___SP_USING_PLATFORM_LINUX___
-        p = std::aligned_alloc(sp_cache_line_size, bytes);
+        p = ::aligned_alloc(sp_cache_line_size, bytes);
     #else
         p = _aligned_malloc(bytes, sp_cache_line_size);
     #endif
@@ -205,6 +209,7 @@ bool operator==(const page_allocator<T>&, const page_allocator<U>&) noexcept { r
 template <typename T, typename U>
 bool operator!=(const page_allocator<T>&, const page_allocator<U>&) noexcept { return false; }
 
+#if ___SP_CPP_VER___ >= 17
 
 template <typename T, size_type N>
 class unbinded_stack_allocator : public _spiral_alloc_traits{
@@ -243,5 +248,7 @@ struct binded_stack_allocator {
 
 template <ull N = 1024>
 using stack_alloc = binded_stack_allocator<N>;
+
+#endif
 }; // namespace sp
 #endif // ____SP_ALLOCATORS____

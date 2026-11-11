@@ -38,7 +38,7 @@ SP_HOT SP_FORCEINLINE constexpr ull strlen(const char* s) noexcept {
 SP_FORCEINLINE constexpr bool isspace(char c) { return (c >= 0 && c <= 127) && (c == ' ' || (c >= '\t' && c <= '\r')); }
 
 
-template <short _safety_level = __SP_DEFAULT_SAFETY_LEVEL__, template <typename> typename Allocator = sp::allocator, bool _use_sso=true>
+template <short _safety_level = __SP_DEFAULT_SAFETY_LEVEL__, template <typename> class Allocator = sp::allocator, bool _use_sso=true>
 class string_impl{
 private:
     friend class string_view;
@@ -1205,12 +1205,12 @@ SP_FORCEINLINE constexpr bool operator==(const char* other,const string_impl<lev
     return str==other;
 }
 
-template <auto SafetyLevel, template <typename> typename Allocator, bool IsOwning> SP_HOT SP_FORCEINLINE constexpr string_impl<SafetyLevel, Allocator, IsOwning> operator+(string_impl<SafetyLevel, Allocator, IsOwning> lhs, char rhs) { return lhs += rhs; }
-template <auto SafetyLevel, template <typename> typename Allocator, bool IsOwning> SP_HOT SP_FORCEINLINE constexpr string_impl<SafetyLevel, Allocator, IsOwning> operator+(string_impl<SafetyLevel, Allocator, IsOwning> lhs, const char* rhs) { return lhs += rhs; }
-template <auto SafetyLevel, template <typename> typename Allocator, bool IsOwning1, bool IsOwning2> SP_HOT SP_FORCEINLINE constexpr string_impl<SafetyLevel, Allocator, IsOwning1> operator+(string_impl<SafetyLevel, Allocator, IsOwning1> lhs, const string_impl<SafetyLevel, Allocator, IsOwning2>& rhs) { return lhs += rhs; }
-template <auto SafetyLevel1, auto SafetyLevel2, template <typename> typename Allocator, bool IsOwning1, bool IsOwning2> SP_HOT SP_FORCEINLINE constexpr string_impl<SafetyLevel1, Allocator, IsOwning1> operator+(string_impl<SafetyLevel1, Allocator, IsOwning1> lhs, const string_impl<SafetyLevel2, Allocator, IsOwning2>& rhs) { return lhs += rhs; }
-template <auto SafetyLevel, template <typename> typename Allocator, bool IsOwning> SP_HOT SP_FORCEINLINE constexpr string_impl<SafetyLevel, Allocator, IsOwning> operator+(char lhs, const string_impl<SafetyLevel, Allocator, IsOwning>& rhs) { string_impl<SafetyLevel, Allocator, IsOwning> res; res.reserve(1 + rhs.size()); res += lhs; res += rhs; return res; }
-template <auto SafetyLevel, template <typename> typename Allocator, bool IsOwning> SP_HOT SP_FORCEINLINE constexpr string_impl<SafetyLevel, Allocator, IsOwning> operator+(const char* lhs, const string_impl<SafetyLevel, Allocator, IsOwning>& rhs) { string_impl<SafetyLevel, Allocator, IsOwning> res; res.reserve(strlen(lhs) + rhs.size()); res += lhs; res += rhs; return res; }
+template <short SafetyLevel, template <typename> class Allocator, bool IsOwning> SP_HOT SP_FORCEINLINE constexpr string_impl<SafetyLevel, Allocator, IsOwning> operator+(string_impl<SafetyLevel, Allocator, IsOwning> lhs, char rhs) { return lhs += rhs; }
+template <short SafetyLevel, template <typename> class Allocator, bool IsOwning> SP_HOT SP_FORCEINLINE constexpr string_impl<SafetyLevel, Allocator, IsOwning> operator+(string_impl<SafetyLevel, Allocator, IsOwning> lhs, const char* rhs) { return lhs += rhs; }
+template <short SafetyLevel, template <typename> class Allocator, bool IsOwning1, bool IsOwning2> SP_HOT SP_FORCEINLINE constexpr string_impl<SafetyLevel, Allocator, IsOwning1> operator+(string_impl<SafetyLevel, Allocator, IsOwning1> lhs, const string_impl<SafetyLevel, Allocator, IsOwning2>& rhs) { return lhs += rhs; }
+template <short SafetyLevel1, short SafetyLevel2, template <typename> class Allocator, bool IsOwning1, bool IsOwning2> SP_HOT SP_FORCEINLINE constexpr string_impl<SafetyLevel1, Allocator, IsOwning1> operator+(string_impl<SafetyLevel1, Allocator, IsOwning1> lhs, const string_impl<SafetyLevel2, Allocator, IsOwning2>& rhs) { return lhs += rhs; }
+template <short SafetyLevel, template <typename> class Allocator, bool IsOwning> SP_HOT SP_FORCEINLINE constexpr string_impl<SafetyLevel, Allocator, IsOwning> operator+(char lhs, const string_impl<SafetyLevel, Allocator, IsOwning>& rhs) { string_impl<SafetyLevel, Allocator, IsOwning> res; res.reserve(1 + rhs.size()); res += lhs; res += rhs; return res; }
+template <short SafetyLevel, template <typename> class Allocator, bool IsOwning> SP_HOT SP_FORCEINLINE constexpr string_impl<SafetyLevel, Allocator, IsOwning> operator+(const char* lhs, const string_impl<SafetyLevel, Allocator, IsOwning>& rhs) { string_impl<SafetyLevel, Allocator, IsOwning> res; res.reserve(strlen(lhs) + rhs.size()); res += lhs; res += rhs; return res; }
 
 class string_view{
 public:

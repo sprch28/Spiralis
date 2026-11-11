@@ -15,7 +15,7 @@ namespace spt {
 }
 
 namespace sp{
-    template <template <typename, auto...> typename Alloc, auto... Args>
+    template <template <typename, size_type...> class Alloc, size_type... Args>
     struct bind_alloc{
         template <typename T>
         using r = Alloc<T, Args...>;
@@ -125,13 +125,13 @@ template<typename B>
 struct negation : bool_constant<!B::value> {};
 
 template<typename... Bs>
-inline constexpr bool conjunction_v = conjunction<Bs...>::value;
+SP_INLINE17 constexpr bool conjunction_v = conjunction<Bs...>::value;
 
 template<typename... Bs>
-inline constexpr bool disjunction_v = disjunction<Bs...>::value;
+SP_INLINE17 constexpr bool disjunction_v = disjunction<Bs...>::value;
 
 template<typename B>
-inline constexpr bool negation_v = negation<B>::value;
+SP_INLINE17 constexpr bool negation_v = negation<B>::value;
 
 // ============================================================
 // SECTION 2: CV / REF QUALIFIERS
@@ -193,8 +193,8 @@ template<typename T, unsigned N = 0> struct extent : integral_constant<unsigned,
 template<typename T, size_t I, unsigned N> struct extent<T[I], N> : integral_constant<unsigned, N == 0 ? I : extent<T, N - 1>::value> {};
 template<typename T, unsigned N> struct extent<T[], N> : integral_constant<unsigned, N == 0 ? 0 : extent<T, N - 1>::value> {};
 
-template<typename T> inline constexpr unsigned rank_v = rank<T>::value;
-template<typename T, unsigned N = 0> inline constexpr unsigned extent_v = extent<T, N>::value;
+template<typename T> SP_INLINE17 constexpr unsigned rank_v = rank<T>::value;
+template<typename T, unsigned N = 0> SP_INLINE17 constexpr unsigned extent_v = extent<T, N>::value;
 
 // ============================================================
 // SECTION 4: PRIMARY TYPE CATEGORIES
@@ -244,18 +244,18 @@ template<typename T> struct is_class : bool_constant<__is_class(T)> {};
 
 
 // --- Variable Templates Helper Shortcuts ---
-template<typename T> inline constexpr bool is_void_v                    = is_void<T>::value;
-template<typename T> inline constexpr bool is_null_pointer_v            = is_null_pointer<T>::value;
-template<typename T> inline constexpr bool is_array_v                   = is_array<T>::value;
-template<typename T> inline constexpr bool is_pointer_v                 = is_pointer<T>::value;
-template<typename T> inline constexpr bool is_lvalue_reference_v        = is_lvalue_reference<T>::value;
-template<typename T> inline constexpr bool is_rvalue_reference_v        = is_rvalue_reference<T>::value;
-template<typename T> inline constexpr bool is_member_object_pointer_v   = is_member_object_pointer<T>::value;
-template<typename T> inline constexpr bool is_member_function_pointer_v = is_member_function_pointer<T>::value;
-template<typename T> inline constexpr bool is_enum_v                    = is_enum<T>::value;
-template<typename T> inline constexpr bool is_union_v                   = is_union<T>::value;
-template<typename T> inline constexpr bool is_class_v                   = is_class<T>::value;
-template<typename T> inline constexpr bool is_function_v                = is_function<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_void_v                    = is_void<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_null_pointer_v            = is_null_pointer<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_array_v                   = is_array<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_pointer_v                 = is_pointer<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_lvalue_reference_v        = is_lvalue_reference<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_rvalue_reference_v        = is_rvalue_reference<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_member_object_pointer_v   = is_member_object_pointer<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_member_function_pointer_v = is_member_function_pointer<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_enum_v                    = is_enum<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_union_v                   = is_union<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_class_v                   = is_class<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_function_v                = is_function<T>::value;
 // ============================================================
 // SECTION 5: COMPOSITE TYPE CATEGORIES
 // ============================================================
@@ -267,13 +267,13 @@ template<typename T> struct is_scalar : bool_constant<is_arithmetic<T>::value ||
 template<typename T> struct is_compound : bool_constant<!is_fundamental<T>::value> {};
 //template<typename T> struct is_member_pointer : bool_constant<is_member_object_pointer<T>::value || is_member_function_pointer<T>::value> {};
 
-template<typename T> inline constexpr bool is_reference_v       = is_reference<T>::value;
-template<typename T> inline constexpr bool is_arithmetic_v      = is_arithmetic<T>::value;
-template<typename T> inline constexpr bool is_fundamental_v     = is_fundamental<T>::value;
-template<typename T> inline constexpr bool is_object_v          = is_object<T>::value;
-template<typename T> inline constexpr bool is_scalar_v          = is_scalar<T>::value;
-template<typename T> inline constexpr bool is_compound_v        = is_compound<T>::value;
-template<typename T> inline constexpr bool is_member_pointer_v  = is_member_pointer<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_reference_v       = is_reference<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_arithmetic_v      = is_arithmetic<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_fundamental_v     = is_fundamental<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_object_v          = is_object<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_scalar_v          = is_scalar<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_compound_v        = is_compound<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_member_pointer_v  = is_member_pointer<T>::value;
 
 // ============================================================
 // SECTION 6: TYPE PROPERTIES
@@ -318,21 +318,21 @@ template<typename T> struct is_unbounded_array      : bool_constant<is_array_v<T
     template<typename T> struct is_scoped_enum : false_type {};
 #endif
 // --- Variable Templates Helper Shortcuts (Stripped 'typename') ---
-template<typename T> inline constexpr bool is_const_v              = is_const<T>::value;
-template<typename T> inline constexpr bool is_volatile_v           = is_volatile<T>::value;
-template<typename T> inline constexpr bool is_trivial_v            = is_trivial<T>::value;
-template<typename T> inline constexpr bool is_trivially_copyable_v = is_trivially_copyable<T>::value;
-template<typename T> inline constexpr bool is_standard_layout_v    = is_standard_layout<T>::value;
-template<typename T> inline constexpr bool is_empty_v              = is_empty<T>::value;
-template<typename T> inline constexpr bool is_polymorphic_v        = is_polymorphic<T>::value;
-template<typename T> inline constexpr bool is_abstract_v           = is_abstract<T>::value;
-template<typename T> inline constexpr bool is_final_v              = is_final<T>::value;
-template<typename T> inline constexpr bool is_aggregate_v          = is_aggregate<T>::value;
-template<typename T> inline constexpr bool is_signed_v             = is_signed<T>::value;
-template<typename T> inline constexpr bool is_unsigned_v           = is_unsigned<T>::value;
-template<typename T> inline constexpr bool is_bounded_array_v      = is_bounded_array<T>::value;
-template<typename T> inline constexpr bool is_unbounded_array_v    = is_unbounded_array<T>::value;
-template<typename T> inline constexpr bool is_scoped_enum_v        = is_scoped_enum<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_const_v              = is_const<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_volatile_v           = is_volatile<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_trivial_v            = is_trivial<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_trivially_copyable_v = is_trivially_copyable<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_standard_layout_v    = is_standard_layout<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_empty_v              = is_empty<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_polymorphic_v        = is_polymorphic<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_abstract_v           = is_abstract<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_final_v              = is_final<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_aggregate_v          = is_aggregate<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_signed_v             = is_signed<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_unsigned_v           = is_unsigned<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_bounded_array_v      = is_bounded_array<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_unbounded_array_v    = is_unbounded_array<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_scoped_enum_v        = is_scoped_enum<T>::value;
 // ============================================================
 // SECTION 7: CONSTRUCTIBILITY & ACTIONS
 // ============================================================
@@ -399,35 +399,35 @@ template<typename T> struct is_swappable : detail::is_swappable_with_h<add_lvalu
 template<typename T, typename U> struct is_nothrow_swappable_with : detail::is_nothrow_swappable_with_h<T, U> {};
 template<typename T> struct is_nothrow_swappable : detail::is_nothrow_swappable_with_h<add_lvalue_reference_t<T>, add_lvalue_reference_t<T>> {};
 
-template<typename T, typename... Args> inline constexpr bool is_constructible_v                  = is_constructible<T, Args...>::value;
-template<typename T>                   inline constexpr bool is_default_constructible_v          = is_default_constructible<T>::value;
-template<typename T>                   inline constexpr bool is_copy_constructible_v             = is_copy_constructible<T>::value;
-template<typename T>                   inline constexpr bool is_move_constructible_v             = is_move_constructible<T>::value;
-template<typename T, typename U>       inline constexpr bool is_assignable_v                     = is_assignable<T, U>::value;
-template<typename T>                   inline constexpr bool is_copy_assignable_v                = is_copy_assignable<T>::value;
-template<typename T>                   inline constexpr bool is_move_assignable_v                = is_move_assignable<T>::value;
-template<typename T, typename U>       inline constexpr bool is_swappable_with_v                 = is_swappable_with<T, U>::value;
-template<typename T>                   inline constexpr bool is_swappable_v                      = is_swappable<T>::value;
-template<typename T>                   inline constexpr bool is_destructible_v                   = is_destructible<T>::value;
-template<typename T, typename... Args> inline constexpr bool is_trivially_constructible_v        = is_trivially_constructible<T, Args...>::value;
-template<typename T>                   inline constexpr bool is_trivially_default_constructible_v= is_trivially_default_constructible<T>::value;
-template<typename T>                   inline constexpr bool is_trivially_copy_constructible_v   = is_trivially_copy_constructible<T>::value;
-template<typename T>                   inline constexpr bool is_trivially_move_constructible_v   = is_trivially_move_constructible<T>::value;
-template<typename T, typename U>       inline constexpr bool is_trivially_assignable_v           = is_trivially_assignable<T, U>::value;
-template<typename T>                   inline constexpr bool is_trivially_copy_assignable_v      = is_trivially_copy_assignable<T>::value;
-template<typename T>                   inline constexpr bool is_trivially_move_assignable_v      = is_trivially_move_assignable<T>::value;
-template<typename T>                   inline constexpr bool is_trivially_destructible_v         = is_trivially_destructible<T>::value;
-template<typename T, typename... Args> inline constexpr bool is_nothrow_constructible_v          = is_nothrow_constructible<T, Args...>::value;
-template<typename T>                   inline constexpr bool is_nothrow_default_constructible_v  = is_nothrow_default_constructible<T>::value;
-template<typename T>                   inline constexpr bool is_nothrow_copy_constructible_v     = is_nothrow_copy_constructible<T>::value;
-template<typename T>                   inline constexpr bool is_nothrow_move_constructible_v     = is_nothrow_move_constructible<T>::value;
-template<typename T, typename U>       inline constexpr bool is_nothrow_assignable_v             = is_nothrow_assignable<T, U>::value;
-template<typename T>                   inline constexpr bool is_nothrow_copy_assignable_v        = is_nothrow_copy_assignable<T>::value;
-template<typename T>                   inline constexpr bool is_nothrow_move_assignable_v        = is_nothrow_move_assignable<T>::value;
-template<typename T, typename U>       inline constexpr bool is_nothrow_swappable_with_v         = is_nothrow_swappable_with<T, U>::value;
-template<typename T>                   inline constexpr bool is_nothrow_swappable_v              = is_nothrow_swappable<T>::value;
-template<typename T>                   inline constexpr bool is_nothrow_destructible_v           = is_nothrow_destructible<T>::value;
-template<typename T>                   inline constexpr bool has_virtual_destructor_v            = has_virtual_destructor<T>::value;
+template<typename T, typename... Args> SP_INLINE17 constexpr bool is_constructible_v                  = is_constructible<T, Args...>::value;
+template<typename T>                   SP_INLINE17 constexpr bool is_default_constructible_v          = is_default_constructible<T>::value;
+template<typename T>                   SP_INLINE17 constexpr bool is_copy_constructible_v             = is_copy_constructible<T>::value;
+template<typename T>                   SP_INLINE17 constexpr bool is_move_constructible_v             = is_move_constructible<T>::value;
+template<typename T, typename U>       SP_INLINE17 constexpr bool is_assignable_v                     = is_assignable<T, U>::value;
+template<typename T>                   SP_INLINE17 constexpr bool is_copy_assignable_v                = is_copy_assignable<T>::value;
+template<typename T>                   SP_INLINE17 constexpr bool is_move_assignable_v                = is_move_assignable<T>::value;
+template<typename T, typename U>       SP_INLINE17 constexpr bool is_swappable_with_v                 = is_swappable_with<T, U>::value;
+template<typename T>                   SP_INLINE17 constexpr bool is_swappable_v                      = is_swappable<T>::value;
+template<typename T>                   SP_INLINE17 constexpr bool is_destructible_v                   = is_destructible<T>::value;
+template<typename T, typename... Args> SP_INLINE17 constexpr bool is_trivially_constructible_v        = is_trivially_constructible<T, Args...>::value;
+template<typename T>                   SP_INLINE17 constexpr bool is_trivially_default_constructible_v= is_trivially_default_constructible<T>::value;
+template<typename T>                   SP_INLINE17 constexpr bool is_trivially_copy_constructible_v   = is_trivially_copy_constructible<T>::value;
+template<typename T>                   SP_INLINE17 constexpr bool is_trivially_move_constructible_v   = is_trivially_move_constructible<T>::value;
+template<typename T, typename U>       SP_INLINE17 constexpr bool is_trivially_assignable_v           = is_trivially_assignable<T, U>::value;
+template<typename T>                   SP_INLINE17 constexpr bool is_trivially_copy_assignable_v      = is_trivially_copy_assignable<T>::value;
+template<typename T>                   SP_INLINE17 constexpr bool is_trivially_move_assignable_v      = is_trivially_move_assignable<T>::value;
+template<typename T>                   SP_INLINE17 constexpr bool is_trivially_destructible_v         = is_trivially_destructible<T>::value;
+template<typename T, typename... Args> SP_INLINE17 constexpr bool is_nothrow_constructible_v          = is_nothrow_constructible<T, Args...>::value;
+template<typename T>                   SP_INLINE17 constexpr bool is_nothrow_default_constructible_v  = is_nothrow_default_constructible<T>::value;
+template<typename T>                   SP_INLINE17 constexpr bool is_nothrow_copy_constructible_v     = is_nothrow_copy_constructible<T>::value;
+template<typename T>                   SP_INLINE17 constexpr bool is_nothrow_move_constructible_v     = is_nothrow_move_constructible<T>::value;
+template<typename T, typename U>       SP_INLINE17 constexpr bool is_nothrow_assignable_v             = is_nothrow_assignable<T, U>::value;
+template<typename T>                   SP_INLINE17 constexpr bool is_nothrow_copy_assignable_v        = is_nothrow_copy_assignable<T>::value;
+template<typename T>                   SP_INLINE17 constexpr bool is_nothrow_move_assignable_v        = is_nothrow_move_assignable<T>::value;
+template<typename T, typename U>       SP_INLINE17 constexpr bool is_nothrow_swappable_with_v         = is_nothrow_swappable_with<T, U>::value;
+template<typename T>                   SP_INLINE17 constexpr bool is_nothrow_swappable_v              = is_nothrow_swappable<T>::value;
+template<typename T>                   SP_INLINE17 constexpr bool is_nothrow_destructible_v           = is_nothrow_destructible<T>::value;
+template<typename T>                   SP_INLINE17 constexpr bool has_virtual_destructor_v            = has_virtual_destructor<T>::value;
 // ============================================================
 // SECTION 8: TYPE RELATIONSHIPS
 // ============================================================
@@ -449,11 +449,11 @@ namespace detail {
 
 template<typename Base, typename Derived> struct is_virtual_base_of : decltype(detail::test_virtual_base<Base, Derived>(0)) {};
 
-template<typename T, typename U> inline constexpr bool is_same_v              = is_same<T, U>::value;
-template<typename Base, typename Derived> inline constexpr bool is_base_of_v  = is_base_of<Base, Derived>::value;
-template<typename From, typename To> inline constexpr bool is_convertible_v   = is_convertible<From, To>::value;
-template<typename From, typename To> inline constexpr bool is_nothrow_convertible_v = is_nothrow_convertible<From, To>::value;
-template<typename T, typename U>     inline constexpr bool is_layout_compatible_v   = is_layout_compatible<T, U>::value;
+template<typename T, typename U> SP_INLINE17 constexpr bool is_same_v              = is_same<T, U>::value;
+template<typename Base, typename Derived> SP_INLINE17 constexpr bool is_base_of_v  = is_base_of<Base, Derived>::value;
+template<typename From, typename To> SP_INLINE17 constexpr bool is_convertible_v   = is_convertible<From, To>::value;
+template<typename From, typename To> SP_INLINE17 constexpr bool is_nothrow_convertible_v = is_nothrow_convertible<From, To>::value;
+template<typename T, typename U>     SP_INLINE17 constexpr bool is_layout_compatible_v   = is_layout_compatible<T, U>::value;
 
 // ============================================================
 // SECTION 9: TYPE TRANSFORMATIONS
@@ -506,7 +506,7 @@ template<size_t Len, typename... Ts> using aligned_union_t  = typename aligned_u
 
 // --- Alignment ---
 template<typename T> struct alignment_of;
-template<typename T> inline constexpr size_t alignment_of_v = alignment_of<T>::value;
+template<typename T> SP_INLINE17 constexpr size_t alignment_of_v = alignment_of<T>::value;
 
 // ============================================================
 // SECTION 10: PACK / VARIADIC UTILITIES
@@ -517,7 +517,7 @@ template<typename... Ts>
 struct pack_size;
 
 template<typename... Ts>
-inline constexpr size_t pack_size_v = pack_size<Ts...>::value;
+SP_INLINE17 constexpr size_t pack_size_v = pack_size<Ts...>::value;
 
 // --- Nth type in pack ---
 template<size_t N, typename... Ts>
@@ -531,14 +531,14 @@ template<typename T, typename... Ts>
 struct pack_index;
 
 template<typename T, typename... Ts>
-inline constexpr size_t pack_index_v = pack_index<T, Ts...>::value;
+SP_INLINE17 constexpr size_t pack_index_v = pack_index<T, Ts...>::value;
 
 // --- Check if type is in pack ---
 template<typename T, typename... Ts>
 struct is_one_of;
 
 template<typename T, typename... Ts>
-inline constexpr bool is_one_of_v = is_one_of<T, Ts...>::value;
+SP_INLINE17 constexpr bool is_one_of_v = is_one_of<T, Ts...>::value;
 
 // --- All / any / none over a predicate applied to pack ---
 template<template<typename> class Pred, typename... Ts>
@@ -551,13 +551,13 @@ template<template<typename> class Pred, typename... Ts>
 struct none_of_pack;
 
 template<template<typename> class Pred, typename... Ts>
-inline constexpr bool all_of_pack_v  = all_of_pack<Pred, Ts...>::value;
+SP_INLINE17 constexpr bool all_of_pack_v  = all_of_pack<Pred, Ts...>::value;
 
 template<template<typename> class Pred, typename... Ts>
-inline constexpr bool any_of_pack_v  = any_of_pack<Pred, Ts...>::value;
+SP_INLINE17 constexpr bool any_of_pack_v  = any_of_pack<Pred, Ts...>::value;
 
 template<template<typename> class Pred, typename... Ts>
-inline constexpr bool none_of_pack_v = none_of_pack<Pred, Ts...>::value;
+SP_INLINE17 constexpr bool none_of_pack_v = none_of_pack<Pred, Ts...>::value;
 
 // --- Type list ---
 template<typename... Ts>
@@ -593,10 +593,10 @@ template<typename R, typename F, typename... Args> struct is_invocable_r;
 template<typename F, typename... Args> struct is_nothrow_invocable;
 template<typename R, typename F, typename... Args> struct is_nothrow_invocable_r;
 
-template<typename F, typename... Args> inline constexpr bool is_invocable_v          = is_invocable<F, Args...>::value;
-template<typename R, typename F, typename... Args> inline constexpr bool is_invocable_r_v = is_invocable_r<R, F, Args...>::value;
-template<typename F, typename... Args> inline constexpr bool is_nothrow_invocable_v  = is_nothrow_invocable<F, Args...>::value;
-template<typename R, typename F, typename... Args> inline constexpr bool is_nothrow_invocable_r_v = is_nothrow_invocable_r<R, F, Args...>::value;
+template<typename F, typename... Args> SP_INLINE17 constexpr bool is_invocable_v          = is_invocable<F, Args...>::value;
+template<typename R, typename F, typename... Args> SP_INLINE17 constexpr bool is_invocable_r_v = is_invocable_r<R, F, Args...>::value;
+template<typename F, typename... Args> SP_INLINE17 constexpr bool is_nothrow_invocable_v  = is_nothrow_invocable<F, Args...>::value;
+template<typename R, typename F, typename... Args> SP_INLINE17 constexpr bool is_nothrow_invocable_r_v = is_nothrow_invocable_r<R, F, Args...>::value;
 
 // --- Decompose callable signature ---
 template<typename F>
@@ -605,7 +605,7 @@ struct function_traits; // specialisations for: plain fn, fn ptr, member fn ptr,
 // Convenience aliases derived from function_traits<F>
 template<typename F> using function_return_t     = typename function_traits<F>::return_type;
 template<typename F> using function_args_t       = typename function_traits<F>::args_type;   // type_list<...>
-template<typename F> inline constexpr size_t function_arity_v = function_traits<F>::arity;
+template<typename F> SP_INLINE17 constexpr size_t function_arity_v = function_traits<F>::arity;
 
 // ============================================================
 // SECTION 12: NUMERIC / ARITHMETIC TRAITS
@@ -699,22 +699,22 @@ struct is_numeric
 // Variable Templates
 // ============================================================================
 
-template <typename T> inline constexpr bool is_integral_v       = is_integral<T>::value;
-template <typename T> inline constexpr bool is_floating_point_v = is_floating_point<T>::value;
-template <typename T> inline constexpr bool is_integer_v        = is_integer<T>::value;
-template <typename T> inline constexpr bool is_character_v      = is_character<T>::value;
-template <typename T> inline constexpr bool is_bool_v           = is_bool<T>::value;
-template <typename T> inline constexpr bool is_numeric_v        = is_numeric<T>::value;
+template <typename T> SP_INLINE17 constexpr bool is_integral_v       = is_integral<T>::value;
+template <typename T> SP_INLINE17 constexpr bool is_floating_point_v = is_floating_point<T>::value;
+template <typename T> SP_INLINE17 constexpr bool is_integer_v        = is_integer<T>::value;
+template <typename T> SP_INLINE17 constexpr bool is_character_v      = is_character<T>::value;
+template <typename T> SP_INLINE17 constexpr bool is_bool_v           = is_bool<T>::value;
+template <typename T> SP_INLINE17 constexpr bool is_numeric_v        = is_numeric<T>::value;
 
 // --- Power-of-two & size helpers (useful for allocators, SIMD, hashes) ---
 template<size_t N> struct is_power_of_two;
-template<size_t N> inline constexpr bool is_power_of_two_v = is_power_of_two<N>::value;
+template<size_t N> SP_INLINE17 constexpr bool is_power_of_two_v = is_power_of_two<N>::value;
 
 template<size_t N> struct next_power_of_two;
-template<size_t N> inline constexpr size_t next_power_of_two_v = next_power_of_two<N>::value;
+template<size_t N> SP_INLINE17 constexpr size_t next_power_of_two_v = next_power_of_two<N>::value;
 
 template<size_t N> struct log2_floor;
-template<size_t N> inline constexpr size_t log2_floor_v = log2_floor<N>::value;
+template<size_t N> SP_INLINE17 constexpr size_t log2_floor_v = log2_floor<N>::value;
 
 // --- Numeric limits reimplementation for sp types ---
 template<typename T>
@@ -729,10 +729,10 @@ template<typename T> struct is_pointer_to_function;
 template<typename T> struct is_smart_pointer;          // detects sp::unique_ptr, sp::shared_ptr, etc.
 template<typename T> struct is_raw_pointer;            // is_pointer and !is_smart_pointer
 
-template<typename T> inline constexpr bool is_pointer_to_const_v    = is_pointer_to_const<T>::value;
-template<typename T> inline constexpr bool is_pointer_to_function_v = is_pointer_to_function<T>::value;
-template<typename T> inline constexpr bool is_smart_pointer_v       = is_smart_pointer<T>::value;
-template<typename T> inline constexpr bool is_raw_pointer_v         = is_raw_pointer<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_pointer_to_const_v    = is_pointer_to_const<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_pointer_to_function_v = is_pointer_to_function<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_smart_pointer_v       = is_smart_pointer<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_raw_pointer_v         = is_raw_pointer<T>::value;
 
 // --- Pointed-at type (strips one level of pointer or smart pointer) ---
 template<typename T> struct pointee;
@@ -743,7 +743,7 @@ template<typename T>
 struct byte_size;
 
 template<typename T>
-inline constexpr size_t byte_size_v = byte_size<T>::value;
+SP_INLINE17 constexpr size_t byte_size_v = byte_size<T>::value;
 
 // ============================================================
 // SECTION 14: ALLOCATOR TRAITS
@@ -759,11 +759,11 @@ template<typename Alloc> struct has_aligned_allocate;
 template<typename Alloc> struct allocator_is_stateless;
 template<typename Alloc> struct allocator_is_thread_safe;
 
-template<typename Alloc> inline constexpr bool has_allocate_at_least_v   = has_allocate_at_least<Alloc>::value;
-template<typename Alloc> inline constexpr bool has_reallocate_v           = has_reallocate<Alloc>::value;
-template<typename Alloc> inline constexpr bool has_aligned_allocate_v     = has_aligned_allocate<Alloc>::value;
-template<typename Alloc> inline constexpr bool allocator_is_stateless_v   = allocator_is_stateless<Alloc>::value;
-template<typename Alloc> inline constexpr bool allocator_is_thread_safe_v = allocator_is_thread_safe<Alloc>::value;
+template<typename Alloc> SP_INLINE17 constexpr bool has_allocate_at_least_v   = has_allocate_at_least<Alloc>::value;
+template<typename Alloc> SP_INLINE17 constexpr bool has_reallocate_v           = has_reallocate<Alloc>::value;
+template<typename Alloc> SP_INLINE17 constexpr bool has_aligned_allocate_v     = has_aligned_allocate<Alloc>::value;
+template<typename Alloc> SP_INLINE17 constexpr bool allocator_is_stateless_v   = allocator_is_stateless<Alloc>::value;
+template<typename Alloc> SP_INLINE17 constexpr bool allocator_is_thread_safe_v = allocator_is_thread_safe<Alloc>::value;
 
 // ============================================================
 // SECTION 15: CONTAINER / ITERATOR TRAITS
@@ -776,11 +776,11 @@ template<typename T> struct is_associative_container;
 template<typename T> struct is_sequence_container;
 template<typename T> struct is_hashable_container;
 
-template<typename T> inline constexpr bool is_container_v            = is_container<T>::value;
-template<typename T> inline constexpr bool is_contiguous_container_v = is_contiguous_container<T>::value;
-template<typename T> inline constexpr bool is_associative_container_v= is_associative_container<T>::value;
-template<typename T> inline constexpr bool is_sequence_container_v   = is_sequence_container<T>::value;
-template<typename T> inline constexpr bool is_hashable_container_v   = is_hashable_container<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_container_v            = is_container<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_contiguous_container_v = is_contiguous_container<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_associative_container_v= is_associative_container<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_sequence_container_v   = is_sequence_container<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_hashable_container_v   = is_hashable_container<T>::value;
 
 // --- Container value type ---
 template<typename T> struct container_value_type;
@@ -797,20 +797,20 @@ template<typename Iter> struct is_bidirectional_iterator;
 template<typename Iter> struct is_random_access_iterator;
 template<typename Iter> struct is_contiguous_iterator;
 
-template<typename Iter> inline constexpr bool is_input_iterator_v         = is_input_iterator<Iter>::value;
-template<typename Iter> inline constexpr bool is_forward_iterator_v       = is_forward_iterator<Iter>::value;
-template<typename Iter> inline constexpr bool is_bidirectional_iterator_v = is_bidirectional_iterator<Iter>::value;
-template<typename Iter> inline constexpr bool is_random_access_iterator_v = is_random_access_iterator<Iter>::value;
-template<typename Iter> inline constexpr bool is_contiguous_iterator_v    = is_contiguous_iterator<Iter>::value;
+template<typename Iter> SP_INLINE17 constexpr bool is_input_iterator_v         = is_input_iterator<Iter>::value;
+template<typename Iter> SP_INLINE17 constexpr bool is_forward_iterator_v       = is_forward_iterator<Iter>::value;
+template<typename Iter> SP_INLINE17 constexpr bool is_bidirectional_iterator_v = is_bidirectional_iterator<Iter>::value;
+template<typename Iter> SP_INLINE17 constexpr bool is_random_access_iterator_v = is_random_access_iterator<Iter>::value;
+template<typename Iter> SP_INLINE17 constexpr bool is_contiguous_iterator_v    = is_contiguous_iterator<Iter>::value;
 
 // --- Range detection (for range-based algorithms) ---
 template<typename T> struct is_range;
 template<typename T> struct is_sized_range;
 template<typename T> struct is_contiguous_range;
 
-template<typename T> inline constexpr bool is_range_v            = is_range<T>::value;
-template<typename T> inline constexpr bool is_sized_range_v      = is_sized_range<T>::value;
-template<typename T> inline constexpr bool is_contiguous_range_v = is_contiguous_range<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_range_v            = is_range<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_sized_range_v      = is_sized_range<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_contiguous_range_v = is_contiguous_range<T>::value;
 
 // ============================================================
 // SECTION 16: SIMD TRAITS
@@ -824,17 +824,17 @@ template<typename T> struct simd_width;
 template<typename T> struct simd_byte_size;
 template<typename T> struct is_simd_compatible;    // T can be a lane element in any SIMD register
 
-template<typename T> inline constexpr bool   is_simd_type_v       = is_simd_type<T>::value;
-template<typename T> inline constexpr bool   is_simd_mask_v       = is_simd_mask<T>::value;
-template<typename T> inline constexpr size_t simd_width_v         = simd_width<T>::value;
-template<typename T> inline constexpr size_t simd_byte_size_v     = simd_byte_size<T>::value;
-template<typename T> inline constexpr bool   is_simd_compatible_v = is_simd_compatible<T>::value;
+template<typename T> SP_INLINE17 constexpr bool   is_simd_type_v       = is_simd_type<T>::value;
+template<typename T> SP_INLINE17 constexpr bool   is_simd_mask_v       = is_simd_mask<T>::value;
+template<typename T> SP_INLINE17 constexpr size_t simd_width_v         = simd_width<T>::value;
+template<typename T> SP_INLINE17 constexpr size_t simd_byte_size_v     = simd_byte_size<T>::value;
+template<typename T> SP_INLINE17 constexpr bool   is_simd_compatible_v = is_simd_compatible<T>::value;
 
 template<typename T> using simd_element_type_t = typename simd_element_type<T>::type;
 
 // --- Optimal SIMD width for element type T on target platform ---
 template<typename T> struct native_simd_width;
-template<typename T> inline constexpr size_t native_simd_width_v = native_simd_width<T>::value;
+template<typename T> SP_INLINE17 constexpr size_t native_simd_width_v = native_simd_width<T>::value;
 
 // ============================================================
 // SECTION 17: HASH TRAITS
@@ -845,8 +845,8 @@ template<typename T> struct is_hashable;           // sp::hash<T> is well-formed
 template<typename T> struct is_trivially_hashable; // safe to hash by raw byte reinterpretation
 template<typename T> struct hash_result_type;      // result type of sp::hash<T>{}(val)
 
-template<typename T> inline constexpr bool is_hashable_v          = is_hashable<T>::value;
-template<typename T> inline constexpr bool is_trivially_hashable_v= is_trivially_hashable<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_hashable_v          = is_hashable<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_trivially_hashable_v= is_trivially_hashable<T>::value;
 template<typename T> using hash_result_type_t = typename hash_result_type<T>::type;
 
 // ============================================================
@@ -858,9 +858,9 @@ template<typename T> struct is_serializable;       // sp serialize protocol
 template<typename T> struct is_deserializable;
 template<typename T> struct is_trivially_serializable; // memcpy-safe on disk
 
-template<typename T> inline constexpr bool is_serializable_v          = is_serializable<T>::value;
-template<typename T> inline constexpr bool is_deserializable_v        = is_deserializable<T>::value;
-template<typename T> inline constexpr bool is_trivially_serializable_v= is_trivially_serializable<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_serializable_v          = is_serializable<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_deserializable_v        = is_deserializable<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_trivially_serializable_v= is_trivially_serializable<T>::value;
 
 // ============================================================
 // SECTION 19: THREAD / CONCURRENCY TRAITS
@@ -875,13 +875,13 @@ template<typename T> struct is_atomic;
 template<typename T> struct is_atomic_lockfree;
 template<typename T> struct is_thread_safe;        // user-opt-in tag
 
-template<typename T> inline constexpr bool is_mutex_v          = is_mutex<T>::value;
-template<typename T> inline constexpr bool is_lockable_v       = is_lockable<T>::value;
-template<typename T> inline constexpr bool is_shared_lockable_v= is_shared_lockable<T>::value;
-template<typename T> inline constexpr bool is_timed_lockable_v = is_timed_lockable<T>::value;
-template<typename T> inline constexpr bool is_atomic_v         = is_atomic<T>::value;
-template<typename T> inline constexpr bool is_atomic_lockfree_v= is_atomic_lockfree<T>::value;
-template<typename T> inline constexpr bool is_thread_safe_v    = is_thread_safe<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_mutex_v          = is_mutex<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_lockable_v       = is_lockable<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_shared_lockable_v= is_shared_lockable<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_timed_lockable_v = is_timed_lockable<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_atomic_v         = is_atomic<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_atomic_lockfree_v= is_atomic_lockfree<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_thread_safe_v    = is_thread_safe<T>::value;
 
 // ============================================================
 // SECTION 20: GPU TRAITS
@@ -895,10 +895,10 @@ template<typename T> struct is_gpu_kernel;         // callable on device
 template<typename T> struct is_gpu_compatible;     // trivially copyable + no host ptrs
 template<typename T> struct is_unified_memory;     // accessible from host and device
 
-template<typename T> inline constexpr bool is_gpu_buffer_v       = is_gpu_buffer<T>::value;
-template<typename T> inline constexpr bool is_gpu_kernel_v       = is_gpu_kernel<T>::value;
-template<typename T> inline constexpr bool is_gpu_compatible_v   = is_gpu_compatible<T>::value;
-template<typename T> inline constexpr bool is_unified_memory_v   = is_unified_memory<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_gpu_buffer_v       = is_gpu_buffer<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_gpu_kernel_v       = is_gpu_kernel<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_gpu_compatible_v   = is_gpu_compatible<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_unified_memory_v   = is_unified_memory<T>::value;
 
 #endif // __SP_USE_GPU__
 
@@ -913,11 +913,11 @@ template<typename T> struct is_endpoint_type;
 template<typename T> struct is_protocol_type;
 template<typename T> struct is_fixed_size_message; // known byte count at compile time
 
-template<typename T> inline constexpr bool is_network_message_v  = is_network_message<T>::value;
-template<typename T> inline constexpr bool is_socket_type_v      = is_socket_type<T>::value;
-template<typename T> inline constexpr bool is_endpoint_type_v    = is_endpoint_type<T>::value;
-template<typename T> inline constexpr bool is_protocol_type_v    = is_protocol_type<T>::value;
-template<typename T> inline constexpr bool is_fixed_size_message_v = is_fixed_size_message<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_network_message_v  = is_network_message<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_socket_type_v      = is_socket_type<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_endpoint_type_v    = is_endpoint_type<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_protocol_type_v    = is_protocol_type<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_fixed_size_message_v = is_fixed_size_message<T>::value;
 
 // ============================================================
 // SECTION 22: STRING / CHARACTER TRAITS
@@ -930,10 +930,10 @@ template<typename T> struct is_string_view_type;
 template<typename T> struct is_c_string;           // T is char* or const char*
 template<typename T> struct char_type_of;          // element type of a string type
 
-template<typename T> inline constexpr bool is_char_type_v       = is_char_type<T>::value;
-template<typename T> inline constexpr bool is_string_type_v     = is_string_type<T>::value;
-template<typename T> inline constexpr bool is_string_view_type_v= is_string_view_type<T>::value;
-template<typename T> inline constexpr bool is_c_string_v        = is_c_string<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_char_type_v       = is_char_type<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_string_type_v     = is_string_type<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_string_view_type_v= is_string_view_type<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_c_string_v        = is_c_string<T>::value;
 template<typename T> using char_type_of_t = typename char_type_of<T>::type;
 
 // ============================================================
@@ -947,10 +947,10 @@ template<typename T> struct tensor_element_type;
 template<typename T> struct tensor_is_contiguous;
 template<typename T> struct tensor_is_owning;
 
-template<typename T> inline constexpr bool   is_tensor_v              = is_tensor<T>::value;
-template<typename T> inline constexpr size_t tensor_rank_v            = tensor_rank<T>::value;
-template<typename T> inline constexpr bool   tensor_is_contiguous_v   = tensor_is_contiguous<T>::value;
-template<typename T> inline constexpr bool   tensor_is_owning_v       = tensor_is_owning<T>::value;
+template<typename T> SP_INLINE17 constexpr bool   is_tensor_v              = is_tensor<T>::value;
+template<typename T> SP_INLINE17 constexpr size_t tensor_rank_v            = tensor_rank<T>::value;
+template<typename T> SP_INLINE17 constexpr bool   tensor_is_contiguous_v   = tensor_is_contiguous<T>::value;
+template<typename T> SP_INLINE17 constexpr bool   tensor_is_owning_v       = tensor_is_owning<T>::value;
 
 template<typename T> using tensor_element_type_t = typename tensor_element_type<T>::type;
 
@@ -964,9 +964,9 @@ template<typename T>              struct is_tuple_like;   // has spt::get and tu
 template<size_t I, typename T>    struct tuple_element_at;
 template<typename T>              struct tuple_size_of;
 
-template<typename T>              inline constexpr bool   is_pair_v       = is_pair<T>::value;
-template<typename T>              inline constexpr bool   is_tuple_like_v = is_tuple_like<T>::value;
-template<typename T>              inline constexpr size_t tuple_size_of_v = tuple_size_of<T>::value;
+template<typename T>              SP_INLINE17 constexpr bool   is_pair_v       = is_pair<T>::value;
+template<typename T>              SP_INLINE17 constexpr bool   is_tuple_like_v = is_tuple_like<T>::value;
+template<typename T>              SP_INLINE17 constexpr size_t tuple_size_of_v = tuple_size_of<T>::value;
 template<size_t I, typename T>    using tuple_element_at_t = typename tuple_element_at<I, T>::type;
 
 // ============================================================
@@ -978,8 +978,8 @@ template<typename T> struct is_exception;           // derives from sp::exceptio
 template<typename T> struct is_sp_exception;        // sp-native exception hierarchy
 template<typename From, typename To> struct is_exception_convertible; // for catch covariance
 
-template<typename T> inline constexpr bool is_exception_v    = is_exception<T>::value;
-template<typename T> inline constexpr bool is_sp_exception_v = is_sp_exception<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_exception_v    = is_exception<T>::value;
+template<typename T> SP_INLINE17 constexpr bool is_sp_exception_v = is_sp_exception<T>::value;
 
 // ============================================================
 // SECTION 26: DETECTION IDIOM (library fundamentals v2 style)
@@ -1019,7 +1019,7 @@ template<typename Default, template<typename...> class Op, typename... Args>
 using detected_or = detail::detector<Default, void, Op, Args...>;
 
 template<template<typename...> class Op, typename... Args>
-inline constexpr bool is_detected_v = is_detected<Op, Args...>::value;
+SP_INLINE17 constexpr bool is_detected_v = is_detected<Op, Args...>::value;
 
 /*template<typename T>
 add_rvalue_reference_t<T> declval() noexcept;*/
@@ -1063,22 +1063,22 @@ template<typename T> struct has_clone           : is_detected<has_clone_expr, T>
 //template<typename T> struct has_serialize       : is_detected<has_serialize_expr, T> {};
 //template<typename T> struct has_deserialize     : is_detected<has_deserialize_expr, T> {};
 
-template<typename T> inline constexpr bool has_size_v         = has_size<T>::value;
-template<typename T> inline constexpr bool has_data_v         = has_data<T>::value;
-template<typename T> inline constexpr bool has_begin_v        = has_begin<T>::value;
-template<typename T> inline constexpr bool has_end_v          = has_end<T>::value;
-template<typename T> inline constexpr bool has_reserve_v      = has_reserve<T>::value;
-template<typename T> inline constexpr bool has_resize_v       = has_resize<T>::value;
-template<typename T> inline constexpr bool has_push_back_v    = has_push_back<T>::value;
-template<typename T> inline constexpr bool has_emplace_back_v = has_emplace_back<T>::value;
-template<typename T> inline constexpr bool has_capacity_v     = has_capacity<T>::value;
-template<typename T> inline constexpr bool has_clear_v        = has_clear<T>::value;
-template<typename T> inline constexpr bool has_find_v         = has_find<T>::value;
-//template<typename T> inline constexpr bool has_hash_v         = has_hash<T>::value;
-template<typename T> inline constexpr bool has_to_string_v    = has_to_string<T>::value;
-template<typename T> inline constexpr bool has_clone_v        = has_clone<T>::value;
-//template<typename T> inline constexpr bool has_serialize_v    = has_serialize<T>::value;
-//template<typename T> inline constexpr bool has_deserialize_v  = has_deserialize<T>::value;
+template<typename T> SP_INLINE17 constexpr bool has_size_v         = has_size<T>::value;
+template<typename T> SP_INLINE17 constexpr bool has_data_v         = has_data<T>::value;
+template<typename T> SP_INLINE17 constexpr bool has_begin_v        = has_begin<T>::value;
+template<typename T> SP_INLINE17 constexpr bool has_end_v          = has_end<T>::value;
+template<typename T> SP_INLINE17 constexpr bool has_reserve_v      = has_reserve<T>::value;
+template<typename T> SP_INLINE17 constexpr bool has_resize_v       = has_resize<T>::value;
+template<typename T> SP_INLINE17 constexpr bool has_push_back_v    = has_push_back<T>::value;
+template<typename T> SP_INLINE17 constexpr bool has_emplace_back_v = has_emplace_back<T>::value;
+template<typename T> SP_INLINE17 constexpr bool has_capacity_v     = has_capacity<T>::value;
+template<typename T> SP_INLINE17 constexpr bool has_clear_v        = has_clear<T>::value;
+template<typename T> SP_INLINE17 constexpr bool has_find_v         = has_find<T>::value;
+//template<typename T> SP_INLINE17 constexpr bool has_hash_v         = has_hash<T>::value;
+template<typename T> SP_INLINE17 constexpr bool has_to_string_v    = has_to_string<T>::value;
+template<typename T> SP_INLINE17 constexpr bool has_clone_v        = has_clone<T>::value;
+//template<typename T> SP_INLINE17 constexpr bool has_serialize_v    = has_serialize<T>::value;
+//template<typename T> SP_INLINE17 constexpr bool has_deserialize_v  = has_deserialize<T>::value;
 
 // ============================================================
 // SECTION 27: UTILITY METAFUNCTIONS
@@ -1088,11 +1088,11 @@ template<typename T> inline constexpr bool has_clone_v        = has_clone<T>::va
 
 // --- always_false (for static_assert in constexpr if branches) ---
 template<typename...>
-inline constexpr bool always_false = false;
+SP_INLINE17 constexpr bool always_false = false;
 
 // --- always_true ---
 template<typename...>
-inline constexpr bool always_true = true;
+SP_INLINE17 constexpr bool always_true = true;
 
 // --- copy_cv: apply CV of Src onto Dst ---
 template<typename Src, typename Dst>
@@ -1183,37 +1183,37 @@ struct has_contiguous_storage<T, spt::void_t<
     decltype(spt::declval<T>().size())
 >> : spt::true_type {};
 
-template <typename Class, auto FuncPtr, typename Void, typename... Args>
+template <typename Class, typename Ptr, Ptr FuncPtr, typename Void, typename... Args>
 struct has_function : spt::false_type {};
 
-template <typename Class, auto FuncPtr, typename... Args>
+template <typename Class, typename Ptr, Ptr FuncPtr, typename... Args>
 struct has_function<
-    Class, 
-    FuncPtr, 
-    spt::void_t<decltype((spt::declval<Class>().*FuncPtr)(spt::declval<Args>()...))>, 
+    Class, Ptr, FuncPtr,
+    spt::void_t<decltype((spt::declval<Class>().*FuncPtr)(spt::declval<Args>()...))>,
     Args...
 > : spt::true_type {};
 
-template <typename T>
-inline constexpr bool has_getSpiralMessage_v = has_getSpiralMessage<T>::value;
+template <typename Class, typename Ptr, Ptr FuncPtr, typename... Args>
+SP_INLINE17 constexpr bool has_function_v = has_function<Class, Ptr, FuncPtr, void, Args...>::value;
 
 template <typename T>
-inline constexpr bool  has_getSpiralBinary_v = has_getSpiralBinary<T>::value;
+SP_INLINE17 constexpr bool has_getSpiralMessage_v = has_getSpiralMessage<T>::value;
 
 template <typename T>
-inline constexpr bool  is_hashable_string_v = is_hashable_string<T>::value;
+SP_INLINE17 constexpr bool  has_getSpiralBinary_v = has_getSpiralBinary<T>::value;
+
+template <typename T>
+SP_INLINE17 constexpr bool  is_hashable_string_v = is_hashable_string<T>::value;
 
 template <class U>
-inline constexpr bool is_init_list_v = is_init_list<U>::value;
+SP_INLINE17 constexpr bool is_init_list_v = is_init_list<U>::value;
 
 template <typename T>
-inline constexpr bool has_contiguous_storage_v = has_contiguous_storage<T>::value;
+SP_INLINE17 constexpr bool has_contiguous_storage_v = has_contiguous_storage<T>::value;
 
-template <typename Class, auto FuncPtr, typename... Args>
-inline constexpr bool has_function_v = has_function<Class, FuncPtr, void, Args...>::value;
 
 /*template <template <typename...> class Op, typename... Args>
-inline constexpr bool is_detected_v = is_detected_impl<void, Op, Args...>::value;*/
+SP_INLINE17 constexpr bool is_detected_v = is_detected_impl<void, Op, Args...>::value;*/
 
 #define SP_DEFINE_METHOD_CHECKER(Method) \
     namespace detail { \

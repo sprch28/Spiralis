@@ -268,7 +268,8 @@ public:
     SP_FORCEINLINE IO& print(Arg1&& arg1, Arg2&& arg2, Args&&... args){
         this->print(sp::forward<Arg1>(arg1));
         this->print(sp::forward<Arg2>(arg2));
-        (this->print(sp::forward<Args>(args)), ...);
+        using swallow = int[];
+        (void)swallow{0, (this->print(sp::forward<Args>(args)), 0)...};
         return *this;
     }
 
@@ -356,7 +357,9 @@ public:
         SP_IF_CONSTEXPR(spt::is_trivially_copyable_v<T>){
             __sp_backend_o.writeBinary(sp::addressof(value), sizeof(T));
         }else SP_IF_CONSTEXPR(spt::has_getSpiralBinary_v<T>){
-            auto [data, size] = value.__getSpiralBinary();
+            auto bin = value.__getSpiralBinary();
+            auto data = bin.first;
+            auto size = bin.second;
             __sp_backend_o.writeBinary(data, size);
         }else SP_IF_CONSTEXPR(spt::has_contiguous_storage_v<T>){
             auto dta = value.data();
@@ -370,7 +373,8 @@ public:
     }
     template <typename... Args>
     SP_FORCEINLINE IO& write(const Args&... args) {
-        (write(args), ...);
+        using swallow = int[];
+        (void)swallow{0, (write(args), 0)...};
         return *this;
     }
 
@@ -383,7 +387,9 @@ public:
             ull bytes_read = __sp_backend_i.readBinary(sp::addressof(value), sizeof(T));
             return bytes_read == sizeof(T);
         }else SP_IF_CONSTEXPR(spt::has_getSpiralBinary_v<T>){
-            auto [data, size] = value.__getSpiralBinary();
+            auto bin = value.__getSpiralBinary();
+            auto data = bin.first;
+            auto size = bin.second;
             ull bytes_read = __sp_backend_i.readBinary((void*)data, size);
             return bytes_read == size; 
         }else SP_IF_CONSTEXPR((SP_HAS_METHOD(T, data))) {
@@ -408,12 +414,16 @@ public:
         SP_IF_EXPECT(read(value)) return {value, true};
         else return {T(), false};
     }
+    
     template <typename T, typename... Args>
     SP_FORCEINLINE bool read(T& first, Args&... args){
-        return (read(first)) && (read(args) && ...);
+        bool ok = read(first);
+        using swallow = bool[];
+        (void)swallow{true, (ok = ok && read(args))...};
+        return ok;
     }
 }; // class IO
-inline IO io;
+SP_INLINE17 IO io;
 
 template <typename... Args>
 SP_FORCEINLINE void print(Args&&... args){

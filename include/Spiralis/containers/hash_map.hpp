@@ -1684,11 +1684,13 @@ template <typename Key, typename Value>
 using hmap = hash_map<Key, Value, __SP_DEFAULT_MAP_TRAITS__>;
 
 
+#if ___SP_CPP_VER___ >= 17
+    template <typename Key, typename Value, size_type N=1024, int _threshold=70, typename Hash = sp::basic_hash>
+    using stack_map = hash_map<Key,Value,1,_threshold,Hash,sp::bind_alloc<sp::unbinded_stack_allocator,N>::template r>;
+    template <typename Key, typename Value, size_type N=1024, int _threshold=70, typename Hash = sp::basic_hash>
+    using stack_umap = hash_map<Key,Value,0,_threshold,Hash,sp::bind_alloc<sp::unbinded_stack_allocator,N>::template r>;
+#endif
 
-template <typename Key, typename Value, size_type N=1024, int _threshold=70, typename Hash = sp::basic_hash>
-using stack_map = hash_map<Key,Value,1,_threshold,Hash,sp::bind_alloc<sp::unbinded_stack_allocator,N>::template r>;
-template <typename Key, typename Value, size_type N=1024, int _threshold=70, typename Hash = sp::basic_hash>
-using stack_umap = hash_map<Key,Value,0,_threshold,Hash,sp::bind_alloc<sp::unbinded_stack_allocator,N>::template r>;
 } // namespace sp
 
 #undef _SP_SAFETY_TEMPLATE_

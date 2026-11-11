@@ -7,17 +7,17 @@
 #include "../core/allocators.hpp"
 
 namespace sp{
-template <typename T, template <typename> typename Alloc>
+template <typename T, template <typename> class Alloc>
 class shared_ptr;
 
-template <typename T, template <typename> typename Alloc>
+template <typename T, template <typename> class Alloc>
 class weak_ptr;
 
 /// Unique owning pointer — sole owner of a heap-allocated object.
 /// Non-copyable; ownership transfers via move only.
 /// @tparam T     Pointed-to type.
 /// @tparam Alloc Allocator template used to allocate and construct @c T.
-template <typename T, template <typename> typename Alloc = sp::allocator>
+template <typename T, template <typename> class Alloc = sp::allocator>
 class ptr{
 private:
 
@@ -26,10 +26,10 @@ private:
     constexpr ptr(T* data, Alloc<T> alloc) noexcept : ptr_(data), alloc_(sp::move(alloc)){}
     constexpr ptr(T* data) noexcept : ptr_(data), alloc_(){}
 
-    template <typename U, template<typename> typename Allocator, typename... Args>
+    template <typename U, template <typename> class Allocator, typename... Args>
     friend constexpr ptr<U, Allocator> make_ptr(Alloc<U>, Args&&...);
 
-    template<typename U, template<typename> typename Allocator, typename... Args>
+    template<typename U, template <typename> class Allocator, typename... Args>
     friend constexpr ptr<U, Allocator> make_ptr(Args&&... args);
 
 public:
@@ -110,7 +110,7 @@ public:
 /// @tparam Args  Constructor argument types.
 /// @param args   Arguments forwarded to @c T's constructor.
 /// @return A @c ptr<T, Alloc> owning the newly constructed object.
-template <typename T, template<typename> typename Alloc = sp::allocator, typename... Args>
+template <typename T, template <typename> class Alloc = sp::allocator, typename... Args>
 constexpr ptr<T, Alloc> make_ptr(Args&&... args){
     Alloc<T> alloc;
     T* data = sp::allocator_traits<Alloc<T>>::allocate(alloc, 1);
@@ -122,7 +122,7 @@ constexpr ptr<T, Alloc> make_ptr(Args&&... args){
 /// @param alloc  Allocator instance to use.
 /// @param args   Arguments forwarded to @c T's constructor.
 /// @return A @c ptr<T, Alloc> owning the newly constructed object.
-template <typename T, template<typename> typename Alloc = sp::allocator, typename... Args>
+template <typename T, template <typename> class Alloc = sp::allocator, typename... Args>
 constexpr ptr<T, Alloc> make_ptr(Alloc<T> alloc, Args&&... args){
     T* data = sp::allocator_traits<Alloc<T>>::allocate(alloc, 1);
     sp::allocator_traits<Alloc<T>>::construct(alloc, data, sp::forward<Args>(args)...);
@@ -144,7 +144,7 @@ constexpr ptr<T, Alloc> make_ptr(Alloc<T> alloc, Args&&... args){
 /// itself is freed when the weak count also hits zero.
 /// @tparam T     Pointed-to type.
 /// @tparam Alloc Allocator template used for the control block allocation.
-template<typename T, template <typename> typename Alloc = sp::allocator>
+template<typename T, template <typename> class Alloc = sp::allocator>
 class shared_ptr{
 public:
     /// Internal reference-counting block. Stores the object inline to avoid
@@ -188,10 +188,10 @@ private:
     
     constexpr shared_ptr(control_block* block) : control_(block){}
 
-    template <typename U, template <typename> typename Allocator, typename... Args>
+    template <typename U, template <typename> class Allocator, typename... Args>
     friend constexpr shared_ptr<U, Allocator> make_shared(Allocator<T> alloc, Args&&... args);
 
-    template <typename U, template <typename> typename Allocator, typename... Args>
+    template <typename U, template <typename> class Allocator, typename... Args>
     friend constexpr shared_ptr<U, Allocator> make_shared(Args&&... args);
 
     friend class weak_ptr<T, Alloc>;
@@ -295,7 +295,7 @@ public:
 /// @tparam Args  Constructor argument types.
 /// @param args   Arguments forwarded to @c T's constructor.
 /// @return A @c shared_ptr<T, Alloc> with strong count 1.
-template<typename T, template<typename> typename Alloc = sp::allocator, typename... Args>
+template<typename T, template <typename> class Alloc = sp::allocator, typename... Args>
 constexpr shared_ptr<T, Alloc> make_shared(Args&&... args){
     using block = typename shared_ptr<T, Alloc>::control_block;
     Alloc<block> alloc;
@@ -323,7 +323,7 @@ constexpr shared_ptr<T, Alloc> make_shared(Args&&... args){
 /// @param alloc  Allocator instance to use for the control block.
 /// @param args   Arguments forwarded to @c T's constructor.
 /// @return A @c shared_ptr<T, Alloc> with strong count 1.
-template<typename T, template<typename> typename Alloc = sp::allocator, typename... Args>
+template<typename T, template <typename> class Alloc = sp::allocator, typename... Args>
 constexpr shared_ptr<T, Alloc> make_shared(Alloc<typename shared_ptr<T, Alloc>::control_block> alloc, Args&&... args){
     using block = typename shared_ptr<T, Alloc>::control_block;
     block* memory = sp::allocator_traits<Alloc<block>>::allocate(alloc, 1);
@@ -357,7 +357,7 @@ constexpr shared_ptr<T, Alloc> make_shared(Alloc<typename shared_ptr<T, Alloc>::
 /// @c shared_ptr — it returns @c nullptr if the object has already been freed.
 /// @tparam T     Pointed-to type.
 /// @tparam Alloc Allocator template; must match the @c shared_ptr being observed.
-template<typename T, template <typename> typename Alloc = sp::allocator>
+template<typename T, template <typename> class Alloc = sp::allocator>
 class weak_ptr{
     using block_t = typename shared_ptr<T, Alloc>::control_block;
     block_t* control_ = nullptr;
@@ -449,7 +449,7 @@ public:
 
 /// Convenience factory: creates a @c weak_ptr from an existing @c shared_ptr.
 /// @return A @c weak_ptr observing the same object as @p sp.
-template<typename T, template<typename> typename Alloc = sp::allocator>
+template<typename T, template <typename> class Alloc = sp::allocator>
 constexpr weak_ptr<T, Alloc> make_weak(const shared_ptr<T, Alloc>& sp) noexcept{
     return weak_ptr<T, Alloc>(sp);
 }

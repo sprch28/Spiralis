@@ -41,8 +41,8 @@
     #error "Modern C++ not detected."
 #endif
 
-#if ___SP_CPP_VER___ < 17
-    #error "Spiralis currently requires C++17 or higher."
+#if ___SP_CPP_VER___ < 14
+    #error "Spiralis currently requires C++14 or higher."
 #endif
 
 // Compiler detection
@@ -244,7 +244,7 @@
 // IO Access
 #define _SP_GRANT_IO_ACCESS_ \
     friend class ::sp::IO; \
-    template <short __t, template <typename> typename __Alloc, bool __u> friend class string_impl; \
+    template <short __t, template <typename> class __Alloc, bool __u> friend class string_impl; \
     template <typename __t, typename __U> friend struct spt::has_getSpiralMessage; \
     template <typename __t, typename __U> friend struct spt::has_getSpiralBinary;
 
@@ -420,8 +420,10 @@
 
 #if ___SP_CPP_VER___ >= 17
     #define SP_IF_CONSTEXPR(expr) if constexpr((expr))
+    #define SP_INLINE17 inline
 #else
     #define SP_IF_CONSTEXPR(expr) if((expr))
+    #define SP_INLINE17
 #endif
 
 #if ___SP_CPP_VER___ >= 23
