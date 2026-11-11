@@ -185,7 +185,7 @@ public:
             _SP_APPLY_UNROLLED_(_size, sp::allocator_traits<Allocator<T>>::construct(_data_alloc,_data+i,0));
         }
     }
-    /// @brief Construct a zero-initialized tensor from variadic integral dimension sizes.
+    /// @brief Construct an uninitialized tensor from variadic integral dimension sizes.
     /// @tparam Args Integral types for each dimension size.
     /// @param args Dimension sizes in order; e.g. `tensor(3, 4)` produces a 3×4 tensor.
     template <typename... Args, 
@@ -394,7 +394,7 @@ public:
     // SPECIAL OPERATORS
 
     /// @brief Returns the transpose of this tensor (alias for `c_t()`).
-    SP_FORCEINLINE constexpr tensor operator~() { return c_t(); }
+    SP_FORCEINLINE constexpr tensor operator~() const { return c_t(); }
     /// @brief Matrix multiplication (alias for `matmul(other)`).
     SP_FORCEINLINE constexpr tensor operator%(const tensor& other) { return matmul(other); }
 
@@ -445,7 +445,7 @@ public:
 
     /// @brief Returns an iterator one past the last element of the flat data buffer.
     constexpr flat_iterator end() { return flat_iterator(_data+_size); }
-    /// @copydoc tensor::end()999999999999999999999999
+    /// @copydoc tensor::end()
     constexpr const_flat_iterator end() const { return const_flat_iterator(_data+_size); }
     /// @copydoc tensor::end()
     constexpr const_flat_iterator cend() const { return const_flat_iterator(_data+_size); }
