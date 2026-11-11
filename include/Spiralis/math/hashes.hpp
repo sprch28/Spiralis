@@ -792,11 +792,11 @@ namespace sp{
         }
         /// Loads 8 bytes from @p p (unaligned-safe via @c __builtin_memcpy).
         static SP_FORCEINLINE constexpr ull _wyr8(const unsigned char* p) noexcept {
-            ull v; __builtin_memcpy(&v, p, 8); return v;
+            ull v = 0; __builtin_memcpy(&v, p, 8); return v;
         }
         /// Loads 4 bytes from @p p.
         static SP_FORCEINLINE constexpr ull _wyr4(const unsigned char* p) noexcept {
-            unsigned int v; __builtin_memcpy(&v, p, 4); return v;
+            unsigned int v = 0; __builtin_memcpy(&v, p, 4); return v;
         }
         /// Reads 1–3 bytes from @p p as a single 24-bit word (wyhash short-string trick).
         static SP_FORCEINLINE constexpr ull _wyr3(const unsigned char* p, size_type k) noexcept {
