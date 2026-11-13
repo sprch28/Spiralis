@@ -132,7 +132,7 @@ public:
     }
 };
 
-inline test_registry_t test_registry;
+SP_INLINE17 test_registry_t test_registry;
 
 
 // ============================================================

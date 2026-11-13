@@ -1021,6 +1021,12 @@ using detected_or = detail::detector<Default, void, Op, Args...>;
 template<template<typename...> class Op, typename... Args>
 SP_INLINE17 constexpr bool is_detected_v = is_detected<Op, Args...>::value;
 
+template <typename...> struct all_integral : spt::true_type {};
+template <typename T, typename... Rest>
+struct all_integral<T, Rest...>
+    : spt::integral_constant<bool,
+          is_integral_v<remove_reference_t<T>> && all_integral<Rest...>::value> {};
+
 /*template<typename T>
 add_rvalue_reference_t<T> declval() noexcept;*/
 

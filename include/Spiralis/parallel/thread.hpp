@@ -44,13 +44,14 @@ namespace detail {
 
 template <class F, class Tuple>
 constexpr decltype(auto) apply(F&& f, Tuple&& t) {
-    return detail::apply_impl(std::forward<F>(f), std::forward<Tuple>(t),
+    return apply_impl(std::forward<F>(f), std::forward<Tuple>(t),
         std::make_index_sequence<std::tuple_size<std::decay_t<Tuple>>::value>{});
 }
 #else
 template <class F, class Tuple>
 constexpr decltype(auto) apply(F&& f, Tuple&& t){
     return std::apply(sp::move(f), sp::move(t));
+}
 } // namespace detail
 #endif
 
@@ -83,7 +84,7 @@ public:
         int result = pthread_create(&_thread, nullptr,
             [](void* raw_data) -> void* {
                 auto* typed = static_cast<ThreadData<Func, Args...>*>(raw_data);
-                sp::apply(typed->func, typed->args);
+                apply(typed->func, typed->args);
                 delete typed;
                 return nullptr;
             }, data);
@@ -106,7 +107,7 @@ public:
         int result = pthread_create(&_thread, nullptr,
             [](void* raw_data) -> void* {
                 auto* typed = static_cast<ThreadData<Func, Args...>*>(raw_data);
-                sp::apply(typed->func, typed->args);
+                apply(typed->func, typed->args);
                 delete typed;
                 return nullptr;
             }, data);
@@ -226,7 +227,7 @@ public:
     SP_FORCEINLINE void enqueue(F&& f, Args&&... args) {
         auto task = [func = sp::forward<F>(f),
                      args_tuple = std::make_tuple(sp::forward<Args>(args)...)]() mutable {
-            sp::apply(sp::move(func), sp::move(args_tuple));
+            apply(sp::move(func), sp::move(args_tuple));
         };
 
         pthread_mutex_lock(&_lock);

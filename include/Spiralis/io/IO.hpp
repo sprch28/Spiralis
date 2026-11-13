@@ -352,25 +352,38 @@ public:
         __sp_backend_o.writeBinary(ptr, bytes);
         return *this;
     }
+
+    // trivially copyable
     template <typename T>
-    SP_FORCEINLINE IO& write(const T& value) {
-        SP_IF_CONSTEXPR(spt::is_trivially_copyable_v<T>){
-            __sp_backend_o.writeBinary(sp::addressof(value), sizeof(T));
-        }else SP_IF_CONSTEXPR(spt::has_getSpiralBinary_v<T>){
-            auto bin = value.__getSpiralBinary();
-            auto data = bin.first;
-            auto size = bin.second;
-            __sp_backend_o.writeBinary(data, size);
-        }else SP_IF_CONSTEXPR(spt::has_contiguous_storage_v<T>){
-            auto dta = value.data();
-            ull size = sizeof(spt::remove_reference_t<decltype(*dta)>) * value.size();
-            __sp_backend_o.writeBinary(dta, size);
-        }else{
-            static_assert(spt::is_trivially_copyable_v<T> || spt::has_getSpiralBinary_v<T>, 
-                        "Type T is unsupported: must be trivially copyable or define __getSpiralBinary()");
-        }
+    SP_FORCEINLINE spt::enable_if_t<spt::is_trivially_copyable_v<T>, IO&>
+    write(const T& value) {
+        __sp_backend_o.writeBinary(sp::addressof(value), sizeof(T));
         return *this;
     }
+
+    // has __getSpiralBinary
+    template <typename T>
+    SP_FORCEINLINE spt::enable_if_t<
+        !spt::is_trivially_copyable_v<T> && spt::has_getSpiralBinary_v<T>, IO&>
+    write(const T& value) {
+        auto bin = value.__getSpiralBinary();
+        __sp_backend_o.writeBinary(bin.first, bin.second);
+        return *this;
+    }
+
+    // contiguous storage (data() + size())
+    template <typename T>
+    SP_FORCEINLINE spt::enable_if_t<
+        !spt::is_trivially_copyable_v<T> &&
+        !spt::has_getSpiralBinary_v<T> &&
+        spt::has_contiguous_storage_v<T>, IO&>
+    write(const T& value) {
+        auto dta = value.data();
+        ull size = sizeof(spt::remove_reference_t<decltype(*dta)>) * value.size();
+        __sp_backend_o.writeBinary(dta, size);
+        return *this;
+    }
+
     template <typename... Args>
     SP_FORCEINLINE IO& write(const Args&... args) {
         using swallow = int[];
@@ -381,33 +394,38 @@ public:
     SP_FORCEINLINE ull read(void* ptr, ull bytes) {
         return __sp_backend_i.readBinary(ptr, bytes);
     }
+    
+    // trivially copyable
     template <typename T>
-    SP_FORCEINLINE bool read(T& value) {
-        SP_IF_CONSTEXPR(spt::is_trivially_copyable_v<T>){
-            ull bytes_read = __sp_backend_i.readBinary(sp::addressof(value), sizeof(T));
-            return bytes_read == sizeof(T);
-        }else SP_IF_CONSTEXPR(spt::has_getSpiralBinary_v<T>){
-            auto bin = value.__getSpiralBinary();
-            auto data = bin.first;
-            auto size = bin.second;
-            ull bytes_read = __sp_backend_i.readBinary((void*)data, size);
-            return bytes_read == size; 
-        }else SP_IF_CONSTEXPR((SP_HAS_METHOD(T, data))) {
-            SP_IF_CONSTEXPR((SP_HAS_METHOD(T, size))) {
-                auto dta = value.data();
-                ull size = sizeof(spt::remove_reference_t<decltype(*dta)>) * value.size();
-                ull bytes_read = __sp_backend_i.readBinary((void*)dta, size);
-                return bytes_read == size;
-            } else {
-                static_assert(false, "Target data type for read() does not have required method size().");
-                return false;
-            }
-        }else{
-            static_assert(spt::is_trivially_copyable_v<T> || spt::has_getSpiralBinary_v<T>, 
-            "Type T is unsupported: must be trivially copyable or define __getSpiralBinary()");
-            return false;
-        }
+    SP_FORCEINLINE spt::enable_if_t<spt::is_trivially_copyable_v<T>, bool>
+    read(T& value) {
+        ull bytes_read = __sp_backend_i.readBinary(sp::addressof(value), sizeof(T));
+        return bytes_read == sizeof(T);
     }
+
+    // has __getSpiralBinary
+    template <typename T>
+    SP_FORCEINLINE spt::enable_if_t<
+        !spt::is_trivially_copyable_v<T> && spt::has_getSpiralBinary_v<T>, bool>
+    read(T& value) {
+        auto bin = value.__getSpiralBinary();
+        ull bytes_read = __sp_backend_i.readBinary((void*)bin.first, bin.second);
+        return bytes_read == bin.second;
+    }
+
+    // contiguous storage
+    template <typename T>
+    SP_FORCEINLINE spt::enable_if_t<
+        !spt::is_trivially_copyable_v<T> &&
+        !spt::has_getSpiralBinary_v<T> &&
+        spt::has_contiguous_storage_v<T>, bool>
+    read(T& value) {
+        auto dta = value.data();
+        ull size = sizeof(spt::remove_reference_t<decltype(*dta)>) * value.size();
+        ull bytes_read = __sp_backend_i.readBinary((void*)dta, size);
+        return bytes_read == size;
+    }
+
     template <typename T>
     SP_FORCEINLINE sp::pair<T, bool> read(){
         T value;

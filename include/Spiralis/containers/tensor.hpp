@@ -95,7 +95,8 @@ private:
     SP_FORCEINLINE constexpr size_type _offset(Idxs... idxs) const {
         size_type offset = 0;
         size_type i = 0;
-        ((offset += static_cast<size_type>(idxs) * _strides[i++]), ...); // C++17
+        using expand_type = int[];
+        (void)expand_type{0, (offset += static_cast<size_type>(idxs) * _strides[i++], 0)...};
         return offset;
     }
     //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -188,8 +189,7 @@ public:
     /// @brief Construct an uninitialized tensor from variadic integral dimension sizes.
     /// @tparam Args Integral types for each dimension size.
     /// @param args Dimension sizes in order; e.g. `tensor(3, 4)` produces a 3×4 tensor.
-    template <typename... Args, 
-              typename = spt::enable_if_t<(spt::is_integral_v<spt::remove_reference_t<Args>> && ...)>>
+    template <typename... Args, typename = spt::enable_if_t<spt::all_integral<Args...>::value>>
     constexpr tensor(Args&&... args){
         size_type shapes[] = { static_cast<size_type>(args)... };
         _shape_size = sizeof...(args);

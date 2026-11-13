@@ -57,31 +57,40 @@ namespace sp{
                 value = static_cast<size_type>(static_cast<unsigned long>(val) * 11400714819323198485ULL);
             else SP_IF_CONSTEXPR((spt::is_same<T,long long>::value || spt::is_same<T,ull>::value))
                 value = static_cast<size_type>(static_cast<ull>(val) * 11400714819323198485ULL);
-            // --- floating point: bit-reinterpret then hash as integer ---
-            else SP_IF_CONSTEXPR((spt::is_same<T,float>::value)){
-                unsigned int bits = detail::bit_cast_hash<unsigned int>(val);
-                // Canonicalise -0.0 → 0
-                if(bits == 0x80000000U) bits = 0;
-                value = static_cast<size_type>(bits * 2654435769U);
-            }
-            else SP_IF_CONSTEXPR((spt::is_same<T,double>::value)){
-                ull bits = detail::bit_cast_hash<ull>(val);
-                if(bits == 0x8000000000000000ULL) bits = 0;
-                value = static_cast<size_type>(bits * 11400714819323198485ULL);
-            }
             // --- pointer types: shift out alignment bits, then multiply ---
             else SP_IF_CONSTEXPR(spt::is_pointer_v<T>){
                 ull addr = reinterpret_cast<ull>(val);
                 addr >>= 3; // strip likely-zero low bits
                 value = static_cast<size_type>(addr * 11400714819323198485ULL);
             }
-            // --- string-like types (c_str() + size()) ---
-            else SP_IF_CONSTEXPR(SP_HAS_METHOD(T, c_str) && SP_HAS_METHOD(T, size))
-                return ____private_string_hash(val.c_str(), val.size());
-            // --- raw C-strings ---
-            else SP_IF_CONSTEXPR((spt::is_same<T,const char*>::value || spt::is_same<T,char*>::value))
-                return ____private_string_hash(val, sp::strlen(val));
             return value;
+        }
+
+        SP_FORCEINLINE SP_PURE constexpr size_type operator()(double val, size_type bucket_size=0) const {
+            size_type value = 0;
+            ull bits = detail::bit_cast_hash<ull>(val);
+            if(bits == 0x8000000000000000ULL) bits = 0;
+            value = static_cast<size_type>(bits * 11400714819323198485ULL);
+            return value;
+        }
+
+        SP_FORCEINLINE SP_PURE constexpr size_type operator()(float val, size_type bucket_size=0) const {
+            size_type value = 0;
+            unsigned int bits = detail::bit_cast_hash<unsigned int>(val);
+            // Canonicalise -0.0 → 0
+            if(bits == 0x80000000U) bits = 0;
+            value = static_cast<size_type>(bits * 2654435769U);
+            return value;
+        }
+
+        template <typename T>
+        spt::enable_if_t<SP_HAS_METHOD(T, c_str) && SP_HAS_METHOD(T, size), size_type> operator()(T val, size_type bucket_size=0) const{
+            return ____private_string_hash(val.c_str(), val.size());
+        }
+
+        template <typename T>
+        spt::enable_if_t<(spt::is_same<T,const char*>::value || spt::is_same<T,char*>::value), size_type> operator()(T val, size_type bucket_size=0) const{
+            return ____private_string_hash(val, sp::strlen(val));
         }
 
         private:

@@ -19,11 +19,15 @@ private:
     sp::hash_map<sp::string, T> stoi_mapping{};
     sp::vector<sp::compressed_string_view> itos_mapping{}; // points to stoi mapping keys
     bool mapping_built = false;
+    #if ___SP_CPP_VER___ >= 17
     static const inline sp::vector<sp::string> color_vec = {
         sp::console::FG_RED, sp::console::FG_BRIGHT_MAGENTA, sp::console::FG_BRIGHT_YELLOW,
-        sp::console::FG_BLUE, sp::console::FG_GREEN,sp::console::FG_WHITE,sp::console::FG_BRIGHT_BLUE,
+        sp::console::FG_BLUE, sp::console::FG_GREEN, sp::console::FG_WHITE, sp::console::FG_BRIGHT_BLUE,
         sp::console::FG_BRIGHT_CYAN, sp::console::FG_BLACK
     };
+    #else
+        static const sp::vector<sp::string> color_vec;
+    #endif
 
     SP_FORCEINLINE static sp::string unpack_chars(ull packed, size_type n) {
         sp::string result(n, '\0');
@@ -134,7 +138,9 @@ private:
 
                     for(ull worker = 0; worker < num_threads; ++worker){
                         auto& src_map = partition_maps[worker][p];
-                        for (const auto& [key, count] : src_map) {
+                        for (const auto& pair : src_map) {
+                            const auto& key = pair.first;
+                            const auto& count = pair.second;
                             final_partition_map[key] += count;
                         }
                         src_map.clear();
@@ -187,7 +193,9 @@ private:
                     str[b] = static_cast<char>((p.first >> (b * 8)) & 0xFF);
                 }
 
-                auto [it, inserted] = stoi_mapping.insert_or_assign(sp::move(str), idx);
+                auto pair = stoi_mapping.insert_or_assign(sp::move(str), idx);
+                auto it = pair.first;
+                auto inserted = pair.second;
                 if (inserted) ++idx;
             }
         }
@@ -311,6 +319,14 @@ public:
         return results;
     }
 };
+#if ___SP_CPP_VER___ < 17
+template <ull min_len, ull max_len, typename T>
+const sp::vector<sp::string> greedy_subword_tokenizer<min_len, max_len, T>::color_vec = {
+    sp::console::FG_RED, sp::console::FG_BRIGHT_MAGENTA, sp::console::FG_BRIGHT_YELLOW,
+    sp::console::FG_BLUE, sp::console::FG_GREEN, sp::console::FG_WHITE, sp::console::FG_BRIGHT_BLUE,
+    sp::console::FG_BRIGHT_CYAN, sp::console::FG_BLACK
+};
+#endif
 
 // =================== // =================== // =================== // =================== // =================== 
 // =================== // =================== // =================== // =================== // =================== 
