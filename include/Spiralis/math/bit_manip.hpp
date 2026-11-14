@@ -9,6 +9,9 @@ template <typename T>
 SP_FORCEINLINE SP_CONST constexpr T rotl(const T x, int k){ return (x << k) | (x >> ((sizeof(T)*8) - k));}
 
 template <typename T>
+SP_FORCEINLINE SP_CONST constexpr T rotr(const T x, int k){ return (x >> k) | (x << ((sizeof(T)*8) - k));}
+
+template <typename T>
 SP_FORCEINLINE SP_CONST constexpr bool isSet(T n, int k) { return (n & (1ULL << k)) != 0; }
 
 template <typename T>
