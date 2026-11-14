@@ -15,7 +15,7 @@ namespace sp{
         /// @tparam U Target unsigned integer type (must be same size as @p T).
         /// @tparam T Source type.
         template <typename U, typename T>
-        SP_FORCEINLINE U bit_cast_hash(T v) noexcept {
+        SP_FORCEINLINE constexpr U bit_cast_hash(T v) noexcept {
             static_assert(sizeof(U) == sizeof(T), "");
             U u{};
             __builtin_memcpy(&u, &v, sizeof(T));

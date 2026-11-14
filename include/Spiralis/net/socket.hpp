@@ -3,9 +3,11 @@
 #pragma once
 #include "../setup/init.hpp"
 #include "../containers/string.hpp"
+#if ___SP_USING_PLATFORM_APPLE___
+#include <sys/event.h>
+#endif
 #if ___SP_USING_PLATFORM_LINUX___ || ___SP_USING_PLATFORM_APPLE___ || ___SP_USING_COMPILER_MINGW___
     #include <sys/types.h>    // Basic system data types (size_t, ssize_t, etc.)
-    #include <sys/event.h>    // kqueue and kevent definitions
     #include <sys/time.h>     // struct timeval and struct timespec (often needed for timeouts)
     #include <sys/socket.h>   // Core socket functions and structures (socket, bind, listen, accept)
     #include <netinet/in.h>   // Internet domain address structures (struct sockaddr_in)
